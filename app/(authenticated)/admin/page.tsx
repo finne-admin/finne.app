@@ -32,7 +32,7 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 text-gray-900">
                 <Card>
                     <CardHeader>
                         <CardTitle>Employee Table</CardTitle>
@@ -42,7 +42,7 @@ export default function AdminDashboard() {
                     </CardContent>
                 </Card>
 
-                <div className="grid sm:grid-cols-2 gap-6">
+                <div className="grid sm:grid-cols-2 gap-6 text-gray-900">
                     <Card>
                         <CardHeader>
                             <CardTitle>Activity Chart</CardTitle>
