@@ -142,7 +142,6 @@ export default function ExerciseLibrary() {
                         description={exercise.description}
                         duration={exercise.duration}
                         thumbnail={exercise.thumbnail}
-                        className="hover:shadow-md transition-shadow"
                     />
                 ))}
             </div>
