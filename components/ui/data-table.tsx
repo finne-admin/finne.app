@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import {Eye, Pencil, Trash2, ChevronLeft, ChevronRight, Activity, ChevronDown, UserCircle, Plus} from 'lucide-react'
+import {Eye, Pencil, Trash2, ChevronLeft, ChevronRight, Activity, UserCircle, Plus} from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
 
 interface Employee {

@@ -35,7 +35,7 @@ export default function LoginPage() {
             </h1>
             <p className="text-white/90 text-base md:text-lg leading-relaxed">
               Start your journey to a healthier workplace by entering the Exercise
-              Snacks platform. Whether you're an employee looking to stay active or an
+              Snacks platform. Whether you&#39;re an employee looking to stay active or an
               admin managing team engagement, our platform makes it easy to access the
               tools and resources you need.
             </p>
@@ -143,7 +143,7 @@ export default function LoginPage() {
               </form>
 
               <div className="mt-6 text-center">
-                <span className="text-gray-600">Don't have an account? </span>
+                <span className="text-gray-600">Don&#39;t have an account? </span>
                 <Link
                     href="/sign-up"
                     className="text-blue-600 hover:text-blue-800 font-medium"
