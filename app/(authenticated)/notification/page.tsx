@@ -65,7 +65,7 @@ export default function NotificationPage() {
                     </div>
 
                     {/* Video Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-auto">
                         {exercises.map((exercise) => (
                             <VideoCard
                                 key={exercise.id}
@@ -78,15 +78,20 @@ export default function NotificationPage() {
                     </div>
 
                     {/* Selection Info */}
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                        <AlertCircle className="w-4 h-4" />
+                    <div
+                        className="flex items-center justify-center gap-2 text-sm text-gray-600"
+                        aria-live="polite"
+                    >
+                        <AlertCircle className="w-4 h-4"/>
                         <span>
-              {selectedVideos.length === maxSelections
-                  ? "Great! You're ready to start."
-                  : `Select ${maxSelections - selectedVideos.length} more ${
-                      maxSelections - selectedVideos.length === 1 ? 'exercise' : 'exercises'
-                  } to continue.`}
-            </span>
+                          {selectedVideos.length === maxSelections
+                              ? "Great! You're ready to start."
+                              : (() => {
+                                  const remainingSelections = maxSelections - selectedVideos.length;
+                                  const exerciseLabel = remainingSelections === 1 ? 'exercise' : 'exercises';
+                                  return `Select ${remainingSelections} more ${exerciseLabel} to continue.`;
+                              })()}
+                        </span>
                     </div>
 
                     {/* Start Button */}

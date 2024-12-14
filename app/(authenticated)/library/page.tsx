@@ -68,7 +68,6 @@ export default function ExerciseLibrary() {
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 6
 
-    // Filter exercises by category and search query
     const filteredExercises = exercises.filter(exercise => {
         const matchesCategory = !activeCategory || exercise.category === activeCategory
         const matchesSearch =
@@ -89,9 +88,8 @@ export default function ExerciseLibrary() {
 
             {/* Search and Filters */}
             <div className="space-y-4 mb-6">
-                {/* Search Bar */}
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500"/>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <Input
                         type="search"
                         placeholder="Search..."
@@ -101,16 +99,14 @@ export default function ExerciseLibrary() {
                     />
                 </div>
 
-                {/* Filter Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    {/* Category Filters: horizontally scrollable on mobile */}
-                    <div className="overflow-x-auto whitespace-nowrap flex gap-2">
+                    <div className="overflow-x-auto flex gap-2 snap-x snap-mandatory">
                         {categories.map((category) => (
                             <Button
                                 key={category}
                                 variant={activeCategory === category ? "default" : "outline"}
                                 className={cn(
-                                    "h-9 flex-shrink-0",
+                                    "h-9 flex-shrink-0 snap-start",
                                     activeCategory === category && "bg-[#8BC5B5] hover:bg-[#7AB4A4]"
                                 )}
                                 onClick={() =>
@@ -122,7 +118,6 @@ export default function ExerciseLibrary() {
                         ))}
                     </div>
 
-                    {/* Favorites Toggle */}
                     <div className="flex items-center gap-2 sm:ml-auto">
                         <span className="text-sm text-gray-600">Favorites</span>
                         <Switch
@@ -134,7 +129,7 @@ export default function ExerciseLibrary() {
             </div>
 
             {/* Exercise Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {currentExercises.map((exercise) => (
                     <ExerciseCard
                         key={exercise.id}
@@ -146,42 +141,28 @@ export default function ExerciseLibrary() {
                 ))}
             </div>
 
-            {/* Pagination / Load More */}
+            {/* Pagination */}
             {totalPages > 1 && (
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-                    {/* Page info only on larger screens */}
                     <p className="text-sm text-gray-900 hidden sm:block">
                         Page {currentPage} of {totalPages}
                     </p>
 
                     <div className="flex gap-2">
-                        {/* On small screens: a simple "Load More" button */}
+                        <Button
+                            variant="default"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                        >
+                            Previous
+                        </Button>
                         <Button
                             variant="default"
                             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                             disabled={currentPage === totalPages}
-                            className="sm:hidden"
                         >
-                            Load More
+                            Next
                         </Button>
-
-                        {/* On larger screens: previous/next buttons */}
-                        <div className="hidden sm:flex gap-2">
-                            <Button
-                                variant="default"
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="default"
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage === totalPages}
-                            >
-                                Next
-                            </Button>
-                        </div>
                     </div>
                 </div>
             )}
