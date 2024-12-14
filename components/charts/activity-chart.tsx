@@ -19,35 +19,6 @@ ChartJS.register(
     Tooltip,
     Legend
 )
-
-const options = {
-  indexAxis: 'y' as const,
-  elements: {
-    bar: {
-      borderWidth: 2,
-    },
-  },
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false,
-    },
-  },
-  scales: {
-    x: {
-      grid: {
-        display: false,
-      },
-    },
-    y: {
-      grid: {
-        display: false,
-      },
-    },
-  },
-}
-
 const data = {
   labels: ['13 Oct 2024', '12 Oct 2024', '11 Oct 2024', '10 Oct 2024', '9 Oct 2024', '8 Oct 2024'],
   datasets: [
@@ -63,8 +34,36 @@ const data = {
 
 export function ActivityChart() {
   return (
-      <div className="h-[300px] sm:h-[400px]">
-        <Bar options={options} data={data} />
+      <div className="h-[250px] sm:h-[300px] lg:h-[400px]">
+        <Bar
+            data={data}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false,
+                },
+              },
+              scales: {
+                x: {
+                  grid: {
+                    display: false,
+                  },
+                  ticks: {
+                    font: {
+                      size: 12, // Adjust label font size
+                    },
+                  },
+                },
+                y: {
+                  grid: {
+                    display: false,
+                  },
+                },
+              },
+            }}
+        />
       </div>
   )
 }

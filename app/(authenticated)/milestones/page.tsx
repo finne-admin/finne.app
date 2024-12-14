@@ -6,10 +6,11 @@ import { Progress } from '@/components/ui/progress'
 
 export default function TrackingMilestonesPage() {
     return (
-        <div className="min-h-screen bg-gray-50 p-6 space-y-8">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 space-y-8">
+            {/* Achieved Milestones Section */}
             <section>
-                <h2 className="text-2xl font-semibold mb-6 text-gray-900">Achieved Milestones</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <h2 className="text-2xl lg:text-3xl font-semibold mb-6 text-gray-900">Achieved Milestones</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <MilestoneCard
                         icon={
                             <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
@@ -58,13 +59,14 @@ export default function TrackingMilestonesPage() {
                 </div>
             </section>
 
-            <section className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-900">Next Milestone</h2>
+            {/* Next Milestone Section */}
+            <section className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
+                <h2 className="text-2xl lg:text-3xl font-semibold mb-6 text-gray-900">Next Milestone</h2>
                 <div>
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600 mb-4 text-sm lg:text-base">
                         5 more sessions to reach 20 total exercises.
                     </p>
-                    <Progress value={75} className="h-3" />
+                    <Progress value={75} className="h-4 sm:h-6" />
                     <p className="text-right text-sm text-gray-500 mt-2">75%</p>
                 </div>
             </section>

@@ -24,21 +24,26 @@ const data = {
     },
   ],
 }
-
-const options = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom' as const,
-    },
-  },
-}
-
 export function EngagementChart() {
   return (
-      <div className="h-[300px] sm:h-[400px]">
-        <Pie data={data} options={options} />
+      <div className="h-[250px] sm:h-[300px] lg:h-[400px]">
+        <Pie
+            data={data}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    font: {
+                      size: 12, // Adjust font size for readability
+                    },
+                  },
+                },
+              },
+            }}
+        />
       </div>
   )
 }

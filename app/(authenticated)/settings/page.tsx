@@ -59,25 +59,19 @@ export default function SettingsPage() {
             <section>
                 <h2 className="text-2xl font-semibold mb-6 text-gray-900">Personal Info</h2>
                 <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label htmlFor="name" className="text-sm text-gray-600">
-                                Name
-                            </label>
-                            <Input id="name" defaultValue="John" />
+                            <label htmlFor="name" className="text-sm text-gray-600">Name</label>
+                            <Input id="name" defaultValue="John"/>
                         </div>
                         <div className="space-y-2">
-                            <label htmlFor="email" className="text-sm text-gray-600">
-                                Email
-                            </label>
-                            <Input id="email" type="email" defaultValue="abc@gmail.com" />
+                            <label htmlFor="email" className="text-sm text-gray-600">Email</label>
+                            <Input id="email" type="email" defaultValue="abc@gmail.com"/>
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <label htmlFor="password" className="text-sm text-gray-600">
-                            Password
-                        </label>
-                        <div className="flex gap-4">
+                        <label htmlFor="password" className="text-sm text-gray-600">Password</label>
+                        <div className="flex flex-col sm:flex-row gap-4">
                             <Input
                                 id="password"
                                 type="password"
@@ -85,13 +79,14 @@ export default function SettingsPage() {
                                 className="bg-gray-50"
                                 disabled
                             />
-                            <Button variant="default" className="shrink-0">
+                            <Button variant="default" className="w-full sm:w-auto">
                                 Change Password
                             </Button>
                         </div>
                     </div>
                 </div>
             </section>
+
 
             {/* Exercise Preferences Section */}
             <section>
@@ -114,7 +109,9 @@ export default function SettingsPage() {
                                     onCheckedChange={(checked) =>
                                         setMuscleGroups((prev) => ({ ...prev, upperBody: checked }))
                                     }
+                                    aria-label="Toggle upper body exercises"
                                 />
+
                             </div>
                             <div className="flex items-center justify-between">
                                 <label htmlFor="lowerBody" className="text-sm">
@@ -158,7 +155,7 @@ export default function SettingsPage() {
                     {/* Favorite Exercises List */}
                     <div className="bg-white p-6 rounded-lg shadow-sm">
                         <h3 className="text-lg font-medium mb-6 text-gray-900">Favorite Exercises List</h3>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto sm:overflow-visible">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -187,7 +184,25 @@ export default function SettingsPage() {
                                     ))}
                                 </TableBody>
                             </Table>
+
+                            {/* Card-based layout for small screens */}
+                            <div className="sm:hidden space-y-4">
+                                {favoriteExercises.map((exercise) => (
+                                    <div key={exercise.title} className="bg-white rounded-lg shadow-sm p-4">
+                                        <h4 className="text-md font-medium">{exercise.title}</h4>
+                                        <p className="text-sm text-gray-600">Category: {exercise.category}</p>
+                                        <p className="text-sm text-gray-600">Duration: {exercise.duration}</p>
+                                        <div className="flex justify-end mt-2">
+                                            <Button variant="ghost" size="sm"
+                                                    className="text-red-500 hover:text-red-600">
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </section>
@@ -280,11 +295,11 @@ export default function SettingsPage() {
                                     <span className="text-sm text-gray-900">{reminder}</span>
                                     <div className="flex gap-2 w-full sm:w-auto justify-end">
                                         <Button variant="edit" size="sm">
-                                            <Pencil className="h-4 w-4 mr-2" />
+                                            <Pencil className="h-4 w-4 mr-2"/>
                                             Edit
                                         </Button>
                                         <Button variant="colorRed" size="sm">
-                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            <Trash2 className="h-4 w-4 mr-2"/>
                                             Delete
                                         </Button>
                                     </div>
