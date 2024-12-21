@@ -65,17 +65,7 @@ export default function SetupPage() {
 
         try {
             // Validation checks
-            if (!firstName || !lastName) {
-                throw new Error('Please enter your first and last name')
-            }
-
-            if (!email || !/\S+@\S+\.\S+/.test(email)) {
-                throw new Error('Please enter a valid email address')
-            }
-
-            if (!password || password.length < 8) {
-                throw new Error('Password must be at least 8 characters long')
-            }
+            validateForm()
 
             // Sign up the user with Supabase Auth
             const { data, error: signUpError } = await supabase.auth.signUp({
@@ -87,24 +77,40 @@ export default function SetupPage() {
                         last_name: lastName,
                         role: 'admin'
                     },
-                    emailRedirectTo: `${window.location.origin}/admin`
+                    emailRedirectTo: `${window.location.origin}/auth/callback`
                 }
             })
 
-            if (signUpError) throw signUpError
-
-            if (!data.user) {
-                throw new Error('Failed to create user account')
+            // Handle potential errors during signup
+            if (signUpError) {
+                console.error('SignUp Error:', signUpError)
+                throw new Error('Unable to sign up. Please try again later.')
             }
 
+            if (!data.user) {
+                console.error('Unexpected error: User object missing', data)
+                throw new Error('Unexpected error occurred during account creation.')
+            }
+
+            // Success: Show confirmation message
             setIsEmailSent(true)
 
         } catch (err) {
             console.error('Setup error:', err)
-            setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+            if (err instanceof Error) {
+                setError(err.message)
+            } else {
+                setError('An unexpected error occurred')
+            }
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const validateForm = () => {
+        if (!firstName || !lastName) throw new Error('Please enter your first and last name')
+        if (!email || !/\S+@\S+\.\S+/.test(email)) throw new Error('Please enter a valid email address')
+        if (!password || password.length < 8) throw new Error('Password must be at least 8 characters long')
     }
 
     const togglePasswordVisibility = () => {

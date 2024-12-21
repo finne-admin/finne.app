@@ -1,19 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 import { EmployeeTable } from '@/components/ui/data-table'
 import { ActivityChart } from '@/components/charts/activity-chart'
 import { EngagementChart } from '@/components/charts/engagement-chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Download, Upload } from 'lucide-react'
+import { useSessionContext } from '@supabase/auth-helpers-react'
+
+
+import { useRouter } from 'next/navigation'
 
 export default function AdminDashboard() {
-    const [isLoading, setIsLoading] = useState(false)
+    const { session, isLoading: sessionLoading } = useSessionContext()
+    const [loading, setLoading] = useState(true)
+    const router = useRouter()
 
-    const handleExport = () => {
-        setIsLoading(true)
-        setTimeout(() => setIsLoading(false), 2000) // Simulating an export process
+    useEffect(() => {
+        // If session is loading, show a loading state
+        if (sessionLoading) {
+            return
+        }
+
+        // Once sessionLoading is false, we either have a session or not
+        if (!session) {
+            // No session found, possibly user cleared localStorage or session expired
+            // Instead of immediate redirect, we could still show a small loader or directly redirect
+            router.push('/login')
+        } else {
+            // Session found and restored from localStorage
+            setLoading(false)
+        }
+    }, [session, sessionLoading, router])
+
+    if (loading || sessionLoading) {
+        return (
+            <div className="flex justify-center items-center h-screen p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+                <p className={'text-gray-900'}>Loading...</p>
+            </div>
+        )
     }
 
     return (
@@ -21,20 +45,6 @@ export default function AdminDashboard() {
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-2xl lg:text-3xl font-semibold text-gray-900">Admin Dashboard</h1>
-                <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                        <Upload className="mr-2 h-4 w-4" /> Import
-                    </Button>
-                    <Button
-                        size="sm"
-                        onClick={handleExport}
-                        disabled={isLoading}
-                        className="w-full sm:w-auto"
-                    >
-                        <Download className="mr-2 h-4 w-4" />
-                        {isLoading ? 'Exporting...' : 'Export'}
-                    </Button>
-                </div>
             </div>
 
             {/* Content Section */}

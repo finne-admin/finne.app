@@ -6,21 +6,51 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import {createClientComponentClient} from "@supabase/auth-helpers-nextjs"; // Ensure this is your Supabase client instance
 
 export default function LoginPage() {
+  const router = useRouter()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log({ email, password, rememberMe })
+    setErrorMessage('')
+    setIsLoading(true)
+    const supabase = createClientComponentClient()
+
+
+    // Perform login with Supabase
+    // By default, supabase.auth.signInWithPassword sets a persistent session.
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      // Display the error message to the user
+      setErrorMessage(error.message)
+      setIsLoading(false)
+      return
+    }
+
+    // If rememberMe is false and you want non-persistent sessions:
+    // Supabase does not provide a built-in "non-persistent" session option easily.
+    // One workaround is to immediately sign out after a certain time, or store a
+    // short-expiry cookie. For simplicity, we’ll skip custom logic here.
+    // If you must handle this, you could implement a timed sign-out or handle sessions manually.
+
+    // On successful login, redirect the user
+    setIsLoading(false)
+    router.push('/admin') // or another protected route
   }
 
   return (
       <div className="min-h-screen flex flex-col lg:flex-row">
-        {/* Left Section - Only visible on larger screens */}
+        {/* Left Section */}
         <div className="hidden lg:flex lg:w-1/3 xl:w-1/4 bg-gradient-to-b from-[#8BC5B5] to-[#5B9B8B] p-8 items-center justify-center relative overflow-hidden">
           <div className="max-w-md text-center z-10">
             <Image
@@ -34,10 +64,7 @@ export default function LoginPage() {
               Welcome to Your Health & Wellness Hub
             </h1>
             <p className="text-white/90 text-base md:text-lg leading-relaxed">
-              Start your journey to a healthier workplace by entering the Exercise
-              Snacks platform. Whether you&#39;re an employee looking to stay active or an
-              admin managing team engagement, our platform makes it easy to access the
-              tools and resources you need.
+              Start your journey to a healthier workplace...
             </p>
           </div>
           {/* Waves */}
@@ -59,7 +86,6 @@ export default function LoginPage() {
         </div>
 
         {/* Right Section */}
-        {/* Added 'flex-1' to ensure the container grows and the form centers properly on mobile */}
         <div className="w-full lg:w-2/3 xl:w-3/4 bg-gray-100 flex items-center justify-center p-4 sm:p-8 flex-1">
           <div className="w-full max-w-md">
             <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
@@ -81,6 +107,12 @@ export default function LoginPage() {
                 Enter your credentials to login your account.
               </p>
 
+              {errorMessage && (
+                  <div className="mb-4 mt-4 bg-red-50 border-red-300 text-red-800 text-center py-2 px-4 rounded">
+                    {errorMessage}
+                  </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm text-gray-700">
@@ -93,7 +125,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full"
+                      className="w-full text-gray-900"
                   />
                 </div>
 
@@ -108,7 +140,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full"
+                      className="w-full text-gray-900"
                   />
                 </div>
 
@@ -137,8 +169,9 @@ export default function LoginPage() {
                 <Button
                     type="submit"
                     className="w-full bg-[#8BC5B5] hover:bg-[#7AB4A4] text-white py-2 sm:py-3 rounded-md"
+                    disabled={isLoading}
                 >
-                  Login
+                  {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
               </form>
 
