@@ -4,60 +4,48 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
+
 export default function AuthCallback() {
     const router = useRouter()
     const supabase = createClientComponentClient()
 
     useEffect(() => {
-        const hash = window.location.hash.substring(1)
-        const params = new URLSearchParams(hash)
-        const access_token = params.get('access_token')
-        const refresh_token = params.get('refresh_token')
+        const handleCallback = async () => {
+            try {
+                const hash = window.location.hash.substring(1)
+                const params = new URLSearchParams(hash)
+                const access_token = params.get('access_token')
+                const refresh_token = params.get('refresh_token')
 
-        if (access_token && refresh_token) {
-            // Set the session to confirm the user is authenticated client-side
-            supabase.auth.setSession({ access_token, refresh_token }).then(async ({ error }) => {
-                if (error) {
-                    console.error('Session creation failed:', error)
-                    router.push('/login?error=session-failed')
-                    return
+                if (!access_token || !refresh_token) {
+                    throw new Error('Missing authentication tokens')
                 }
 
-                // Now fetch the authenticated user
-                const { data: { user }, error: userError } = await supabase.auth.getUser()
-                if (userError || !user) {
-                    console.error('No user retrieved:', userError)
-                    router.push('/login?error=no-user')
-                    return
-                }
-
-                // Insert the confirmed user into public.users via a secure API route
-                const res = await fetch('/api/users/insert', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id: user.id,
-                        email: user.email,
-                        first_name: user.user_metadata.first_name,
-                        last_name: user.user_metadata.last_name,
-                        role: user.user_metadata.role
-                    })
+                // Set the session
+                const { error: sessionError } = await supabase.auth.setSession({
+                    access_token,
+                    refresh_token
                 })
 
-                if (!res.ok) {
-                    console.error('User insertion failed')
-                    router.push('/login?error=user-insert-failed')
-                    return
-                }
+                if (sessionError) throw sessionError
 
-                // Successfully inserted, now redirect to admin
+                // Redirect to admin
                 router.push('/admin')
-            })
-        } else {
-            console.error('Missing tokens in callback URL')
-            router.push('/login?error=missing-tokens')
+            } catch (error) {
+                console.error('Authentication error:', error)
+                router.push(`/login?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`)
+            }
         }
+
+        handleCallback()
     }, [router, supabase])
 
-    return <div className="flex justify-center items-center h-screen">Processing confirmation...</div>
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#8ACC9F] mx-auto mb-4"></div>
+                <p className="text-gray-600">Confirming your account...</p>
+            </div>
+        </div>
+    )
 }
