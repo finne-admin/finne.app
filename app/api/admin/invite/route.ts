@@ -4,8 +4,11 @@ import {supabaseAdmin} from "@/lib/supabaseAdmin";
 export async function POST(request: Request) {
     const { email } = await request.json()
 
-
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email)
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        data: {
+            role: 'user'
+        }
+    })
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 })

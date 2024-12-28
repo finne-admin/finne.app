@@ -4,7 +4,6 @@ import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from 'lucide-react'
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Fragment } from "react"
 import { Dialog, Transition } from "@headlessui/react"
 
@@ -13,8 +12,7 @@ interface InviteEmployeesDialogProps {
     onClose: () => void
 }
 
-export function InviteEmployeesDialog({ isOpen, onClose }: InviteEmployeesDialogProps) {
-    const supabase = createClientComponentClient()
+export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmployeesDialogProps>) {
 
     const [emailInput, setEmailInput] = React.useState("")
     const [emailList, setEmailList] = React.useState<string[]>([])
@@ -74,6 +72,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: InviteEmployeesDialog
             setInviteSuccess(`Invites sent to ${emailList.length} email(s).`)
             setEmailList([])
             setTimeout(() => {
+                setInviteSuccess("")
                 onClose()
             }, 2000)
         } catch (error) {
