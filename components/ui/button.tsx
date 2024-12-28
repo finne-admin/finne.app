@@ -15,6 +15,7 @@ const buttonVariants = cva(
                 link: "text-primary underline-offset-4 hover:underline",
                 colorRed: "bg-red-500 text-white hover:bg-red-600",
                 edit: "bg-[#8BC5B5] text-white hover:bg-[#7AB4A4]",
+                delete: "bg-red-500 text-white hover:bg-red-600",
             },
             size: {
                 default: "h-10 px-4 py-2",

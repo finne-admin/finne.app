@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Heart, Play, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Image from "next/image";
 
 interface VideoCardProps {
   id: string
@@ -36,11 +37,11 @@ export function VideoCard({
       )}>
         {/* Video Thumbnail */}
         <div className="relative aspect-video bg-gray-100">
-          <img
-              src={thumbnail}
-              alt={`${title} thumbnail`}
-              className="w-full h-full object-cover"
-          />
+            <Image
+                src={thumbnail}
+                alt={`${title} thumbnail`}
+                className="w-full h-full object-cover"
+                />
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
 
           {/* Play Button */}

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { Pencil, Trash2 } from 'lucide-react'
+import {Loader2, Pencil, Trash2} from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -13,8 +13,36 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
+import {useRouter} from "next/navigation";
+
+interface UserProfile {
+    email: string;
+    first_name?: string;
+    last_name?: string;
+}
+
+interface LoadingStates {
+    userInfo: boolean
+    saveProfile: boolean
+}
+
 
 export default function SettingsPage() {
+    const supabase = createClientComponentClient()
+    const router = useRouter()
+
+    const [loadingStates, setLoadingStates] = useState<LoadingStates>({
+        userInfo: true,
+        saveProfile: false
+    })
+
+    const [profile, setProfile] = useState<UserProfile>({
+        email: '',
+        first_name: '',
+        last_name: '',
+    })
+
     const [muscleGroups, setMuscleGroups] = useState({
         upperBody: false,
         lowerBody: true,
@@ -28,6 +56,57 @@ export default function SettingsPage() {
         eightHours: true,
         daily: false,
     })
+
+    const [isEditingName, setIsEditingName] = useState(false)
+
+    useEffect(() => {
+        async function getUserData() {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser()
+                if (error) throw error
+
+                if (user) {
+                    setProfile({
+                        email: user.email ?? '',
+                        first_name: user.user_metadata?.first_name || '',
+                        last_name: user.user_metadata?.last_name || ''
+                    })
+                }
+            } catch (error) {
+                console.error('Error getting user:', error)
+            } finally {
+                setLoadingStates(prev => ({ ...prev, userInfo: false }))
+            }
+        }
+
+        getUserData()
+    }, [supabase])
+
+    async function handleSave() {
+        setLoadingStates(prev => ({ ...prev, saveProfile: true }))
+        try {
+            const { error } = await supabase.auth.updateUser({
+                data: {
+                    first_name: profile.first_name,
+                    last_name: profile.last_name,
+                }
+            })
+            if (error) throw error
+            setIsEditingName(false)
+        } catch (error) {
+            console.error('Error updating user:', error)
+        } finally {
+            setLoadingStates(prev => ({ ...prev, saveProfile: false }))
+        }
+    }
+
+    function handleEditToggle() {
+        setIsEditingName((prev) => !prev)
+    }
+
+    function handleChangePassword() {
+        router.push('/reset-password')
+    }
 
     const favoriteExercises = [
         {
@@ -58,31 +137,139 @@ export default function SettingsPage() {
             {/* Personal Info Section */}
             <section>
                 <h2 className="text-2xl font-semibold mb-6 text-gray-900">Personal Info</h2>
-                <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label htmlFor="name" className="text-sm text-gray-600">Name</label>
-                            <Input id="name" defaultValue="John"/>
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-lg shadow-sm space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            {loadingStates.userInfo ? (
+                                <div className="space-y-4 animate-pulse">
+                                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                    <div className="h-10 bg-gray-200 rounded"></div>
+                                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                    <div className="h-10 bg-gray-200 rounded"></div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        <label htmlFor="first_name" className="text-sm font-medium text-gray-600">
+                                            First Name
+                                        </label>
+                                        <Input
+                                            id="first_name"
+                                            value={profile.first_name}
+                                            disabled={!isEditingName}
+                                            onChange={(e) => setProfile((prev) => ({
+                                                ...prev,
+                                                first_name: e.target.value
+                                            }))}
+                                            className="w-full transition-colors"
+                                            placeholder="Enter first name"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label htmlFor="last_name" className="text-sm font-medium text-gray-600">
+                                            Last Name
+                                        </label>
+                                        <Input
+                                            id="last_name"
+                                            value={profile.last_name}
+                                            disabled={!isEditingName}
+                                            onChange={(e) => setProfile((prev) => ({
+                                                ...prev,
+                                                last_name: e.target.value
+                                            }))}
+                                            className="w-full transition-colors"
+                                            placeholder="Enter last name"
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
-                        <div className="space-y-2">
-                            <label htmlFor="email" className="text-sm text-gray-600">Email</label>
-                            <Input id="email" type="email" defaultValue="abc@gmail.com"/>
+
+                        <div className="space-y-4">
+                            {loadingStates.userInfo ? (
+                                <div className="space-y-4 animate-pulse">
+                                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                    <div className="h-10 bg-gray-200 rounded"></div>
+                                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                    <div className="h-10 bg-gray-200 rounded"></div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        <label htmlFor="email" className="text-sm font-medium text-gray-600">
+                                            Email
+                                        </label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={profile.email}
+                                            disabled
+                                            className="w-full bg-gray-50"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label htmlFor="password" className="text-sm font-medium text-gray-600">
+                                            Password
+                                        </label>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <Input
+                                                id="password"
+                                                type="password"
+                                                placeholder="********"
+                                                className="w-full bg-gray-50"
+                                                disabled
+                                            />
+                                            <Button
+                                                variant="default"
+                                                onClick={handleChangePassword}
+                                                className="w-full sm:w-auto whitespace-nowrap"
+                                            >
+                                                Change Password
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <label htmlFor="password" className="text-sm text-gray-600">Password</label>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <Input
-                                id="password"
-                                type="password"
-                                defaultValue="12345!@#$"
-                                className="bg-gray-50"
-                                disabled
-                            />
-                            <Button variant="default" className="w-full sm:w-auto">
-                                Change Password
+
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                        {isEditingName ? (
+                            <>
+                                <Button
+                                    variant="default"
+                                    onClick={handleSave}
+                                    disabled={loadingStates.saveProfile}
+                                    className="w-full sm:w-auto"
+                                >
+                                    {loadingStates.saveProfile ? (
+                                        <span className="flex items-center gap-2">
+                                           <Loader2 className="h-4 w-4 animate-spin"/>
+                                           Saving...
+                                       </span>
+                                    ) : (
+                                        'Save Changes'
+                                    )}
+                                </Button>
+                                <Button
+                                    variant="delete"
+                                    onClick={() => setIsEditingName(false)}
+                                    className="w-full sm:w-auto"
+                                >
+                                    Cancel
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                variant="default"
+                                onClick={handleEditToggle}
+                                className="w-full sm:w-auto"
+                            >
+                                Edit Name
                             </Button>
-                        </div>
+                        )}
                     </div>
                 </div>
             </section>
