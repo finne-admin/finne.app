@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
                         Forgot Your Password?
                     </h1>
                     <p className="text-white/90 text-base md:text-lg leading-relaxed">
-                        Don't worry! We'll help you reset it in no time.
+                        Don&#39;t worry! We&#39;ll help you reset it in no time.
                     </p>
                 </div>
                 {/* Waves background */}
