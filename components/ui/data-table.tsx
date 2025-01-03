@@ -21,7 +21,35 @@ import { Button } from "@/components/ui/button"
 import { Eye, Pencil, Trash2, Plus, Search } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import {InviteEmployeesDialog} from "@/components/InviteEmployeesDialog";
+import { InviteEmployeesDialog } from "@/components/InviteEmployeesDialog"
+
+// Skeleton Row Component
+const SkeletonRow = () => (
+    <TableRow className="animate-pulse">
+      <TableCell>
+        <div className="h-4 w-4 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell>
+        <div className="h-4 w-32 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell className="hidden sm:table-cell">
+        <div className="h-4 w-48 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <div className="h-4 w-20 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell className="hidden lg:table-cell">
+        <div className="h-6 w-16 bg-gray-200 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <div className="h-8 w-8 bg-gray-200 rounded" />
+          <div className="h-8 w-8 bg-gray-200 rounded" />
+          <div className="h-8 w-8 bg-gray-200 rounded" />
+        </div>
+      </TableCell>
+    </TableRow>
+);
 
 // -------------- Employee interface --------------
 interface Employee {
@@ -36,7 +64,6 @@ interface Employee {
 }
 
 export function EmployeeTable() {
-  // ---------- Existing states ----------
   const [employees, setEmployees] = React.useState<Employee[]>([])
   const [emailError, setEmailError] = React.useState("")
   const [filteredEmployees, setFilteredEmployees] = React.useState<Employee[]>([])
@@ -45,23 +72,16 @@ export function EmployeeTable() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string>("")
   const [roleFilter, setRoleFilter] = React.useState<string>("")
-  const [selectedEmployees, setSelectedEmployees] = React.useState<Set<string>>(
-      new Set()
-  )
-
-  const itemsPerPage = 5
-  const supabase = createClientComponentClient()
-
-  // ---------- HEADLESS UI DIALOG STATES ----------
+  const [selectedEmployees, setSelectedEmployees] = React.useState<Set<string>>(new Set())
   const [isModalOpen, setIsModalOpen] = React.useState(false)
-
-  // Instead of text-area, we manage an array of email strings
   const [emailInput, setEmailInput] = React.useState("")
-  const [emailList, setEmailList] = React.useState<string[]>([]) // all queued emails
-
+  const [emailList, setEmailList] = React.useState<string[]>([])
   const [inviteLoading, setInviteLoading] = React.useState(false)
   const [inviteError, setInviteError] = React.useState("")
   const [inviteSuccess, setInviteSuccess] = React.useState("")
+
+  const itemsPerPage = 5
+  const supabase = createClientComponentClient()
 
   // ---------- Pagination ----------
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage)
@@ -100,7 +120,6 @@ export function EmployeeTable() {
   React.useEffect(() => {
     let filtered = employees
 
-    // Search
     if (searchTerm) {
       filtered = filtered.filter((emp) =>
           emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,14 +129,12 @@ export function EmployeeTable() {
       )
     }
 
-    // Status
     if (statusFilter && statusFilter !== "default") {
       filtered = filtered.filter((emp) =>
           statusFilter === "active" ? emp.is_active : !emp.is_active
       )
     }
 
-    // Role
     if (roleFilter && roleFilter !== "default") {
       filtered = filtered.filter((emp) => emp.role === roleFilter)
     }
@@ -134,6 +151,7 @@ export function EmployeeTable() {
       setSelectedEmployees(new Set())
     }
   }
+
   const handleSelectEmployee = (empId: string, checked: boolean) => {
     const newSelected = new Set(selectedEmployees)
     if (checked) {
@@ -154,6 +172,7 @@ export function EmployeeTable() {
       console.error("Error deleting employee:", error)
     }
   }
+
   const handleBulkDelete = async () => {
     try {
       const { error } = await supabase
@@ -256,53 +275,59 @@ export function EmployeeTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedEmployees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>
-                      <Checkbox
-                          checked={selectedEmployees.has(employee.id)}
-                          onCheckedChange={(checked) =>
-                              handleSelectEmployee(employee.id, checked as boolean)
-                          }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {employee.first_name} {employee.last_name}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {employee.email}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{employee.role}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                  <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                          employee.is_active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                      }`}
-                  >
-                    {employee.is_active ? "Active" : "Inactive"}
-                  </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(employee.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-              ))}
+              {loading ? (
+                  Array(itemsPerPage).fill(null).map((_, index) => (
+                      <SkeletonRow key={index} />
+                  ))
+              ) : (
+                  paginatedEmployees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell>
+                          <Checkbox
+                              checked={selectedEmployees.has(employee.id)}
+                              onCheckedChange={(checked) =>
+                                  handleSelectEmployee(employee.id, checked as boolean)
+                              }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {employee.first_name} {employee.last_name}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {employee.email}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{employee.role}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                    <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                            employee.is_active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                        }`}
+                    >
+                      {employee.is_active ? "Active" : "Inactive"}
+                    </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(employee.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                  ))
+              )}
             </TableBody>
           </Table>
         </div>

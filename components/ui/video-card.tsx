@@ -39,6 +39,8 @@ export function VideoCard({
         <div className="relative aspect-video bg-gray-100">
             <Image
                 src={thumbnail}
+                width={16}
+                height={9}
                 alt={`${title} thumbnail`}
                 className="w-full h-full object-cover"
                 />
