@@ -5,6 +5,7 @@ import "./globals.css";
 import React from "react";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
+import { Toaster } from "sonner";
 
 const geistSans = localFont({
     src: "./fonts/GeistVF.woff",
@@ -40,6 +41,7 @@ export default function RootLayout({
           to authenticate users server-side.
         */}
         <SessionContextProvider supabaseClient={supabase}>
+            <Toaster />
             {children}
         </SessionContextProvider>
         </body>

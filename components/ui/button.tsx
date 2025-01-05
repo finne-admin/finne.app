@@ -16,6 +16,8 @@ const buttonVariants = cva(
                 colorRed: "bg-red-500 text-white hover:bg-red-600",
                 edit: "bg-[#8BC5B5] text-white hover:bg-[#7AB4A4]",
                 delete: "bg-red-500 text-white hover:bg-red-600",
+                destructive: "bg-red-500 text-white hover:bg-red-600",
+                cancel: "bg-gray-300 text-gray-800 hover:bg-gray-400",
             },
             size: {
                 default: "h-10 px-4 py-2",
