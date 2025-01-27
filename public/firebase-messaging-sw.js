@@ -30,3 +30,30 @@ messaging.onBackgroundMessage(function (payload) {
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close(); // close the notification
+
+    const action = event.action; // "GO_ACTION" or "SNOOZE_ACTION"
+    const notificationData = event.notification.data || {};
+
+    // If user_id was included in data payload
+    const userId = notificationData.user_id;
+
+    if (action === 'GO_ACTION') {
+        // Open (or focus) a page in the PWA
+        event.waitUntil(clients.openWindow('/notification'));
+    } else if (action === 'SNOOZE_ACTION') {
+        event.waitUntil(
+            fetch('https://cgpqlasmzpabwrubvhyl.supabase.co/functions/v1/handle-snooze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            })
+        );
+    } else {
+        // If user clicked on the notification body or another place
+        event.waitUntil(clients.openWindow('/'));
+    }
+});
+
