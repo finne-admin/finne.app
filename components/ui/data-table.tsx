@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import * as React from "react"
 import {
@@ -18,79 +18,238 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import {Eye, Pencil, Trash2, Plus} from 'lucide-react'
+import { Eye, Pencil, Trash2, Plus, Search } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { InviteEmployeesDialog } from "@/components/InviteEmployeesDialog"
 
+// Skeleton Row Component
+const SkeletonRow = () => (
+    <TableRow className="animate-pulse">
+      <TableCell>
+        <div className="h-4 w-4 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell>
+        <div className="h-4 w-32 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell className="hidden sm:table-cell">
+        <div className="h-4 w-48 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <div className="h-4 w-20 bg-gray-200 rounded" />
+      </TableCell>
+      <TableCell className="hidden lg:table-cell">
+        <div className="h-6 w-16 bg-gray-200 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <div className="h-8 w-8 bg-gray-200 rounded" />
+          <div className="h-8 w-8 bg-gray-200 rounded" />
+          <div className="h-8 w-8 bg-gray-200 rounded" />
+        </div>
+      </TableCell>
+    </TableRow>
+);
+
+// -------------- Employee interface --------------
 interface Employee {
   id: string
-  name: string
   email: string
+  first_name: string
+  last_name: string
   role: string
-  status: string
-  exercises: number
-  lastActive: string
+  created_at: string
+  last_active: string
+  is_active: boolean
 }
 
-const employees: Employee[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    email: "sarah.j@company.com",
-    role: "Employee",
-    status: "Active",
-    exercises: 45,
-    lastActive: "2024-10-09"
-  },
-  {
-    id: "2",
-    name: "David Smith",
-    email: "david.s@company.com",
-    role: "Admin",
-    status: "Inactive",
-    exercises: 30,
-    lastActive: "2024-10-10"
-  },
-  // Add more employees...
-]
-
 export function EmployeeTable() {
+  const [employees, setEmployees] = React.useState<Employee[]>([])
+  const [emailError, setEmailError] = React.useState("")
+  const [filteredEmployees, setFilteredEmployees] = React.useState<Employee[]>([])
+  const [loading, setLoading] = React.useState(true)
   const [currentPage, setCurrentPage] = React.useState(1)
-  const itemsPerPage = 5
-  const totalPages = Math.ceil(employees.length / itemsPerPage)
+  const [searchTerm, setSearchTerm] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState<string>("")
+  const [roleFilter, setRoleFilter] = React.useState<string>("")
+  const [selectedEmployees, setSelectedEmployees] = React.useState<Set<string>>(new Set())
+  const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [emailInput, setEmailInput] = React.useState("")
+  const [emailList, setEmailList] = React.useState<string[]>([])
+  const [inviteLoading, setInviteLoading] = React.useState(false)
+  const [inviteError, setInviteError] = React.useState("")
+  const [inviteSuccess, setInviteSuccess] = React.useState("")
 
-  const paginatedEmployees = employees.slice(
+  const itemsPerPage = 5
+  const supabase = createClientComponentClient()
+
+  // ---------- Pagination ----------
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage)
+  const paginatedEmployees = filteredEmployees.slice(
       (currentPage - 1) * itemsPerPage,
       currentPage * itemsPerPage
   )
+
+  // ---------- Fetch employees ----------
+  React.useEffect(() => {
+    async function fetchEmployees() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .order("created_at", { ascending: false })
+
+        if (error) throw error
+        if (data) {
+          setEmployees(data)
+          setFilteredEmployees(data)
+        }
+      } catch (error) {
+        console.error("Error fetching employees:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchEmployees()
+  }, [supabase])
+
+  // ---------- Filters ----------
+  React.useEffect(() => {
+    let filtered = employees
+
+    if (searchTerm) {
+      filtered = filtered.filter((emp) =>
+          emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          `${emp.first_name} ${emp.last_name}`
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())
+      )
+    }
+
+    if (statusFilter && statusFilter !== "default") {
+      filtered = filtered.filter((emp) =>
+          statusFilter === "active" ? emp.is_active : !emp.is_active
+      )
+    }
+
+    if (roleFilter && roleFilter !== "default") {
+      filtered = filtered.filter((emp) => emp.role === roleFilter)
+    }
+
+    setFilteredEmployees(filtered)
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, roleFilter, employees])
+
+  // ---------- Select logic ----------
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedEmployees(new Set(paginatedEmployees.map((emp) => emp.id)))
+    } else {
+      setSelectedEmployees(new Set())
+    }
+  }
+
+  const handleSelectEmployee = (empId: string, checked: boolean) => {
+    const newSelected = new Set(selectedEmployees)
+    if (checked) {
+      newSelected.add(empId)
+    } else {
+      newSelected.delete(empId)
+    }
+    setSelectedEmployees(newSelected)
+  }
+
+  // ---------- Delete logic ----------
+  const handleDelete = async (empId: string) => {
+    try {
+      const { error } = await supabase.from("users").delete().eq("id", empId)
+      if (error) throw error
+      setEmployees((prev) => prev.filter((emp) => emp.id !== empId))
+    } catch (error) {
+      console.error("Error deleting employee:", error)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    try {
+      const { error } = await supabase
+          .from("users")
+          .delete()
+          .in("id", Array.from(selectedEmployees))
+
+      if (error) throw error
+      setEmployees((prev) => prev.filter((emp) => !selectedEmployees.has(emp.id)))
+      setSelectedEmployees(new Set())
+    } catch (error) {
+      console.error("Error deleting employees:", error)
+    }
+  }
+
+
 
   return (
       <div className="space-y-4">
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <Input
-              placeholder="Search..."
-              className="pl-8 w-full sm:w-[300px]"
-          />
+          {/* Search */}
+          <div className="relative w-full sm:w-[300px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Input
+                placeholder="Search by name or email..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Filters & Add Button */}
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Select>
+            <Select value={statusFilter || "default"} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="default">All Statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
-            <Select>
+
+            <Select value={roleFilter || "default"} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="default">All Roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
+                <SelectItem value="user">User</SelectItem>
               </SelectContent>
             </Select>
-            <Button className="bg-[#8BC5B5] hover:bg-[#7AB4A4] text-white">
+
+            {selectedEmployees.size > 0 && (
+                <Button
+                    variant="colorRed"
+                    onClick={handleBulkDelete}
+                    className="whitespace-nowrap"
+                >
+                  Delete Selected ({selectedEmployees.size})
+                </Button>
+            )}
+
+            {/* Button to open Headless UI dialog */}
+            <Button
+                className="bg-[#8BC5B5] hover:bg-[#7AB4A4] text-white whitespace-nowrap"
+                onClick={() => {
+                  setIsModalOpen(true)
+                  setEmailList([])
+                  setEmailInput("")
+                  setInviteError("")
+                  setInviteSuccess("")
+                }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Add Employee
             </Button>
@@ -103,7 +262,10 @@ export function EmployeeTable() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
-                  <Checkbox />
+                  <Checkbox
+                      checked={selectedEmployees.size === paginatedEmployees.length}
+                      onCheckedChange={handleSelectAll}
+                  />
                 </TableHead>
                 <TableHead>Employee Name</TableHead>
                 <TableHead className="hidden sm:table-cell">Email</TableHead>
@@ -113,47 +275,85 @@ export function EmployeeTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedEmployees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>
-                      <Checkbox />
-                    </TableCell>
-                    <TableCell>{employee.name}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{employee.email}</TableCell>
-                    <TableCell className="hidden md:table-cell">{employee.role}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{employee.status}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon">
-                          <Eye />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Pencil />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-              ))}
+              {loading ? (
+                  Array(itemsPerPage).fill(null).map((_, index) => (
+                      <SkeletonRow key={index} />
+                  ))
+              ) : (
+                  paginatedEmployees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell>
+                          <Checkbox
+                              checked={selectedEmployees.has(employee.id)}
+                              onCheckedChange={(checked) =>
+                                  handleSelectEmployee(employee.id, checked as boolean)
+                              }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {employee.first_name} {employee.last_name}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {employee.email}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{employee.role}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                    <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                            employee.is_active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                        }`}
+                    >
+                      {employee.is_active ? "Active" : "Inactive"}
+                    </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(employee.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                  ))
+              )}
             </TableBody>
           </Table>
         </div>
 
         {/* Pagination */}
         <div className="flex justify-between items-center">
-          <p className="text-sm text-gray-500">Page {currentPage} of {totalPages}</p>
+          <p className="text-sm text-gray-500">
+            Showing {paginatedEmployees.length} of {filteredEmployees.length} employees
+          </p>
           <div className="flex gap-2">
-            <Button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}>
+            <Button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+            >
               Previous
             </Button>
-            <Button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}>
+            <Button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+            >
               Next
             </Button>
           </div>
         </div>
+
+        <InviteEmployeesDialog isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </div>
   )
 }
-

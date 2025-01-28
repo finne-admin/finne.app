@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@chakra-ui/react": "^3.2.3",
+    "@headlessui/react": "^2.2.0",
+    "@radix-ui/react-alert-dialog": "^1.1.4",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
@@ -17,17 +19,25 @@
     "@radix-ui/react-progress": "^1.1.0",
     "@radix-ui/react-select": "^2.1.2",
     "@radix-ui/react-switch": "^1.1.1",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/auth-helpers-react": "^0.5.0",
+    "@supabase/auth-helpers-shared": "^0.7.0",
+    "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.7",
     "antd": "^5.22.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "firebase": "^11.1.0",
     "lucide-react": "^0.465.0",
     "next": "^14.2.20",
+    "next-pwa": "^5.6.0",
     "react": "^18",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18",
     "react-icons": "^5.4.0",
-    "tailwind-merge": "^2.5.5"
+    "sonner": "^1.7.1",
+    "tailwind-merge": "^2.5.5",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -36,6 +46,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.0",
     "postcss": "^8",
+    "supabase": "^2.2.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
