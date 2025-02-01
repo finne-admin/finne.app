@@ -21,9 +21,11 @@ const withPWA = nextPwa({
 const nextConfig = {
     reactStrictMode: true,
     experimental: {
-        appDir: true // or any other Next.js 14 feature flags you want
+        appDir: true
     },
-    // ...other config
+    images: {
+        domains: ['embed-ssl.wistia.com', 'embed.wistia.com'],
+    }
 }
 
 // Wrap your config with next-pwa
