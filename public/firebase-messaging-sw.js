@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging-compat.js');
 
-// Your web app's Firebase configuration (from your Firebase Console)
+// Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCeTWV4MAIuT5J5iOdV5omkiMNZcxsGAkc",
     authDomain: "finne-app.firebaseapp.com",
@@ -12,48 +12,59 @@ const firebaseConfig = {
     measurementId: "G-DTPM6L289S"
 };
 
-// Initialize Firebase in the service worker
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-
-// Retrieve an instance of Firebase Messaging so that it can handle background messages
 const messaging = firebase.messaging();
 
-// Optional: Handle background messages
-messaging.onBackgroundMessage(function (payload) {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
+// Handle background messages
+messaging.onBackgroundMessage((payload) => {
+    console.log('[firebase-messaging-sw.js] Received background message:', payload);
 
-    const notificationTitle = payload.notification?.title ?? 'Background Title';
+    // Extract title and body from the data field
+    const notificationTitle = payload.data?.title ?? 'Background Title';
     const notificationOptions = {
-        body: payload.notification?.body ?? 'Background Body',
-        icon: '/logoprincipalRecurso 4@4x.png', // Add your own icon if needed
+        body: payload.data?.body ?? 'Background Body',
+        icon: '/logoprincipalRecurso 4@4x.png',
+        data: payload.data, // Pass the data to the notification
     };
 
+    // Display the notification
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// Handle notification click events
 self.addEventListener('notificationclick', (event) => {
-    event.notification.close(); // close the notification
+    event.notification.close(); // Close the notification immediately
 
-    const action = event.action; // "GO_ACTION" or "SNOOZE_ACTION"
-    const notificationData = event.notification.data || {};
+    event.waitUntil(
+        (async () => {
+            const action = event.action; // The action identifier (e.g., "GO_ACTION", "SNOOZE_ACTION")
+            const notificationData = event.notification.data || {};
+            const userId = notificationData.user_id; // Custom data passed with the notification
 
-    // If user_id was included in data payload
-    const userId = notificationData.user_id;
-
-    if (action === 'GO_ACTION') {
-        // Open (or focus) a page in the PWA
-        event.waitUntil(clients.openWindow('/notification'));
-    } else if (action === 'SNOOZE_ACTION') {
-        event.waitUntil(
-            fetch('https://cgpqlasmzpabwrubvhyl.supabase.co/functions/v1/handle-snooze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            })
-        );
-    } else {
-        // If user clicked on the notification body or another place
-        event.waitUntil(clients.openWindow('/'));
-    }
+            try {
+                if (action === 'GO_ACTION') {
+                    // Open or focus a specific page in your PWA
+                    await clients.openWindow('/notification');
+                } else if (action === 'SNOOZE_ACTION') {
+                    // Send a POST request to your backend function (e.g., to snooze a reminder)
+                    await fetch('https://cgpqlasmzpabwrubvhyl.supabase.co/functions/v1/handle-snooze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId }),
+                    });
+                } else {
+                    // Default action: open the homepage or another default page
+                    await clients.openWindow('/');
+                }
+            } catch (error) {
+                console.error('Error handling notification click:', error);
+            }
+        })()
+    );
 });
 
+// (Optional) Listen for notification close events
+self.addEventListener('notificationclose', (event) => {
+    console.log('Notification was closed', event.notification);
+});
