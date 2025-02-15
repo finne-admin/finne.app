@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { ExerciseCard } from '@/components/ui/exercise-card'
-import {WistiaModal} from "@/components/wistia-modal/wistia-modal";
+import { WistiaModal } from "@/components/wistia-modal/wistia-modal"
 
 function SkeletonCard() {
     return (
@@ -34,45 +34,88 @@ interface WistiaMedia {
     assets: Asset[]
 }
 
+// List of available tags (only one at a time)
+const TAGS = [
+    "fuerza",
+    "miembro superior",
+    "miembro inferior",
+    "movilidad",
+    "core",
+    "cervicales",
+    "cardio",
+]
+
 export default function ExerciseLibrary() {
-    // State: Data, loading, favorites, search, pagination
     const [exercises, setExercises] = useState<WistiaMedia[]>([])
     const [loading, setLoading] = useState(true)
     const [showFavorites, setShowFavorites] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
+
+    // Wistia Modal
     const [showModal, setShowModal] = useState(false)
     const [selectedHashedId, setSelectedHashedId] = useState<string | null>(null)
 
+    // Only one selected tag at a time
+    const [selectedTag, setSelectedTag] = useState<string | null>(null)
+
+    // Toggles whether the tag list is visible
+    const [showTagList, setShowTagList] = useState(false)
+
+    // Fetch all videos on initial mount (no tags)
     useEffect(() => {
-        const fetchWistiaVideos = async () => {
-            try {
-                setLoading(true) // Start loading
-                const response = await fetch(`/api/wistia`)
-                const data: WistiaMedia[] = await response.json()
-
-                setExercises(data)
-            } catch (err) {
-                console.error('Error fetching Wistia medias', err)
-            } finally {
-                setLoading(false) // Stop loading
-            }
-        }
-
         fetchWistiaVideos()
     }, [])
 
-    // Basic filtering by search (title or description)
+    // Single-tag version of fetch
+    async function fetchWistiaVideos(tag?: string | null) {
+        try {
+            setLoading(true)
+
+            let url = '/api/wistia'
+            if (tag) {
+                // If a tag is specified, we append it to the query
+                const params = new URLSearchParams()
+                params.set('tags', tag)
+                url += `?${params.toString()}`
+            }
+
+            const response = await fetch(url)
+            const data: WistiaMedia[] = await response.json()
+            setExercises(data)
+        } catch (err) {
+            console.error('Error fetching Wistia medias', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Toggle a single tag
+    const handleTagSelection = (tag: string) => {
+        setCurrentPage(1) // reset pagination to the first page
+        setSelectedTag((prev) => {
+            if (prev === tag) {
+                // If user clicks the same tag, unselect
+                fetchWistiaVideos(null)
+                return null
+            } else {
+                // Select new tag
+                fetchWistiaVideos(tag)
+                return tag
+            }
+        })
+    }
+
+    // Basic search filter (only affects currently fetched data)
     const filteredExercises = exercises.filter((media) => {
         const lowerQuery = searchQuery.toLowerCase()
         const nameMatch = media.name.toLowerCase().includes(lowerQuery)
         const descMatch = (media.description || '').toLowerCase().includes(lowerQuery)
-
         return nameMatch || descMatch
     })
 
-    // Pagination logic
+    // Pagination
     const totalPages = Math.ceil(filteredExercises.length / itemsPerPage)
     const currentExercises = filteredExercises.slice(
         (currentPage - 1) * itemsPerPage,
@@ -90,7 +133,7 @@ export default function ExerciseLibrary() {
         setSelectedHashedId(null)
     }
 
-    // Render numbered page buttons (improved pagination)
+    // Numbered page buttons
     function renderPageNumbers() {
         const pageLinksToShow = 5
         let startPage = Math.max(currentPage - 2, 1)
@@ -125,8 +168,9 @@ export default function ExerciseLibrary() {
         <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <h1 className="text-3xl font-semibold text-gray-900 mb-6">Browse Exercises</h1>
 
-            {/* Search and Favorites */}
+            {/* Search + Favorites + "Tag" button */}
             <div className="space-y-4 mb-6">
+                {/* Search */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <Input
@@ -141,16 +185,62 @@ export default function ExerciseLibrary() {
                     />
                 </div>
 
+                {/* Favorites + Tag button */}
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Favorites</span>
                     <Switch
                         checked={showFavorites}
                         onCheckedChange={setShowFavorites}
                     />
+
+                    {/* If user hasn't clicked "Tag" yet, show the button */}
+                    {!showTagList && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowTagList(true)}
+                        >
+                            Tag
+                        </Button>
+                    )}
                 </div>
+
+                {/* Tag List (slides in horizontally) */}
+                {showTagList && (
+                    <div className="bg-gray-50 rounded-md p-3">
+                        <h2 className="text-sm font-medium text-gray-700 mb-2">
+                            Select a Tag
+                        </h2>
+
+                        {/*
+              - "overflow-x-auto" + "whitespace-nowrap" let the tags slide horizontally.
+              - "scrollbar-thin" classes (if using plugin) for a thinner scrollbar.
+            */}
+                        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300">
+                            {TAGS.map((tag) => {
+                                const isActive = selectedTag === tag
+                                return (
+                                    <button
+                                        key={tag}
+                                        onClick={() => handleTagSelection(tag)}
+                                        className={`
+                      inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium
+                      transition-colors border
+                      ${isActive
+                                            ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                        }
+                    `}
+                                    >
+                                        {tag}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* If loading, show skeletons. Otherwise, show actual data */}
+            {/* Loading skeleton vs. actual data */}
             {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {Array.from({ length: 8 }).map((_, i) => (
@@ -228,10 +318,10 @@ export default function ExerciseLibrary() {
                 </>
             )}
 
-            {/* Modal for Wistia Video Playback */}
-            {
-                showModal && selectedHashedId && <WistiaModal hashedId={selectedHashedId} onClose={closeModal} />
-            }
+            {/* Wistia Modal for video playback */}
+            {showModal && selectedHashedId && (
+                <WistiaModal hashedId={selectedHashedId} onClose={closeModal} />
+            )}
         </div>
     )
 }

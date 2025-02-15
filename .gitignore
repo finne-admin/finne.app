@@ -40,3 +40,16 @@ next-env.d.ts
 /storybook-static
 
 /.idea
+
+./public/sw.js
+./public/sw.js.map
+./public/service-worker.js
+./public/service-worker.js.map
+./public/worker.js
+./public/worker.js.map
+./public/worker.js.LICENSE.txt
+./public/worker.js.LICENSE.txt.map
+./public/worker.js.map.LICENSE.txt
+./public/worker.js.map.LICENSE.txt.map
+
+
