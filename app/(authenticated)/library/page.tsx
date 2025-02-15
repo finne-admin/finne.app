@@ -1,12 +1,15 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { ExerciseCard } from '@/components/ui/exercise-card'
 import { WistiaModal } from "@/components/wistia-modal/wistia-modal"
+import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
+
+const supabase = createClientComponentClient()
 
 function SkeletonCard() {
     return (
@@ -34,7 +37,6 @@ interface WistiaMedia {
     assets: Asset[]
 }
 
-// List of available tags (only one at a time)
 const TAGS = [
     "fuerza",
     "miembro superior",
@@ -52,30 +54,90 @@ export default function ExerciseLibrary() {
     const [searchQuery, setSearchQuery] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
-
-    // Wistia Modal
     const [showModal, setShowModal] = useState(false)
     const [selectedHashedId, setSelectedHashedId] = useState<string | null>(null)
-
-    // Only one selected tag at a time
     const [selectedTag, setSelectedTag] = useState<string | null>(null)
-
-    // Toggles whether the tag list is visible
     const [showTagList, setShowTagList] = useState(false)
+    const [favorites, setFavorites] = useState<Set<string>>(new Set())
+    const [error, setError] = useState<string | null>(null)
 
-    // Fetch all videos on initial mount (no tags)
+    // Fetch exercises and favorites
     useEffect(() => {
-        fetchWistiaVideos()
+        const initializeData = async () => {
+            try {
+                await fetchWistiaVideos()
+                await fetchUserFavorites()
+            } catch (err) {
+                setError('Failed to load initial data')
+            }
+        }
+        initializeData()
     }, [])
 
-    // Single-tag version of fetch
+    // Fetch user favorites from Supabase
+    const fetchUserFavorites = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data, error } = await supabase
+            .from('exercise_favorites')
+            .select('video_hashed_id')
+            .eq('user_id', user.id)
+
+        if (error) {
+            setError('Failed to load favorites')
+            return
+        }
+
+        setFavorites(new Set(data.map((f: { video_hashed_id: any }) => f.video_hashed_id)))
+    }, [])
+
+    // Toggle favorite handler
+    const handleFavoriteToggle = async (hashedId: string) => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            setError('You must be logged in to save favorites')
+            return
+        }
+
+        try {
+            const isFavorite = favorites.has(hashedId)
+            const newFavorites = new Set(favorites)
+
+            // Optimistic update
+            if (isFavorite) {
+                newFavorites.delete(hashedId)
+            } else {
+                newFavorites.add(hashedId)
+            }
+            setFavorites(newFavorites)
+
+            // Database update
+            if (isFavorite) {
+                await supabase
+                    .from('exercise_favorites')
+                    .delete()
+                    .match({ user_id: user.id, video_hashed_id: hashedId })
+            } else {
+                await supabase
+                    .from('exercise_favorites')
+                    .insert({
+                        user_id: user.id,
+                        video_hashed_id: hashedId
+                    })
+            }
+        } catch (err) {
+            setError('Failed to update favorite')
+            await fetchUserFavorites() // Revert to actual state
+        }
+    }
+
+    // Fetch Wistia videos
     async function fetchWistiaVideos(tag?: string | null) {
         try {
             setLoading(true)
-
             let url = '/api/wistia'
             if (tag) {
-                // If a tag is specified, we append it to the query
                 const params = new URLSearchParams()
                 params.set('tags', tag)
                 url += `?${params.toString()}`
@@ -91,28 +153,28 @@ export default function ExerciseLibrary() {
         }
     }
 
-    // Toggle a single tag
+    // Handle tag selection
     const handleTagSelection = (tag: string) => {
-        setCurrentPage(1) // reset pagination to the first page
+        setCurrentPage(1)
         setSelectedTag((prev) => {
             if (prev === tag) {
-                // If user clicks the same tag, unselect
                 fetchWistiaVideos(null)
                 return null
             } else {
-                // Select new tag
                 fetchWistiaVideos(tag)
                 return tag
             }
         })
     }
 
-    // Basic search filter (only affects currently fetched data)
+    // Filter exercises
     const filteredExercises = exercises.filter((media) => {
         const lowerQuery = searchQuery.toLowerCase()
         const nameMatch = media.name.toLowerCase().includes(lowerQuery)
         const descMatch = (media.description || '').toLowerCase().includes(lowerQuery)
-        return nameMatch || descMatch
+        const favoriteMatch = showFavorites ? favorites.has(media.hashed_id) : true
+
+        return nameMatch && descMatch && favoriteMatch
     })
 
     // Pagination
@@ -122,18 +184,7 @@ export default function ExerciseLibrary() {
         currentPage * itemsPerPage
     )
 
-    // Modal handlers
-    const handlePlay = (hashedId?: string) => {
-        if (!hashedId) return
-        setSelectedHashedId(hashedId)
-        setShowModal(true)
-    }
-    const closeModal = () => {
-        setShowModal(false)
-        setSelectedHashedId(null)
-    }
-
-    // Numbered page buttons
+    // Render page numbers
     function renderPageNumbers() {
         const pageLinksToShow = 5
         let startPage = Math.max(currentPage - 2, 1)
@@ -164,13 +215,38 @@ export default function ExerciseLibrary() {
         )
     }
 
+    // Modal handlers
+    const handlePlay = (hashedId?: string) => {
+        if (!hashedId) return
+        setSelectedHashedId(hashedId)
+        setShowModal(true)
+    }
+
+    const closeModal = () => {
+        setShowModal(false)
+        setSelectedHashedId(null)
+    }
+
     return (
         <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <h1 className="text-3xl font-semibold text-gray-900 mb-6">Browse Exercises</h1>
 
-            {/* Search + Favorites + "Tag" button */}
+            {/* Error Display */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-4">
+                    <p className="text-red-700">{error}</p>
+                    <Button
+                        variant="ghost"
+                        className="mt-2"
+                        onClick={() => setError(null)}
+                    >
+                        Dismiss
+                    </Button>
+                </div>
+            )}
+
+            {/* Search + Favorites + Tags */}
             <div className="space-y-4 mb-6">
-                {/* Search */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <Input
@@ -185,15 +261,16 @@ export default function ExerciseLibrary() {
                     />
                 </div>
 
-                {/* Favorites + Tag button */}
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Favorites</span>
                     <Switch
                         checked={showFavorites}
-                        onCheckedChange={setShowFavorites}
+                        onCheckedChange={(checked) => {
+                            setShowFavorites(checked)
+                            setCurrentPage(1)
+                        }}
                     />
 
-                    {/* If user hasn't clicked "Tag" yet, show the button */}
                     {!showTagList && (
                         <Button
                             variant="outline"
@@ -204,17 +281,11 @@ export default function ExerciseLibrary() {
                     )}
                 </div>
 
-                {/* Tag List (slides in horizontally) */}
                 {showTagList && (
                     <div className="bg-gray-50 rounded-md p-3">
                         <h2 className="text-sm font-medium text-gray-700 mb-2">
                             Select a Tag
                         </h2>
-
-                        {/*
-              - "overflow-x-auto" + "whitespace-nowrap" let the tags slide horizontally.
-              - "scrollbar-thin" classes (if using plugin) for a thinner scrollbar.
-            */}
                         <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300">
                             {TAGS.map((tag) => {
                                 const isActive = selectedTag === tag
@@ -223,13 +294,13 @@ export default function ExerciseLibrary() {
                                         key={tag}
                                         onClick={() => handleTagSelection(tag)}
                                         className={`
-                      inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium
-                      transition-colors border
-                      ${isActive
+                                            inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium
+                                            transition-colors border
+                                            ${isActive
                                             ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
                                             : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                                         }
-                    `}
+                                        `}
                                     >
                                         {tag}
                                     </button>
@@ -240,7 +311,7 @@ export default function ExerciseLibrary() {
                 )}
             </div>
 
-            {/* Loading skeleton vs. actual data */}
+            {/* Loading Skeleton */}
             {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {Array.from({ length: 8 }).map((_, i) => (
@@ -251,19 +322,19 @@ export default function ExerciseLibrary() {
                 <>
                     {/* Exercise Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                        {currentExercises.map((media) => {
-                            return (
-                                <ExerciseCard
-                                    key={media.id}
-                                    title={media.name}
-                                    description={media.description.replace(/(<([^>]+)>)/gi, "")}
-                                    duration={`${Math.round(media.duration)}s`}
-                                    assets={media.assets}
-                                    hashedId={media.hashed_id}
-                                    onPlay={handlePlay}
-                                />
-                            )
-                        })}
+                        {currentExercises.map((media) => (
+                            <ExerciseCard
+                                key={media.id}
+                                title={media.name}
+                                description={media.description.replace(/(<([^>]+)>)/gi, "")}
+                                duration={`${Math.round(media.duration)}s`}
+                                assets={media.assets}
+                                hashedId={media.hashed_id}
+                                onPlay={handlePlay}
+                                isFavorite={favorites.has(media.hashed_id)}
+                                onFavoriteToggle={handleFavoriteToggle}
+                            />
+                        ))}
                     </div>
 
                     {/* Pagination */}
@@ -272,9 +343,7 @@ export default function ExerciseLibrary() {
                             <p className="text-sm text-gray-900 hidden sm:block">
                                 Page {currentPage} of {totalPages}
                             </p>
-
                             <div className="flex gap-2 items-center">
-                                {/* First */}
                                 <Button
                                     variant="outline"
                                     onClick={() => setCurrentPage(1)}
@@ -282,8 +351,6 @@ export default function ExerciseLibrary() {
                                 >
                                     First
                                 </Button>
-
-                                {/* Previous */}
                                 <Button
                                     variant="outline"
                                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -291,11 +358,7 @@ export default function ExerciseLibrary() {
                                 >
                                     Prev
                                 </Button>
-
-                                {/* Numbered Pages */}
                                 {renderPageNumbers()}
-
-                                {/* Next */}
                                 <Button
                                     variant="outline"
                                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
@@ -303,8 +366,6 @@ export default function ExerciseLibrary() {
                                 >
                                     Next
                                 </Button>
-
-                                {/* Last */}
                                 <Button
                                     variant="outline"
                                     onClick={() => setCurrentPage(totalPages)}
@@ -318,7 +379,7 @@ export default function ExerciseLibrary() {
                 </>
             )}
 
-            {/* Wistia Modal for video playback */}
+            {/* Wistia Modal */}
             {showModal && selectedHashedId && (
                 <WistiaModal hashedId={selectedHashedId} onClose={closeModal} />
             )}
