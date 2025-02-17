@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (event) => {
                     });
                 } else {
                     // Default action: open the homepage or another default page
-                    await clients.openWindow('/');
+                    await clients.openWindow('/notification');
                 }
             } catch (error) {
                 console.error('Error handling notification click:', error);
