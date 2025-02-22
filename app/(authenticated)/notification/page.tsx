@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react"
 import { VideoCard } from "@/components/ui/video-card"
 import { Button } from "@/components/ui/button"
-import { AlertCircle } from "lucide-react"
+import {AlertCircle, Loader2} from "lucide-react"
 import { cn } from "@/lib/utils"
 import Confetti from "react-confetti"
 import { WistiaModalNotification } from "@/components/wistia-modal/wistia-modal-notification"
+import {Skeleton} from "@/components/ui/skeleton";
+import {CountdownTimer} from "@/components/ui/countdown-timer";
 
 interface Asset {
     url: string
@@ -39,6 +41,11 @@ export default function NotificationPage() {
     const [showConfetti, setShowConfetti] = useState(false)
     const [chosenEmoji, setChosenEmoji] = useState<string | null>(null)
     const [countdown, setCountdown] = useState(3)
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [isStarting, setIsStarting] = useState(false)
+    const [progress, setProgress] = useState(100)
+
 
     const maxSelections = 2
 
@@ -48,17 +55,18 @@ export default function NotificationPage() {
         const fetchData = async () => {
             try {
                 const res = await fetch("/api/wistia")
-                if (!res.ok) {
-                    throw new Error("Failed to fetch Wistia data")
-                }
+                if (!res.ok) throw new Error("Failed to fetch videos")
                 const data: WistiaMedia[] = await res.json()
                 setAllVideos(data)
             } catch (err) {
-                console.error("Error fetching Wistia data:", err)
-                // Here you might want to set an error state and display it to the user
+                setError(err instanceof Error ? err.message : "Failed to load exercises")
+            } finally {
+                setIsLoading(false)
             }
         }
-        fetchData()
+
+        const timer = setTimeout(() => fetchData(), 500) // Add slight delay for skeleton demo
+        return () => clearTimeout(timer)
     }, [])
 
     useEffect(() => {
@@ -69,6 +77,7 @@ export default function NotificationPage() {
 
     useEffect(() => {
         if (currentStep === "countdown") {
+            setProgress(100)
             const timer = setInterval(() => {
                 setCountdown((prev) => {
                     if (prev <= 1) {
@@ -76,7 +85,9 @@ export default function NotificationPage() {
                         setCurrentStep("video2")
                         return 3
                     }
-                    return prev - 1
+                    const newCount = prev - 1
+                    setProgress((newCount / 3) * 100)
+                    return newCount
                 })
             }, 1000)
 
@@ -95,8 +106,13 @@ export default function NotificationPage() {
             return [...prev, strId]
         })
     }
+    const handleSkipCountdown = () => {
+        setCurrentStep("video2")
+    }
+
 
     const handleStartExercise = () => {
+        setIsStarting(true)
         setCurrentStep("video1")
     }
 
@@ -107,6 +123,7 @@ export default function NotificationPage() {
         } else if (currentStep === "video2") {
             setCurrentStep("satisfaction")
         }
+        setIsStarting(false) // Reset starting state
     }
 
     const handleEmojiSelect = (emoji: string) => {
@@ -120,21 +137,42 @@ export default function NotificationPage() {
         setShowConfetti(false)
         setChosenEmoji(null)
         setSelectedVideos([])
+        setIsStarting(false) // Reset starting state
     }
+
+    const LoadingSkeleton = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="aspect-video rounded-xl" />
+            ))}
+        </div>
+    )
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {showConfetti && <Confetti />}
+            {showConfetti && <Confetti recycle={false} numberOfPieces={200} />}
 
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="space-y-6">
                     <div className="text-center">
-                        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Choose Your Exercises</h1>
-                        <p className="mt-2 text-sm text-gray-600">Pick exactly two exercises to begin your session.</p>
+                        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
+                            Choose Your Exercises
+                        </h1>
+                        <p className="mt-2 text-sm text-gray-600">
+                            Pick exactly two exercises to begin your session
+                        </p>
                     </div>
 
-                    {exercises.length === 0 ? (
-                        <p className="text-center text-gray-500 mt-8">Loading exercises...</p>
+                    {error ? (
+                        <div className="text-center p-6 bg-red-50 rounded-lg">
+                            <p className="text-red-600">{error}</p>
+                        </div>
+                    ) : isLoading ? (
+                        <LoadingSkeleton />
+                    ) : exercises.length === 0 ? (
+                        <div className="text-center p-6 bg-yellow-50 rounded-lg">
+                            <p className="text-yellow-700">No exercises available</p>
+                        </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {exercises.map((ex) => (
@@ -153,49 +191,56 @@ export default function NotificationPage() {
                         </div>
                     )}
 
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-600" aria-live="polite">
-                        <AlertCircle className="w-4 h-4" />
-                        <span>
-              {selectedVideos.length === maxSelections
-                  ? "Great! You're ready to start."
-                  : `Select ${maxSelections - selectedVideos.length} more exercises to continue.`}
-            </span>
-                    </div>
+                    {/* Selection Status */}
+                    {!isLoading && !error && (
+                        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            <span>
+                {selectedVideos.length === maxSelections
+                    ? "Great! You're ready to start."
+                    : `Select ${maxSelections - selectedVideos.length} more to continue`}
+              </span>
+                        </div>
+                    )}
 
-                    <div className="flex justify-center">
-                        <Button
-                            onClick={handleStartExercise}
-                            disabled={selectedVideos.length !== maxSelections}
-                            className={cn(
-                                "px-8 py-3 text-lg transition-all duration-200",
-                                selectedVideos.length === maxSelections
-                                    ? "bg-green-500 text-white hover:bg-green-600 transform hover:-translate-y-1"
-                                    : "bg-gray-300 text-gray-700 cursor-not-allowed",
-                            )}
-                        >
-                            Start Exercise
-                        </Button>
-                    </div>
+                    {/* Start Button */}
+                    {!isLoading && !error && (
+                        <div className="flex justify-center">
+                            <Button
+                                onClick={handleStartExercise}
+                                disabled={selectedVideos.length !== maxSelections || isStarting}
+                                className={cn(
+                                    "px-8 py-3 text-lg transition-transform",
+                                    selectedVideos.length === maxSelections &&
+                                    "hover:scale-105 active:scale-95",
+                                    isStarting && "cursor-wait"
+                                )}
+                                size="lg"
+                            >
+                                {isStarting ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    "Start Session"
+                                )}
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
 
+            {/* Modals and Overlays */}
             {currentStep === "video1" && selectedExerciseData[0] && (
                 <WistiaModalNotification
                     hashedId={selectedExerciseData[0].hashed_id}
                     onClose={closeModal}
                     onVideoEnd={handleVideoEnd}
+                    isLoading={!selectedExerciseData[0].assets?.length}
                 />
             )}
 
             {currentStep === "countdown" && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                    <div className="bg-white p-8 rounded-lg text-center text-gray-900">
-                        <h2 className="text-xl font-semibold mb-4">Short Break</h2>
-                        <p className="text-lg font-medium">Rest for {countdown} seconds...</p>
-                    </div>
-                </div>
+                <CountdownTimer countdown={countdown} totalTime={countdown} onSkip={handleSkipCountdown} />
             )}
-
             {currentStep === "video2" && selectedExerciseData[1] && (
                 <WistiaModalNotification
                     hashedId={selectedExerciseData[1].hashed_id}
