@@ -9,6 +9,7 @@ import Confetti from "react-confetti"
 import { WistiaModalNotification } from "@/components/wistia-modal/wistia-modal-notification"
 import {Skeleton} from "@/components/ui/skeleton";
 import {CountdownTimer} from "@/components/ui/countdown-timer";
+import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
 
 interface Asset {
     url: string
@@ -32,7 +33,7 @@ function pickRandomThree<T>(arr: T[]): T[] {
 }
 
 type Step = "selection" | "video1" | "countdown" | "video2" | "satisfaction" | "end"
-
+const supabase = createClientComponentClient()
 export default function NotificationPage() {
     const [allVideos, setAllVideos] = useState<WistiaMedia[]>([])
     const [exercises, setExercises] = useState<WistiaMedia[]>([])
@@ -45,12 +46,42 @@ export default function NotificationPage() {
     const [error, setError] = useState<string | null>(null)
     const [isStarting, setIsStarting] = useState(false)
     const [progress, setProgress] = useState(100)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [submitError, setSubmitError] = useState<string|null>(null)
 
 
     const maxSelections = 2
 
     const selectedExerciseData = exercises.filter((ex) => selectedVideos.includes(String(ex.id)))
 
+    const saveSatisfactionData = async (level: number) => {
+        setIsSubmitting(true);
+        setSubmitError(null);
+        const { data: { user } } = await supabase.auth.getUser();
+
+        try {
+            // Extract hash IDs from selectedExerciseData
+            const videoHashIds = selectedExerciseData.map(exercise => exercise.hashed_id);
+
+            const { error } = await supabase
+                .from('exercise_satisfaction')
+                .insert([{
+                    user_id: user?.id ?? null,
+                    video_hash_ids: videoHashIds,
+                    satisfaction_level: level
+                }]);
+
+            if (error) throw error;
+
+            console.log('Feedback saved successfully');
+
+        } catch (err) {
+            setSubmitError('Failed to save feedback. Please try again.');
+            console.error('Submission error:', err);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -126,7 +157,12 @@ export default function NotificationPage() {
         setIsStarting(false) // Reset starting state
     }
 
-    const handleEmojiSelect = (emoji: string) => {
+    const handleEmojiSelect = async (emoji: string) => {
+        const levels = ["😟", "😐", "🙂", "😀", "🤩"]
+        const level = levels.indexOf(emoji) + 1
+
+        await saveSatisfactionData(level)
+
         setChosenEmoji(emoji)
         setShowConfetti(true)
         setCurrentStep("end")
@@ -251,20 +287,43 @@ export default function NotificationPage() {
 
             {currentStep === "satisfaction" && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                    <div className="bg-white p-8 rounded-lg text-center text-gray-900">
-                        <h2 className="text-xl font-semibold mb-4">How do you feel?</h2>
-                        <div className="flex justify-center gap-3 text-3xl mt-4">
-                            {["😟", "😐", "🙂", "😀", "🤩"].map((emoji) => (
+                    <div className="bg-white p-8 rounded-xl text-center text-gray-900 max-w-md w-full">
+                        <h2 className="text-2xl font-bold mb-4">How did you feel about the exercise?</h2>
+
+                        {submitError && (
+                            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg">
+                                {submitError}
+                            </div>
+                        )}
+
+                        <div className="flex justify-center gap-2 text-4xl mt-6">
+                            {["😟", "😐", "🙂", "😀", "🤩"].map((emoji, index) => (
                                 <button
                                     key={emoji}
                                     onClick={() => handleEmojiSelect(emoji)}
-                                    className="hover:scale-125 transition-transform"
-                                    aria-label={`Choose emoji ${emoji}`}
+                                    disabled={isSubmitting}
+                                    className={cn(
+                                        "p-2 transform transition-all duration-150 hover:scale-125",
+                                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                                        chosenEmoji === emoji ? "scale-125" : "scale-100"
+                                    )}
+                                    aria-label={`Rate ${index + 1} out of 5`}
                                 >
                                     {emoji}
                                 </button>
                             ))}
                         </div>
+
+                        {isSubmitting && (
+                            <div className="mt-4 flex items-center justify-center gap-2 text-gray-600">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Saving your feedback...</span>
+                            </div>
+                        )}
+
+                        <p className="mt-6 text-sm text-gray-500">
+                            Your feedback helps improve future sessions
+                        </p>
                     </div>
                 </div>
             )}
