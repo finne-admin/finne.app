@@ -14,6 +14,10 @@
   }
 }
 
+.wistia_embed {
+  transition: opacity 0.3s ease;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);

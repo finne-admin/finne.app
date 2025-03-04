@@ -25,6 +25,25 @@
     --radius: 0.5rem;
 }
 
+.fade-enter {
+    opacity: 0;
+    transform: translateX(20px);
+}
+.fade-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: all 300ms ease-out;
+}
+.fade-exit {
+    opacity: 1;
+    transform: translateX(0);
+}
+.fade-exit-active {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: all 300ms ease-in;
+}
+
 .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
