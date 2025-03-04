@@ -1,92 +1,251 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { ExerciseCard } from '@/components/ui/exercise-card'
-import { cn } from "@/lib/utils"
+import { WistiaModal } from "@/components/wistia-modal/wistia-modal"
+import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
 
-const exercises = [
-    {
-        id: 1,
-        title: 'Seated Leg Lifts',
-        description: 'Strengthen your core with these easy leg lifts while seated.',
-        duration: '30s',
-        thumbnail: '/placeholder.svg?height=200&width=300',
-        category: 'Core'
-    },
-    {
-        id: 2,
-        title: 'Wrist Stretch',
-        description: 'Stretch your wrists and forearms to reduce strain from typing.',
-        duration: '20s',
-        thumbnail: '/placeholder.svg?height=200&width=300',
-        category: 'Stretching'
-    },
-    {
-        id: 3,
-        title: 'Desk Squats',
-        description: 'Engage your legs and glutes with simple squats using your desk.',
-        duration: '40s',
-        thumbnail: '/placeholder.svg?height=200&width=300',
-        category: 'Lower Body'
-    },
-    {
-        id: 4,
-        title: 'Chair Twists',
-        description: 'Loosen up your spine and core with these seated twists.',
-        duration: '30s',
-        thumbnail: '/placeholder.svg?height=200&width=300',
-        category: 'Core'
-    },
-    {
-        id: 5,
-        title: 'Neck Stretches',
-        description: 'Gently stretch your neck to alleviate tension from sitting.',
-        duration: '40s',
-        thumbnail: '/placeholder.svg?height=200&width=300',
-        category: 'Stretching'
-    },
-    {
-        id: 6,
-        title: 'Neck Relaxer',
-        description: 'Relax your neck muscles and reduce stiffness with these simple rotations.',
-        duration: '40s',
-        thumbnail: '/placeholder.svg?height=200&width=300',
-        category: 'Stretching'
-    }
+const supabase = createClientComponentClient()
+
+function SkeletonCard() {
+    return (
+        <div className="rounded-lg shadow-sm bg-white p-4 animate-pulse">
+            <div className="relative w-full aspect-video bg-gray-200 mb-4" />
+            <div className="h-4 bg-gray-200 rounded w-3/5 mb-2" />
+            <div className="h-4 bg-gray-200 rounded w-4/5" />
+        </div>
+    )
+}
+
+interface Asset {
+    url: string
+    width: number
+    height: number
+    type: string
+}
+
+interface WistiaMedia {
+    id: number
+    name: string
+    description: string
+    duration: number
+    hashed_id: string
+    assets: Asset[]
+}
+
+const TAGS = [
+    "fuerza",
+    "miembro superior",
+    "miembro inferior",
+    "movilidad",
+    "core",
+    "cervicales",
+    "cardio",
 ]
 
-const categories = ['Upper Body', 'Lower Body', 'Core', 'Stretching']
-
 export default function ExerciseLibrary() {
-    const [activeCategory, setActiveCategory] = useState<string | null>(null)
+    const [exercises, setExercises] = useState<WistiaMedia[]>([])
+    const [loading, setLoading] = useState(true)
     const [showFavorites, setShowFavorites] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 6
+    const itemsPerPage = 10
+    const [showModal, setShowModal] = useState(false)
+    const [selectedHashedId, setSelectedHashedId] = useState<string | null>(null)
+    const [selectedTag, setSelectedTag] = useState<string | null>(null)
+    const [showTagList, setShowTagList] = useState(false)
+    const [favorites, setFavorites] = useState<Set<string>>(new Set())
+    const [error, setError] = useState<string | null>(null)
 
-    const filteredExercises = exercises.filter(exercise => {
-        const matchesCategory = !activeCategory || exercise.category === activeCategory
-        const matchesSearch =
-            exercise.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            exercise.description.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesCategory && matchesSearch
+    // Fetch exercises and favorites
+    useEffect(() => {
+        const initializeData = async () => {
+            try {
+                await fetchWistiaVideos()
+                await fetchUserFavorites()
+            } catch (err) {
+                setError('Failed to load initial data')
+            }
+        }
+        initializeData()
+    }, [])
+
+    // Fetch user favorites from Supabase
+    const fetchUserFavorites = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data, error } = await supabase
+            .from('exercise_favorites')
+            .select('video_hashed_id')
+            .eq('user_id', user.id)
+
+        if (error) {
+            setError('Failed to load favorites')
+            return
+        }
+
+        setFavorites(new Set(data.map((f: { video_hashed_id: any }) => f.video_hashed_id)))
+    }, [])
+
+    // Toggle favorite handler
+    const handleFavoriteToggle = async (hashedId: string) => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            setError('You must be logged in to save favorites')
+            return
+        }
+
+        try {
+            const isFavorite = favorites.has(hashedId)
+            const newFavorites = new Set(favorites)
+
+            // Optimistic update
+            if (isFavorite) {
+                newFavorites.delete(hashedId)
+            } else {
+                newFavorites.add(hashedId)
+            }
+            setFavorites(newFavorites)
+
+            // Database update
+            if (isFavorite) {
+                await supabase
+                    .from('exercise_favorites')
+                    .delete()
+                    .match({ user_id: user.id, video_hashed_id: hashedId })
+            } else {
+                await supabase
+                    .from('exercise_favorites')
+                    .insert({
+                        user_id: user.id,
+                        video_hashed_id: hashedId
+                    })
+            }
+        } catch (err) {
+            setError('Failed to update favorite')
+            await fetchUserFavorites() // Revert to actual state
+        }
+    }
+
+    // Fetch Wistia videos
+    async function fetchWistiaVideos(tag?: string | null) {
+        try {
+            setLoading(true)
+            let url = '/api/wistia'
+            if (tag) {
+                const params = new URLSearchParams()
+                params.set('tags', tag)
+                url += `?${params.toString()}`
+            }
+
+            const response = await fetch(url)
+            const data: WistiaMedia[] = await response.json()
+            setExercises(data)
+        } catch (err) {
+            console.error('Error fetching Wistia medias', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Handle tag selection
+    const handleTagSelection = (tag: string) => {
+        setCurrentPage(1)
+        setSelectedTag((prev) => {
+            if (prev === tag) {
+                fetchWistiaVideos(null)
+                return null
+            } else {
+                fetchWistiaVideos(tag)
+                return tag
+            }
+        })
+    }
+
+    // Filter exercises
+    const filteredExercises = exercises.filter((media) => {
+        const lowerQuery = searchQuery.toLowerCase()
+        const nameMatch = media.name.toLowerCase().includes(lowerQuery)
+        const descMatch = (media.description || '').toLowerCase().includes(lowerQuery)
+        const favoriteMatch = showFavorites ? favorites.has(media.hashed_id) : true
+
+        return nameMatch && descMatch && favoriteMatch
     })
 
+    // Pagination
     const totalPages = Math.ceil(filteredExercises.length / itemsPerPage)
     const currentExercises = filteredExercises.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     )
 
+    // Render page numbers
+    function renderPageNumbers() {
+        const pageLinksToShow = 5
+        let startPage = Math.max(currentPage - 2, 1)
+        let endPage = startPage + (pageLinksToShow - 1)
+
+        if (endPage > totalPages) {
+            endPage = totalPages
+            startPage = Math.max(endPage - (pageLinksToShow - 1), 1)
+        }
+
+        const pages = []
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i)
+        }
+
+        return (
+            <>
+                {pages.map((page) => (
+                    <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        onClick={() => setCurrentPage(page)}
+                    >
+                        {page}
+                    </Button>
+                ))}
+            </>
+        )
+    }
+
+    // Modal handlers
+    const handlePlay = (hashedId?: string) => {
+        if (!hashedId) return
+        setSelectedHashedId(hashedId)
+        setShowModal(true)
+    }
+
+    const closeModal = () => {
+        setShowModal(false)
+        setSelectedHashedId(null)
+    }
+
     return (
         <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <h1 className="text-3xl font-semibold text-gray-900 mb-6">Browse Exercises</h1>
 
-            {/* Search and Filters */}
+            {/* Error Display */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-4">
+                    <p className="text-red-700">{error}</p>
+                    <Button
+                        variant="ghost"
+                        className="mt-2"
+                        onClick={() => setError(null)}
+                    >
+                        Dismiss
+                    </Button>
+                </div>
+            )}
+
+            {/* Search + Favorites + Tags */}
             <div className="space-y-4 mb-6">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -95,76 +254,134 @@ export default function ExerciseLibrary() {
                         placeholder="Search..."
                         className="pl-9 w-full"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value)
+                            setCurrentPage(1)
+                        }}
                     />
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <div className="overflow-x-auto flex gap-2 snap-x snap-mandatory">
-                        {categories.map((category) => (
-                            <Button
-                                key={category}
-                                variant={activeCategory === category ? "default" : "outline"}
-                                className={cn(
-                                    "h-9 flex-shrink-0 snap-start",
-                                    activeCategory === category && "bg-[#8BC5B5] hover:bg-[#7AB4A4]"
-                                )}
-                                onClick={() =>
-                                    setActiveCategory(activeCategory === category ? null : category)
-                                }
-                            >
-                                {category}
-                            </Button>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Favorites</span>
+                    <Switch
+                        checked={showFavorites}
+                        onCheckedChange={(checked) => {
+                            setShowFavorites(checked)
+                            setCurrentPage(1)
+                        }}
+                    />
+
+                    {!showTagList && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowTagList(true)}
+                        >
+                            Tag
+                        </Button>
+                    )}
+                </div>
+
+                {showTagList && (
+                    <div className="bg-gray-50 rounded-md p-3">
+                        <h2 className="text-sm font-medium text-gray-700 mb-2">
+                            Select a Tag
+                        </h2>
+                        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300">
+                            {TAGS.map((tag) => {
+                                const isActive = selectedTag === tag
+                                return (
+                                    <button
+                                        key={tag}
+                                        onClick={() => handleTagSelection(tag)}
+                                        className={`
+                                            inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium
+                                            transition-colors border
+                                            ${isActive
+                                            ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                        }
+                                        `}
+                                    >
+                                        {tag}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Loading Skeleton */}
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <SkeletonCard key={i} />
+                    ))}
+                </div>
+            ) : (
+                <>
+                    {/* Exercise Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                        {currentExercises.map((media) => (
+                            <ExerciseCard
+                                key={media.id}
+                                title={media.name}
+                                description={media.description.replace(/(<([^>]+)>)/gi, "")}
+                                duration={`${Math.round(media.duration)}s`}
+                                assets={media.assets}
+                                hashedId={media.hashed_id}
+                                onPlay={handlePlay}
+                                isFavorite={favorites.has(media.hashed_id)}
+                                onFavoriteToggle={handleFavoriteToggle}
+                            />
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-2 sm:ml-auto">
-                        <span className="text-sm text-gray-600">Favorites</span>
-                        <Switch
-                            checked={showFavorites}
-                            onCheckedChange={setShowFavorites}
-                        />
-                    </div>
-                </div>
-            </div>
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+                            <p className="text-sm text-gray-900 hidden sm:block">
+                                Page {currentPage} of {totalPages}
+                            </p>
+                            <div className="flex gap-2 items-center">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    First
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Prev
+                                </Button>
+                                {renderPageNumbers()}
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Last
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
 
-            {/* Exercise Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {currentExercises.map((exercise) => (
-                    <ExerciseCard
-                        key={exercise.id}
-                        title={exercise.title}
-                        description={exercise.description}
-                        duration={exercise.duration}
-                        thumbnail={exercise.thumbnail}
-                    />
-                ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-                    <p className="text-sm text-gray-900 hidden sm:block">
-                        Page {currentPage} of {totalPages}
-                    </p>
-
-                    <div className="flex gap-2">
-                        <Button
-                            variant="default"
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                        >
-                            Previous
-                        </Button>
-                        <Button
-                            variant="default"
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
+            {/* Wistia Modal */}
+            {showModal && selectedHashedId && (
+                <WistiaModal hashedId={selectedHashedId} onClose={closeModal} />
             )}
         </div>
     )
