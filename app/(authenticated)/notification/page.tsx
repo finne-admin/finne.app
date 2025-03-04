@@ -60,23 +60,44 @@ export default function NotificationPage() {
         const { data: { user } } = await supabase.auth.getUser();
 
         try {
-            // Extract hash IDs from selectedExerciseData
-            const videoHashIds = selectedExerciseData.map(exercise => exercise.hashed_id);
+            // Get video hashes from selected exercises
+            const videoHashes = selectedExerciseData.map(ex => ex.hashed_id);
 
+            // Fetch tags through API
+            const tagsResponse = await fetch('/api/tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ video_hashes: videoHashes })
+            });
+
+            if (!tagsResponse.ok) {
+                const errorData = await tagsResponse.json();
+                throw new Error(errorData.error || 'Failed to fetch tags');
+            }
+
+            const { tags, errors } = await tagsResponse.json();
+
+            // Log any tag fetch errors
+            if (errors?.length) {
+                console.warn('Partial tag fetch errors:', errors);
+            }
+
+            // Save to Supabase
             const { error } = await supabase
                 .from('exercise_satisfaction')
                 .insert([{
                     user_id: user?.id ?? null,
-                    video_hash_ids: videoHashIds,
-                    satisfaction_level: level
+                    video_hash_ids: videoHashes,
+                    satisfaction_level: level,
+                    tags: tags
                 }]);
 
             if (error) throw error;
 
-            console.log('Feedback saved successfully');
+            console.log('Feedback saved successfully with tags:', tags);
 
-        } catch (err) {
-            setSubmitError('Failed to save feedback. Please try again.');
+        } catch (err : any) {
+            setSubmitError(err.message || 'Failed to save feedback');
             console.error('Submission error:', err);
         } finally {
             setIsSubmitting(false);
