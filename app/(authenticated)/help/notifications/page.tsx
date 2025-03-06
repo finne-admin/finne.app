@@ -9,15 +9,8 @@ import {
     Copy,
     Check,
     ChevronUp,
-    ChevronDown,
-    Share2,
-    Printer,
-    Moon,
-    Sun,
-    ArrowLeft,
+    ChevronDown
 } from "lucide-react"
-import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 
 export default function NotificationsHelpPage() {
     // State for tracking completed steps
@@ -28,11 +21,6 @@ export default function NotificationsHelpPage() {
     const [copiedText, setCopiedText] = useState<string | null>(null)
     // State for dark mode
     const [darkMode, setDarkMode] = useState(false)
-
-    // Get the section from URL query params
-    const searchParams = useSearchParams()
-    const highlightedSection = searchParams.get("section")
-
 
     // Toggle completed status of a step
     const toggleCompleted = (stepNumber: number) => {
@@ -65,46 +53,11 @@ export default function NotificationsHelpPage() {
             })
     }
 
-    // Toggle dark mode
-    const toggleDarkMode = () => {
-        setDarkMode(!darkMode)
-    }
-
-    // Share specific section
-    const shareSection = (sectionNumber: number) => {
-        if (typeof window !== "undefined") {
-            const url = `${window.location.origin}${window.location.pathname}?section=${sectionNumber}`
-
-            if (navigator.share) {
-                navigator
-                    .share({
-                        title: "Solución de Problemas con las Notificaciones | FINNE",
-                        text: `Consulta la sección ${sectionNumber} de la guía de solución de problemas de FINNE`,
-                        url: url,
-                    })
-                    .catch((err) => {
-                        console.error("Error sharing: ", err)
-                        // Fallback to copying the URL
-                        copyToClipboard(url, `URL de la sección ${sectionNumber}`)
-                    })
-            } else {
-                // Fallback to copying the URL
-                copyToClipboard(url, `URL de la sección ${sectionNumber}`)
-            }
-        }
-    }
-
-    // Print the page
-    const printPage = () => {
-        window.print()
-    }
-
     return (
         <div
             className={`transition-colors duration-300 ${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"}`}
         >
             <div className="container max-w-4xl py-8 px-4 sm:px-6 lg:px-8 mx-auto">
-
                 {/* Page title and introduction */}
                 <header className="mb-8">
                     <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold flex items-center gap-2 mb-3">
@@ -147,7 +100,7 @@ export default function NotificationsHelpPage() {
                                 : darkMode
                                     ? "bg-gray-800 border-gray-700"
                                     : "bg-white border-gray-100"
-                        } ${highlightedSection === "1" ? (darkMode ? "ring-2 ring-blue-500" : "ring-2 ring-blue-400") : ""}`}
+                        }`}
                     >
                         {/* Section header */}
                         <div
@@ -283,7 +236,7 @@ export default function NotificationsHelpPage() {
                                 : darkMode
                                     ? "bg-gray-800 border-gray-700"
                                     : "bg-white border-gray-100"
-                        } ${highlightedSection === "2" ? (darkMode ? "ring-2 ring-blue-500" : "ring-2 ring-blue-400") : ""}`}
+                        }`}
                     >
                         {/* Section header */}
                         <div
@@ -321,7 +274,6 @@ export default function NotificationsHelpPage() {
                             </div>
 
                             <div className="flex items-center gap-2">
-
                                 <button
                                     onClick={() => toggleExpanded(2)}
                                     className={`p-1.5 rounded-full md:hidden ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} transition-colors`}
@@ -388,7 +340,7 @@ export default function NotificationsHelpPage() {
                                 : darkMode
                                     ? "bg-gray-800 border-gray-700"
                                     : "bg-white border-gray-100"
-                        } ${highlightedSection === "3" ? (darkMode ? "ring-2 ring-blue-500" : "ring-2 ring-blue-400") : ""}`}
+                        }`}
                     >
                         {/* Section header */}
                         <div
@@ -544,7 +496,7 @@ export default function NotificationsHelpPage() {
                                 : darkMode
                                     ? "bg-gray-800 border-gray-700"
                                     : "bg-white border-gray-100"
-                        } ${highlightedSection === "4" ? (darkMode ? "ring-2 ring-blue-500" : "ring-2 ring-blue-400") : ""}`}
+                        }`}
                     >
                         {/* Section header */}
                         <div
