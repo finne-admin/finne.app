@@ -13,7 +13,7 @@ export default function AdminDashboard() {
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h1 className="text-2xl lg:text-3xl font-semibold text-gray-900">Admin Dashboard</h1>
+                <h1 className="text-2xl lg:text-3xl font-semibold text-gray-900">Panel de Administración</h1>
             </div>
 
             {/* Content Section */}
@@ -21,7 +21,7 @@ export default function AdminDashboard() {
                 {/* Employee Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Employee Table</CardTitle>
+                        <CardTitle>Tabla de Empleados</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <EmployeeTable />
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Activity Chart</CardTitle>
+                            <CardTitle>Gráfico de Actividad</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <ActivityChart />
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
                     </Card>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Engagement Chart</CardTitle>
+                            <CardTitle>Gráfico de Participación</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <EngagementChart />

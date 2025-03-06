@@ -68,7 +68,7 @@ export default function ExerciseLibrary() {
                 await fetchWistiaVideos()
                 await fetchUserFavorites()
             } catch (err) {
-                setError('Failed to load initial data')
+                setError('Error al cargar los datos iniciales')
             }
         }
         initializeData()
@@ -85,7 +85,7 @@ export default function ExerciseLibrary() {
             .eq('user_id', user.id)
 
         if (error) {
-            setError('Failed to load favorites')
+            setError('Error al cargar favoritos')
             return
         }
 
@@ -96,7 +96,7 @@ export default function ExerciseLibrary() {
     const handleFavoriteToggle = async (hashedId: string) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
-            setError('You must be logged in to save favorites')
+            setError('Debes iniciar sesión para guardar favoritos')
             return
         }
 
@@ -127,7 +127,7 @@ export default function ExerciseLibrary() {
                     })
             }
         } catch (err) {
-            setError('Failed to update favorite')
+            setError('Error al actualizar favorito')
             await fetchUserFavorites() // Revert to actual state
         }
     }
@@ -147,7 +147,7 @@ export default function ExerciseLibrary() {
             const data: WistiaMedia[] = await response.json()
             setExercises(data)
         } catch (err) {
-            console.error('Error fetching Wistia medias', err)
+            console.error('Error al obtener vídeos de Wistia', err)
         } finally {
             setLoading(false)
         }
@@ -229,7 +229,7 @@ export default function ExerciseLibrary() {
 
     return (
         <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-6">Browse Exercises</h1>
+            <h1 className="text-3xl font-semibold text-gray-900 mb-6">Explorar Ejercicios</h1>
 
             {/* Error Display */}
             {error && (
@@ -240,7 +240,7 @@ export default function ExerciseLibrary() {
                         className="mt-2"
                         onClick={() => setError(null)}
                     >
-                        Dismiss
+                        Descartar
                     </Button>
                 </div>
             )}
@@ -251,7 +251,7 @@ export default function ExerciseLibrary() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <Input
                         type="search"
-                        placeholder="Search..."
+                        placeholder="Buscar..."
                         className="pl-9 w-full"
                         value={searchQuery}
                         onChange={(e) => {
@@ -262,7 +262,7 @@ export default function ExerciseLibrary() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Favorites</span>
+                    <span className="text-sm text-gray-600">Favoritos</span>
                     <Switch
                         checked={showFavorites}
                         onCheckedChange={(checked) => {
@@ -276,7 +276,7 @@ export default function ExerciseLibrary() {
                             variant="outline"
                             onClick={() => setShowTagList(true)}
                         >
-                            Tag
+                            Etiqueta
                         </Button>
                     )}
                 </div>
@@ -284,7 +284,7 @@ export default function ExerciseLibrary() {
                 {showTagList && (
                     <div className="bg-gray-50 rounded-md p-3">
                         <h2 className="text-sm font-medium text-gray-700 mb-2">
-                            Select a Tag
+                            Seleccionar una Etiqueta
                         </h2>
                         <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300">
                             {TAGS.map((tag) => {
@@ -341,7 +341,7 @@ export default function ExerciseLibrary() {
                     {totalPages > 1 && (
                         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
                             <p className="text-sm text-gray-900 hidden sm:block">
-                                Page {currentPage} of {totalPages}
+                                Página {currentPage} de {totalPages}
                             </p>
                             <div className="flex gap-2 items-center">
                                 <Button
@@ -349,14 +349,14 @@ export default function ExerciseLibrary() {
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
                                 >
-                                    First
+                                    Primera
                                 </Button>
                                 <Button
                                     variant="outline"
                                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
                                 >
-                                    Prev
+                                    Anterior
                                 </Button>
                                 {renderPageNumbers()}
                                 <Button
@@ -364,14 +364,14 @@ export default function ExerciseLibrary() {
                                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                                     disabled={currentPage === totalPages}
                                 >
-                                    Next
+                                    Siguiente
                                 </Button>
                                 <Button
                                     variant="outline"
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages}
                                 >
-                                    Last
+                                    Última
                                 </Button>
                             </div>
                         </div>

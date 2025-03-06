@@ -46,12 +46,12 @@ export function StatisticsDashboard() {
             if (!user) return
 
             if (!user) {
-                setError("User not authenticated")
+                setError("Usuario no autenticado")
                 setIsLoading(false)
                 return
             }
             try {
-                console.log("Fetching exercise data...")
+                console.log("Obteniendo datos de ejercicios...")
 
                 // Get raw data from exercise_satisfaction table
                 const { data: rawData, error: rawError } = await supabase
@@ -59,20 +59,20 @@ export function StatisticsDashboard() {
                     .select("*")
                     .eq("user_id", user.id)
 
-                console.log("Raw exercise data:", rawData?.length ?? 0, "records")
+                console.log("Datos brutos de ejercicios:", rawData?.length ?? 0, "registros")
 
                 if (rawError) {
-                    throw new Error(`Failed to fetch exercise data: ${rawError.message}`)
+                    throw new Error(`Error al obtener datos de ejercicios: ${rawError.message}`)
                 }
 
                 if (!rawData || rawData.length === 0) {
-                    console.log("No exercise data found for user")
+                    console.log("No se encontraron datos de ejercicios para el usuario")
                     setData({
                         streaks: { current: 0, longest: 0 },
                         distribution: [],
                         totalExercises: 0,
                         avgSatisfaction: 0,
-                        message: "No exercise data found",
+                        message: "No se encontraron datos de ejercicios",
                     })
                     setIsLoading(false)
                     return
@@ -103,8 +103,8 @@ export function StatisticsDashboard() {
                     processedData: statisticsData,
                 })
             } catch (err) {
-                console.error("Error processing statistics:", err)
-                setError(err instanceof Error ? err.message : "An error occurred")
+                console.error("Error al procesar estadísticas:", err)
+                setError(err instanceof Error ? err.message : "Ha ocurrido un error")
                 setDebugInfo({ error: err })
             } finally {
                 setIsLoading(false)
@@ -229,7 +229,7 @@ export function StatisticsDashboard() {
         labels: data?.distribution.map((d) => d.tag) || [],
         datasets: [
             {
-                label: "Exercise Count",
+                label: "Número de Ejercicios",
                 data: data?.distribution.map((d) => d.exercise_count) || [],
                 backgroundColor: "#3b82f6",
                 borderRadius: 8,
@@ -250,7 +250,7 @@ export function StatisticsDashboard() {
                         const index = context.dataIndex
                         const count = data?.distribution[index]?.exercise_count ?? 0
                         const duration = data?.distribution[index]?.total_duration
-                        return `${count} exercises (${formatDuration(duration)} min)`
+                        return `${count} ejercicios (${formatDuration(duration)} min)`
                     },
                 },
             },
@@ -263,13 +263,13 @@ export function StatisticsDashboard() {
                 },
                 title: {
                     display: true,
-                    text: "Number of Exercises",
+                    text: "Número de Ejercicios",
                 },
             },
             x: {
                 title: {
                     display: true,
-                    text: "Exercise Category",
+                    text: "Categoría de Ejercicio",
                 },
             },
         },
@@ -279,7 +279,7 @@ export function StatisticsDashboard() {
     if (isLoading) {
         return (
             <div className="space-y-6 p-4">
-                <h1 className="text-2xl font-bold">Exercise Statistics</h1>
+                <h1 className="text-2xl font-bold">Estadísticas de Ejercicios</h1>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Skeleton className="h-32 w-full" />
                     <Skeleton className="h-32 w-full" />
@@ -293,10 +293,10 @@ export function StatisticsDashboard() {
     if (error) {
         return (
             <div className="p-4 bg-red-50 rounded-xl text-red-600">
-                <h1 className="text-2xl font-bold mb-4">Error Loading Statistics</h1>
+                <h1 className="text-2xl font-bold mb-4">Error al Cargar Estadísticas</h1>
                 <p>{error}</p>
                 <details className="mt-4">
-                    <summary className="cursor-pointer">Debug Information</summary>
+                    <summary className="cursor-pointer">Información de Depuración</summary>
                     <pre className="mt-2 p-2 bg-gray-100 overflow-auto max-h-40 text-xs">
             {JSON.stringify(debugInfo, null, 2)}
           </pre>
@@ -309,31 +309,31 @@ export function StatisticsDashboard() {
     if (!data || data.totalExercises === 0) {
         return (
             <div className="p-6 bg-blue-50 rounded-xl text-blue-600">
-                <h1 className="text-2xl font-bold mb-4">No Exercise Data Yet</h1>
-                <p>Complete some exercises to see your statistics here!</p>
+                <h1 className="text-2xl font-bold mb-4">Aún No Hay Datos de Ejercicios</h1>
+                <p>¡Completa algunos ejercicios para ver tus estadísticas aquí!</p>
             </div>
         )
     }
 
     return (
         <div className="space-y-6 p-4">
-            <h1 className="text-2xl font-bold">Exercise Statistics</h1>
+            <h1 className="text-2xl font-bold">Estadísticas de Ejercicios</h1>
 
             {/* Streak Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Current Streak</h2>
+                    <h2 className="text-lg font-semibold mb-2">Racha Actual</h2>
                     <div>
-                        <p className="text-3xl font-bold text-blue-600">{data.streaks.current} days</p>
-                        <p className="text-sm text-gray-500">Consecutive exercise days</p>
+                        <p className="text-3xl font-bold text-blue-600">{data.streaks.current} días</p>
+                        <p className="text-sm text-gray-500">Días consecutivos de ejercicio</p>
                     </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Longest Streak</h2>
+                    <h2 className="text-lg font-semibold mb-2">Racha Más Larga</h2>
                     <div>
-                        <p className="text-3xl font-bold text-green-600">{data.streaks.longest} days</p>
-                        <p className="text-sm text-gray-500">All-time record</p>
+                        <p className="text-3xl font-bold text-green-600">{data.streaks.longest} días</p>
+                        <p className="text-sm text-gray-500">Récord histórico</p>
                     </div>
                 </div>
             </div>
@@ -341,44 +341,44 @@ export function StatisticsDashboard() {
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Total Exercises</h2>
+                    <h2 className="text-lg font-semibold mb-2">Total de Ejercicios</h2>
                     <div>
                         <p className="text-3xl font-bold text-purple-600">{data.totalExercises}</p>
-                        <p className="text-sm text-gray-500">Completed exercises</p>
+                        <p className="text-sm text-gray-500">Ejercicios completados</p>
                     </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Average Satisfaction</h2>
+                    <h2 className="text-lg font-semibold mb-2">Satisfacción Media</h2>
                     <div>
                         <p className="text-3xl font-bold text-amber-600">{data.avgSatisfaction}/5</p>
-                        <p className="text-sm text-gray-500">How you felt after exercises</p>
+                        <p className="text-sm text-gray-500">Cómo te sentiste después de los ejercicios</p>
                     </div>
                 </div>
             </div>
 
             {/* Exercise Distribution Chart */}
             <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h2 className="text-lg font-semibold mb-4">Exercise Distribution</h2>
+                <h2 className="text-lg font-semibold mb-4">Distribución de Ejercicios</h2>
                 <div className="h-[400px]">
                     {data.distribution.length > 0 ? (
                         <Bar data={chartData} options={chartOptions} />
                     ) : (
-                        <div className="flex items-center justify-center h-full text-gray-500">No distribution data available</div>
+                        <div className="flex items-center justify-center h-full text-gray-500">No hay datos de distribución disponibles</div>
                     )}
                 </div>
-                <p className="text-sm text-gray-500 mt-4">Breakdown of exercises by muscle group/category</p>
+                <p className="text-sm text-gray-500 mt-4">Desglose de ejercicios por grupo muscular/categoría</p>
             </div>
 
             {/* Debug information */}
             <div className="mt-8 p-4 border border-gray-200 rounded-md bg-gray-50">
-                <h3 className="text-sm font-medium mb-2">Debug Information</h3>
+                <h3 className="text-sm font-medium mb-2">Información de Depuración</h3>
                 <div className="text-xs">
-                    <p>Total exercises: {data.totalExercises}</p>
-                    <p>Distribution items: {data.distribution.length}</p>
-                    {data.message && <p>Message: {data.message}</p>}
+                    <p>Total de ejercicios: {data.totalExercises}</p>
+                    <p>Elementos de distribución: {data.distribution.length}</p>
+                    {data.message && <p>Mensaje: {data.message}</p>}
                     <details>
-                        <summary>Raw response data</summary>
+                        <summary>Datos de respuesta en bruto</summary>
                         <pre className="mt-2 p-2 bg-gray-100 overflow-auto max-h-40">{JSON.stringify(debugInfo, null, 2)}</pre>
                     </details>
                 </div>
