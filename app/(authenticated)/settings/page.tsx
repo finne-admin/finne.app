@@ -4,7 +4,7 @@ import {useEffect, useState} from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import {Loader2, Pencil, Plus, Clock, X} from 'lucide-react'
+import { Loader2, Pencil, Plus, Clock, X } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -144,7 +144,7 @@ export default function SettingsPage() {
 
         // Validate new time
         if (!isValidEditedTime(newTimeStr, index)) {
-            toast.error('Time must be at least 15 minutes apart from other reminders');
+            toast.error('Los horarios deben estar separados al menos 15 minutos entre sí');
             return;
         }
 
@@ -181,10 +181,10 @@ export default function SettingsPage() {
             await savePreferences(preferences)
             setIsEditing(false)
             setOriginalPreferences(preferences)
-            toast.success('Exercise times saved successfully')
+            toast.success('Horarios de ejercicio guardados correctamente')
         } catch (error) {
-            console.error('Error saving times:', error)
-            toast.error('Failed to save exercise times')
+            console.error('Error al guardar horarios:', error)
+            toast.error('Error al guardar horarios de ejercicio')
         }
     }
 
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                     })
                 }
             } catch (error) {
-                console.error('Error getting user:', error)
+                console.error('Error al obtener usuario:', error)
             } finally {
                 setLoadingStates(prev => ({ ...prev, userInfo: false }))
             }
@@ -251,8 +251,8 @@ export default function SettingsPage() {
                     })
                 }
             } catch (error) {
-                console.error('Error fetching notification settings:', error)
-                toast.error('Failed to load notification settings')
+                console.error('Error al cargar configuración de notificaciones:', error)
+                toast.error('Error al cargar configuración de notificaciones')
             } finally {
                 setLoadingStates(prev => ({ ...prev, notifications: false }))
             }
@@ -274,7 +274,7 @@ export default function SettingsPage() {
             if (error) throw error
             setIsEditingName(false)
         } catch (error) {
-            console.error('Error updating user:', error)
+            console.error('Error al actualizar usuario:', error)
         } finally {
             setLoadingStates(prev => ({ ...prev, saveProfile: false }))
         }
@@ -304,10 +304,10 @@ export default function SettingsPage() {
             if (error) throw error
 
             setPreferences(newPrefs)
-            toast.success('Notification preferences saved')
+            toast.success('Preferencias de notificación guardadas')
         } catch (error) {
-            console.error('Error saving preferences:', error)
-            toast.error('Failed to save preferences')
+            console.error('Error al guardar preferencias:', error)
+            toast.error('Error al guardar preferencias')
         }
     }
 
@@ -324,19 +324,19 @@ export default function SettingsPage() {
 // Sample Data
     const favoriteExercises = [
         {
-            title: 'Seated Leg Lifts',
+            title: 'Elevaciones de piernas sentado',
             category: 'Core',
-            duration: '30 Seconds',
+            duration: '30 Segundos',
         },
         {
-            title: 'Neck Stretches',
-            category: 'Stretching',
-            duration: '30 Seconds',
+            title: 'Estiramientos de cuello',
+            category: 'Estiramiento',
+            duration: '30 Segundos',
         },
         {
-            title: 'Desk Push-ups',
-            category: 'Strength',
-            duration: '40 Seconds',
+            title: 'Flexiones en escritorio',
+            category: 'Fuerza',
+            duration: '40 Segundos',
         },
     ]
 
@@ -344,7 +344,7 @@ export default function SettingsPage() {
         <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
             {/* Personal Info Section */}
             <section>
-                <h2 className="text-2xl font-semibold mb-6 text-gray-900">Personal Info</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-900">Información Personal</h2>
                 <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-lg shadow-sm space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-4">
@@ -359,7 +359,7 @@ export default function SettingsPage() {
                                 <>
                                     <div className="space-y-2">
                                         <label htmlFor="first_name" className="text-sm font-medium text-gray-600">
-                                            First Name
+                                            Nombre
                                         </label>
                                         <Input
                                             id="first_name"
@@ -370,13 +370,13 @@ export default function SettingsPage() {
                                                 first_name: e.target.value
                                             }))}
                                             className="w-full transition-colors text-gray-900"
-                                            placeholder="Enter first name"
+                                            placeholder="Introduce tu nombre"
                                         />
                                     </div>
 
                                     <div className="space-y-2">
                                         <label htmlFor="last_name" className="text-sm font-medium text-gray-600">
-                                            Last Name
+                                            Apellidos
                                         </label>
                                         <Input
                                             id="last_name"
@@ -387,7 +387,7 @@ export default function SettingsPage() {
                                                 last_name: e.target.value
                                             }))}
                                             className="w-full transition-colors text-gray-900"
-                                            placeholder="Enter last name"
+                                            placeholder="Introduce tus apellidos"
                                         />
                                     </div>
                                 </>
@@ -406,7 +406,7 @@ export default function SettingsPage() {
                                 <>
                                     <div className="space-y-2">
                                         <label htmlFor="email" className="text-sm font-medium text-gray-600">
-                                            Email
+                                            Correo electrónico
                                         </label>
                                         <Input
                                             id="email"
@@ -419,7 +419,7 @@ export default function SettingsPage() {
 
                                     <div className="space-y-2">
                                         <label htmlFor="password" className="text-sm font-medium text-gray-600">
-                                            Password
+                                            Contraseña
                                         </label>
                                         <div className="flex flex-col sm:flex-row gap-3">
                                             <Input
@@ -434,7 +434,7 @@ export default function SettingsPage() {
                                                 onClick={handleChangePassword}
                                                 className="w-full sm:w-auto whitespace-nowrap"
                                             >
-                                                Change Password
+                                                Cambiar Contraseña
                                             </Button>
                                         </div>
                                     </div>
@@ -455,10 +455,10 @@ export default function SettingsPage() {
                                     {loadingStates.saveProfile ? (
                                         <span className="flex items-center gap-2">
                                            <Loader2 className="h-4 w-4 animate-spin"/>
-                                           Saving...
+                                           Guardando...
                                        </span>
                                     ) : (
-                                        'Save Changes'
+                                        'Guardar Cambios'
                                     )}
                                 </Button>
                                 <Button
@@ -466,7 +466,7 @@ export default function SettingsPage() {
                                     onClick={() => setIsEditingName(false)}
                                     className="w-full sm:w-auto"
                                 >
-                                    Cancel
+                                    Cancelar
                                 </Button>
                             </>
                         ) : (
@@ -475,7 +475,7 @@ export default function SettingsPage() {
                                 onClick={handleEditToggle}
                                 className="w-full sm:w-auto"
                             >
-                                Edit Name
+                                Editar Nombre
                             </Button>
                         )}
                     </div>
@@ -484,18 +484,18 @@ export default function SettingsPage() {
 
             {/* Exercise Preferences Section */}
             <section>
-                <h2 className="text-2xl font-semibold mb-6 text-gray-900">Exercise Preferences</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-900">Preferencias de Ejercicio</h2>
                 <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                     {/* Muscle Group */}
                     <div className="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 className="text-lg font-medium mb-2 text-gray-900">Muscle Group</h3>
+                        <h3 className="text-lg font-medium mb-2 text-gray-900">Grupo Muscular</h3>
                         <p className="text-sm text-gray-500 mb-6">
-                            Select their preferred muscle groups to focus on during exercises.
+                            Selecciona los grupos musculares preferidos para enfocarte durante los ejercicios.
                         </p>
                         <div className="space-y-4 text-gray-900">
                             <div className="flex items-center justify-between">
                                 <label htmlFor="upperBody" className="text-sm">
-                                    Upper Body
+                                    Parte Superior
                                 </label>
                                 <Switch
                                     id="upperBody"
@@ -507,7 +507,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="flex items-center justify-between">
                                 <label htmlFor="lowerBody" className="text-sm">
-                                    Lower Body
+                                    Parte Inferior
                                 </label>
                                 <Switch
                                     id="lowerBody"
@@ -519,7 +519,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="flex items-center justify-between">
                                 <label htmlFor="fullBody" className="text-sm">
-                                    Full Body
+                                    Cuerpo Completo
                                 </label>
                                 <Switch
                                     id="fullBody"
@@ -546,15 +546,15 @@ export default function SettingsPage() {
 
                     {/* Favorite Exercises List */}
                     <div className="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 className="text-lg font-medium mb-6 text-gray-900">Favorite Exercises List</h3>
+                        <h3 className="text-lg font-medium mb-6 text-gray-900">Lista de Ejercicios Favoritos</h3>
                         <div className="overflow-x-auto sm:overflow-visible">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Exercise Title</TableHead>
-                                        <TableHead>Category</TableHead>
-                                        <TableHead>Duration</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
+                                        <TableHead>Título del Ejercicio</TableHead>
+                                        <TableHead>Categoría</TableHead>
+                                        <TableHead>Duración</TableHead>
+                                        <TableHead className="text-right">Acción</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -569,7 +569,7 @@ export default function SettingsPage() {
                                                     size="sm"
                                                     className="text-red-500 hover:text-red-600 hover:bg-red-50"
                                                 >
-                                                    Remove
+                                                    Eliminar
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -584,7 +584,7 @@ export default function SettingsPage() {
             {/* Notification Settings Section */}
             <section>
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-semibold text-gray-900">Notification Settings</h2>
+                    <h2 className="text-2xl font-semibold text-gray-900">Configuración de Notificaciones</h2>
                     {!isEditing && (
                         <Button
                             variant="edit"
@@ -592,7 +592,7 @@ export default function SettingsPage() {
                             className="flex items-center gap-2"
                         >
                             <Pencil className="h-4 w-4" />
-                            Edit Times
+                            Editar Horarios
                         </Button>
                     )}
                 </div>
@@ -620,14 +620,14 @@ export default function SettingsPage() {
                         <>
                             <div className="mb-6">
                                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                    Exercise Reminder Times
+                                    Horarios de Recordatorio de Ejercicios
                                 </h3>
                                 <p className="text-sm text-gray-500">
                                     {isEditing
-                                        ? "Add or remove times when you'd like to be reminded to exercise. Times must be at least 15 minutes apart."
+                                        ? "Añade o elimina horarios en los que te gustaría recibir recordatorios para hacer ejercicio. Los horarios deben estar separados al menos 15 minutos entre sí."
                                         : preferences.active
-                                            ? "Your custom exercise reminder times are set."
-                                            : "Using default reminder times set by your administrator."
+                                            ? "Tus horarios personalizados de recordatorio de ejercicios están configurados."
+                                            : "Usando los horarios de recordatorio predeterminados establecidos por tu administrador."
                                     }
                                 </p>
                             </div>
@@ -681,14 +681,14 @@ export default function SettingsPage() {
                                                                     setEditMinute('');
                                                                 }}
                                                             >
-                                                                Cancel
+                                                                Cancelar
                                                             </Button>
                                                             <Button
                                                                 size="sm"
                                                                 onClick={() => handleSaveEditedTime(index)}
                                                                 className="bg-[#8BC5B5] hover:bg-[#7AB4A4] text-white"
                                                             >
-                                                                Save
+                                                                Guardar
                                                             </Button>
                                                         </div>
                                                     </div>
@@ -699,7 +699,7 @@ export default function SettingsPage() {
                                                             {format12Hour(time)}
                                                         </p>
                                                         <p className="text-sm text-gray-500">
-                                                            Exercise Reminder
+                                                            Recordatorio de Ejercicio
                                                         </p>
                                                     </div>
                                                 )}
@@ -734,7 +734,7 @@ export default function SettingsPage() {
                                             className="h-full min-h-[120px] rounded-lg border-2 border-dashed border-gray-200 hover:border-[#8BC5B5] flex items-center justify-center text-gray-500 hover:text-[#8BC5B5] transition-colors"
                                         >
                                             <Plus className="h-6 w-6 mr-2" />
-                                            Add Time
+                                            Añadir Horario
                                         </button>
                                     )}
                                 </div>
@@ -747,13 +747,13 @@ export default function SettingsPage() {
                                                 setIsEditing(false)
                                             }}
                                         >
-                                            Cancel
+                                            Cancelar
                                         </Button>
                                         <Button
                                             onClick={handleSaveTimes}
                                             className="bg-[#8BC5B5] hover:bg-[#7AB4A4]"
                                         >
-                                            Save Times
+                                            Guardar Horarios
                                         </Button>
                                     </div>
                                 )}
@@ -766,9 +766,9 @@ export default function SettingsPage() {
                 <Dialog open={isAddTimeOpen} onOpenChange={setIsAddTimeOpen}>
                     <DialogContent className="sm:max-w-[400px] bg-white">
                         <DialogHeader>
-                            <DialogTitle className={"text-gray-900"}>Add Exercise Time</DialogTitle>
+                            <DialogTitle className={"text-gray-900"}>Añadir Horario de Ejercicio</DialogTitle>
                             <DialogDescription className={"text-gray-700"}>
-                                Choose a time for your exercise reminder. Times must be at least 15 minutes apart.
+                                Elige un horario para tu recordatorio de ejercicio. Los horarios deben estar separados al menos 15 minutos entre sí.
                             </DialogDescription>
                         </DialogHeader>
 
@@ -776,7 +776,7 @@ export default function SettingsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700">
-                                        Hour
+                                        Hora
                                     </label>
                                     <select
                                         value={newHour}
@@ -792,7 +792,7 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700">
-                                        Minute
+                                        Minuto
                                     </label>
                                     <select
                                         value={newMinute}
@@ -814,13 +814,13 @@ export default function SettingsPage() {
                                 variant="cancel"
                                 onClick={() => setIsAddTimeOpen(false)}
                             >
-                                Cancel
+                                Cancelar
                             </Button>
                             <Button
                                 onClick={handleAddTime}
                                 disabled={!isValidNewTime()}
                             >
-                                Add Time
+                                Añadir Horario
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -831,20 +831,20 @@ export default function SettingsPage() {
                     <AlertDialogContent className="sm:max-w-[400px] bg-white">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="text-red-600">
-                                Remove Exercise Time
+                                Eliminar Horario de Ejercicio
                             </AlertDialogTitle>
                             <AlertDialogDescription>
                                 {deleteDialogOpen !== null && preferences.times[deleteDialogOpen] && (
                                     <div className="space-y-3">
                                         <p className={"text-gray-900"}>
-                                            Are you sure you want to remove this exercise reminder?
+                                            ¿Estás seguro de que quieres eliminar este recordatorio de ejercicio?
                                         </p>
                                         <div className="bg-gray-50 p-3 rounded-md">
                                             <p className="font-medium text-gray-900">
                                                 {format12Hour(preferences.times[deleteDialogOpen])}
                                             </p>
                                             <p className="text-sm text-gray-500">
-                                                This action cannot be undone.
+                                                Esta acción no se puede deshacer.
                                             </p>
                                         </div>
                                     </div>
@@ -853,7 +853,7 @@ export default function SettingsPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel onClick={() => setDeleteDialogOpen(null)}>
-                                Cancel
+                                Cancelar
                             </AlertDialogCancel>
                             <AlertDialogAction
                                 onClick={() => {
@@ -864,7 +864,7 @@ export default function SettingsPage() {
                                 }}
                                 className="bg-red-600 hover:bg-red-700 text-white"
                             >
-                                Remove Time
+                                Eliminar Horario
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

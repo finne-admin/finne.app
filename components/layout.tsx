@@ -3,21 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import React, { useState, useEffect, memo, useMemo } from 'react'
-import {
-  Bell,
-  Settings,
-  HelpCircle,
-  Menu,
-  BellDot,
-  Library,
-  BarChart2,
-  Award,
-  LayoutGrid,
-  LogOut,
-  Search,
-  X,
-  Loader2
-} from 'lucide-react'
+import { Bell, Settings, HelpCircle, Menu, BellDot, Library, BarChart2, Award, LayoutGrid, LogOut, Search, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -38,16 +24,16 @@ type MenuItem = {
 
 // Define menu items without 'as const'
 const regularMenuItems: MenuItem[] = [
-  { icon: BellDot, label: 'Exercise Notification', href: '/notification' },
-  { icon: Library, label: 'Exercise Library', href: '/library' },
-  { icon: BarChart2, label: 'Statistics', href: '/statistics' },
-  { icon: Settings, label: 'Account Settings', href: '/settings' },
-  { icon: Award, label: 'Tracking Milestones', href: '/milestones' },
+  { icon: BellDot, label: 'Pausa Activa', href: '/notification' },
+  { icon: Library, label: 'Biblioteca de Ejercicios', href: '/library' },
+  { icon: BarChart2, label: 'Estadísticas', href: '/statistics' },
+  { icon: Settings, label: 'Ajustes de Cuenta', href: '/settings' },
+  { icon: Award, label: 'Seguimiento de Logros', href: '/milestones' },
 ]
 
 const adminMenuItem: MenuItem = {
   icon: LayoutGrid,
-  label: 'Admin Dashboard',
+  label: 'Panel de Administrador',
   href: '/admin',
 }
 
@@ -129,12 +115,12 @@ const LogoutButton = memo(function LogoutButton() {
         {isLoading ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-              <span className="font-medium">Logging out...</span>
+              <span className="font-medium">Cerrando sesión...</span>
             </>
         ) : (
             <>
               <LogOut className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">Cerrar sesión</span>
             </>
         )}
       </Button>
@@ -149,7 +135,7 @@ const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[]
         <SheetHeader className="p-6 text-white border-b border-white/10">
           <SheetTitle className="flex items-center justify-between">
             <Image
-                src="/logoprincipalRecurso 4@4x.png"
+                src="/logonegativoRecurso.png"
                 alt="Finne Logo"
                 width={100}
                 height={40}
@@ -194,7 +180,7 @@ const Sidebar = memo(function Sidebar({ menuItems }: { menuItems: MenuItem[] }) 
       <div className="flex flex-col h-full w-full">
         <div className="p-6">
           <Image
-              src="/logoprincipalRecurso 4@4x.png"
+              src="/logonegativoRecurso.png"
               alt="Finne Logo"
               width={100}
               height={40}
@@ -235,7 +221,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Search className="absolute left-3 w-6 h-6 text-gray-500" aria-hidden="true" />
             <Input
                 type="search"
-                placeholder="Search..."
+                placeholder="Buscar..."
                 className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-full bg-gray-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#8BC5B5] focus-visible:border-transparent"
             />
           </div>
@@ -252,7 +238,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Bell className="h-6 w-6 text-gray-600" aria-hidden="true" />
           </Button>
           <Avatar className={cn("hover:bg-gray-200")}>
-            <AvatarImage src="/path-to-image.jpg" alt="User Name" />
+            <AvatarImage src="/path-to-image.jpg" alt="Nombre de Usuario" />
             <AvatarFallback>UN</AvatarFallback>
           </Avatar>
         </div>
@@ -268,7 +254,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="icon"
                 className="lg:hidden fixed left-2 top-2 z-50"
-                aria-label="Open menu"
+                aria-label="Abrir menú"
             >
               <Menu className="h-6 w-6" />
             </Button>
