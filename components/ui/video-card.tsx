@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Heart, Play, Check } from "lucide-react"
+import { Heart, Play, Check } from 'lucide-react'
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -72,8 +72,8 @@ export function VideoCard({
                 {thumbnail ? (
                     <>
                         <Image
-                            src={thumbnail.url}
-                            alt={`${title} thumbnail`}
+                            src={thumbnail.url || "/placeholder.svg"}
+                            alt={`Miniatura de ${title}`}
                             fill
                             className={cn(
                                 "object-cover w-full h-full transform transition-transform duration-300",
@@ -108,7 +108,7 @@ export function VideoCard({
                                 ? "text-red-500 bg-white/90 hover:bg-white"
                                 : "text-white bg-black/30 hover:bg-black/40"
                         )}
-                        aria-label={favorite ? "Remove favorite" : "Add favorite"}
+                        aria-label={favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
                     >
                         <Heart className={cn("w-4 h-4 transition-colors", favorite && "fill-current")} />
                     </button>
@@ -146,7 +146,7 @@ export function VideoCard({
                             : "bg-gray-100 text-gray-600 group-hover:bg-gray-200"
                     )}
                 >
-                    {isSelected ? "Selected" : "Select Video"}
+                    {isSelected ? "Seleccionado" : "Seleccionar Vídeo"}
                 </div>
             </div>
         </div>
