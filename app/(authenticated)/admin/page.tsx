@@ -1,9 +1,8 @@
 'use client'
 
 import { EmployeeTable } from '@/components/ui/data-table'
-import { ActivityChart } from '@/components/charts/activity-chart'
-import { EngagementChart } from '@/components/charts/engagement-chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmployeeAnalytics } from '@/components/employee-analytics'
 
 
 
@@ -29,24 +28,9 @@ export default function AdminDashboard() {
                 </Card>
 
                 {/* Charts Section */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Gráfico de Actividad</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ActivityChart />
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Gráfico de Participación</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <EngagementChart />
-                        </CardContent>
-                    </Card>
-                </div>
+                <section className="mt-12">
+                    <EmployeeAnalytics />
+                </section>
             </div>
         </div>
     )

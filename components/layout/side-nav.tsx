@@ -8,7 +8,7 @@ import { useState } from 'react'
 
 const navigation = [
   {
-    name: 'Notificación de Ejercicio',
+    name: 'Pausa Activa',
     href: '/notifications',
     icon: Bell
   },
