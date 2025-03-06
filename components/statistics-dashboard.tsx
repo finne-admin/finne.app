@@ -1,10 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Bar } from "react-chartjs-2"
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
 import { Skeleton } from "@/components/ui/skeleton"
-import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import {cn} from "@/lib/utils";
+import {ActivityIcon, ArrowDown01Icon, DumbbellIcon, FlameIcon, InfoIcon, SmileIcon, TrophyIcon} from "lucide-react";
+import {useRouter} from "next/navigation";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -12,7 +15,7 @@ interface ExerciseSatisfaction {
     id: string
     user_id: string
     video_hash_ids: string[]
-    video_tags: string[]
+    tags: string[] // Updated field name to match actual data structure
     satisfaction_level: number
     created_at: string
 }
@@ -33,6 +36,7 @@ interface StatisticsData {
 }
 
 export function StatisticsDashboard() {
+    const router = useRouter();
     const [data, setData] = useState<StatisticsData | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -42,15 +46,16 @@ export function StatisticsDashboard() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-
-            if (!user) {
-                setError("Usuario no autenticado")
-                setIsLoading(false)
-                return
-            }
             try {
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser()
+                if (!user) {
+                    setError("Usuario no autenticado")
+                    setIsLoading(false)
+                    return
+                }
+
                 console.log("Obteniendo datos de ejercicios...")
 
                 // Get raw data from exercise_satisfaction table
@@ -79,12 +84,14 @@ export function StatisticsDashboard() {
                 }
 
                 const exerciseData = rawData as ExerciseSatisfaction[]
+                console.log("Ejercicios:", exerciseData)
 
                 // Calculate streaks
                 const streaks = calculateStreaks(exerciseData)
 
                 // Calculate distribution
                 const distribution = calculateDistribution(exerciseData)
+                console.log("Distribución:", distribution)
 
                 // Calculate total exercises and satisfaction average
                 const totalExercises = exerciseData.length
@@ -99,7 +106,9 @@ export function StatisticsDashboard() {
 
                 setData(statisticsData)
                 setDebugInfo({
-                    rawData: exerciseData,
+                    sampleExercise: exerciseData[0],
+                    distributionData: distribution,
+                    distributionLength: distribution.length,
                     processedData: statisticsData,
                 })
             } catch (err) {
@@ -177,20 +186,32 @@ export function StatisticsDashboard() {
         }
     }
 
-    // Calculate distribution from exercise data
+    // Calculate distribution from exercise data - UPDATED to use the correct field name
     const calculateDistribution = (exerciseData: ExerciseSatisfaction[]) => {
         const tagCounts: Record<string, number> = {}
+        let totalTagsProcessed = 0
 
         // Count exercises per tag
         exerciseData.forEach((exercise) => {
-            if (exercise.video_tags && Array.isArray(exercise.video_tags)) {
-                exercise.video_tags.forEach((tag) => {
-                    if (tag) {
-                        tagCounts[tag] = (tagCounts[tag] || 0) + 1
+            // Use the correct field name: 'tags' instead of 'video_tags'
+            if (exercise.tags && Array.isArray(exercise.tags)) {
+                exercise.tags.forEach((tag) => {
+                    if (tag && tag.trim() !== "") {
+                        const normalizedTag = tag.trim()
+                        tagCounts[normalizedTag] = (tagCounts[normalizedTag] || 0) + 1
+                        totalTagsProcessed++
                     }
                 })
             }
         })
+
+        console.log(`Processed ${totalTagsProcessed} tags from ${exerciseData.length} exercises`)
+        console.log("Tag counts:", tagCounts)
+
+        // If no tags were found, create a default "Sin categoría" tag
+        if (Object.keys(tagCounts).length === 0) {
+            tagCounts["Sin categoría"] = exerciseData.length
+        }
 
         // Convert to array format
         return Object.entries(tagCounts).map(([tag, count]) => ({
@@ -278,110 +299,226 @@ export function StatisticsDashboard() {
     // Render loading state
     if (isLoading) {
         return (
-            <div className="space-y-6 p-4">
-                <h1 className="text-2xl font-bold">Estadísticas de Ejercicios</h1>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
+            <div className="space-y-6 p-4 max-w-6xl mx-auto">
+                <h1 className="text-2xl font-bold text-gray-900 animate-pulse">
+                    <Skeleton className="h-8 w-48" />
+                </h1>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <Skeleton className="h-6 w-32 mb-4" />
+                            <Skeleton className="h-8 w-full mb-2" />
+                            <Skeleton className="h-4 w-48" />
+                        </div>
+                    ))}
                 </div>
-                <Skeleton className="h-[400px] w-full" />
-            </div>
-        )
-    }
-
-    // Render error state
-    if (error) {
-        return (
-            <div className="p-4 bg-red-50 rounded-xl text-red-600">
-                <h1 className="text-2xl font-bold mb-4">Error al Cargar Estadísticas</h1>
-                <p>{error}</p>
-                <details className="mt-4">
-                    <summary className="cursor-pointer">Información de Depuración</summary>
-                    <pre className="mt-2 p-2 bg-gray-100 overflow-auto max-h-40 text-xs">
-            {JSON.stringify(debugInfo, null, 2)}
-          </pre>
-                </details>
+                <Skeleton className="h-[400px] w-full rounded-xl" />
             </div>
         )
     }
 
     // No data state
     if (!data || data.totalExercises === 0) {
+
         return (
-            <div className="p-6 bg-blue-50 rounded-xl text-blue-600">
-                <h1 className="text-2xl font-bold mb-4">Aún No Hay Datos de Ejercicios</h1>
-                <p>¡Completa algunos ejercicios para ver tus estadísticas aquí!</p>
+            <div className="p-8 bg-teal-50 rounded-2xl text-center max-w-2xl mx-auto border border-teal-100 shadow-sm">
+                <ActivityIcon className="h-16 w-16 mx-auto text-[#8AC5B5] mb-4" />
+                <h1 className="text-2xl font-bold mb-3 text-teal-800">
+                    ¡Comienza tu viaje de ejercicios!
+                </h1>
+                <p className="text-teal-600 mb-5 max-w-md mx-auto">
+                    Completa tu primera sesión para desbloquear estadísticas detalladas
+                </p>
+                <div className="space-y-4">
+                    <div className="animate-bounce">
+                        <ArrowDown01Icon className="h-8 w-8 mx-auto text-[#8AC5B5]" />
+                    </div>
+                    <button
+                        className="px-6 py-3 bg-[#8AC5B5] hover:bg-teal-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center mx-auto space-x-2 justify-center"
+                        onClick={() => router.push("/notification")}
+                    >
+                        <span>Iniciar Ejercicio</span>
+                    </button>
+                </div>
             </div>
         )
     }
+    // Function to generate visually distinct colors
+    const generateChartColors = (count: number): string[] => {
+        const baseColors = [
+            '#3b82f6', // blue
+            '#8AC5B5', // teal (your brand color)
+            '#f59e0b', // amber
+            '#10b981', // emerald
+            '#8b5cf6', // violet
+            '#ef4444', // red
+            '#ec4899', // pink
+            '#f97316', // orange
+            '#14b8a6', // teal
+            '#6366f1', // indigo
+        ];
+
+        // If we have more categories than base colors, we'll generate some
+        if (count <= baseColors.length) {
+            return baseColors.slice(0, count);
+        }
+
+        // Generate additional colors if needed
+        const colors = [...baseColors];
+        for (let i = baseColors.length; i < count; i++) {
+            const hue = (i * 137.5) % 360; // Use golden angle for even distribution
+            colors.push(`hsl(${hue}, 75%, 50%)`);
+        }
+
+        return colors;
+    };
 
     return (
-        <div className="space-y-6 p-4">
-            <h1 className="text-2xl font-bold">Estadísticas de Ejercicios</h1>
+        <div className="space-y-8 p-4 max-w-6xl mx-auto">
+            <h1 className="text-3xl font-bold text-gray-900 text-center md:text-left">
+                Estadísticas de Ejercicios
+            </h1>
 
-            {/* Streak Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Racha Actual</h2>
-                    <div>
-                        <p className="text-3xl font-bold text-blue-600">{data.streaks.current} días</p>
-                        <p className="text-sm text-gray-500">Días consecutivos de ejercicio</p>
-                    </div>
-                </div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                    title="Racha Actual"
+                    value={data.streaks.current}
+                    unit="días"
+                    color="text-blue-600"
+                    icon={<FlameIcon className="h-6 w-6" />}
+                    description="Días consecutivos de ejercicio"
+                />
 
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Racha Más Larga</h2>
-                    <div>
-                        <p className="text-3xl font-bold text-green-600">{data.streaks.longest} días</p>
-                        <p className="text-sm text-gray-500">Récord histórico</p>
-                    </div>
-                </div>
+                <StatCard
+                    title="Récord Personal"
+                    value={data.streaks.longest}
+                    unit="días"
+                    color="text-green-600"
+                    icon={<TrophyIcon className="h-6 w-6" />}
+                    description="Mejor racha histórica"
+                />
+
+                <StatCard
+                    title="Total Ejercicios"
+                    value={data.totalExercises}
+                    unit="sesiones"
+                    color="text-purple-600"
+                    icon={<DumbbellIcon className="h-6 w-6" />}
+                    description="Sesiones completadas"
+                />
+
+                <StatCard
+                    title="Satisfacción"
+                    value={data.avgSatisfaction}
+                    unit="/5"
+                    color="text-amber-600"
+                    icon={<SmileIcon className="h-6 w-6" />}
+                    description="Media de satisfacción"
+                />
             </div>
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Total de Ejercicios</h2>
-                    <div>
-                        <p className="text-3xl font-bold text-purple-600">{data.totalExercises}</p>
-                        <p className="text-sm text-gray-500">Ejercicios completados</p>
+            {/* Chart Section */}
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                        Distribución de Ejercicios
+                    </h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <InfoIcon className="h-4 w-4" />
+                        <span>Haz hover sobre las barras para más detalles</span>
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-2">Satisfacción Media</h2>
-                    <div>
-                        <p className="text-3xl font-bold text-amber-600">{data.avgSatisfaction}/5</p>
-                        <p className="text-sm text-gray-500">Cómo te sentiste después de los ejercicios</p>
-                    </div>
+                <div className="h-[400px] md:h-[500px] lg:h-[600px] relative">
+                    <Bar
+                        data={{
+                            labels: chartData.labels,
+                            datasets: [{
+                                label: "Número de Ejercicios",
+                                data: chartData.datasets[0].data,
+                                backgroundColor: generateChartColors(data.distribution.length),
+                                borderRadius: 8,
+                            }]
+                        }}
+                        options={{
+                            ...chartOptions,
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                ...chartOptions.scales,
+                                x: {
+                                    ...chartOptions.scales?.x,
+                                    ticks: {
+                                        autoSkip: true,
+                                        maxRotation: 45,
+                                        minRotation: 45,
+                                        font: {
+                                            size: window.innerWidth < 768 ? 10 : 12
+                                        }
+                                    }
+                                }
+                            }
+                        }}
+                    />
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-4 justify-center">
+                    {data.distribution.map((category, index) => {
+                        const colors = generateChartColors(data.distribution.length);
+                        return (
+                            <div
+                                key={category.tag}
+                                className="px-4 py-2 bg-gray-50 rounded-full flex items-center gap-2"
+                            >
+                    <span
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: colors[index] }}
+                    />
+                                <span className="text-sm font-medium text-gray-700">
+                        {category.tag}
+                    </span>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
+        </div>
+    )
+}
 
-            {/* Exercise Distribution Chart */}
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h2 className="text-lg font-semibold mb-4">Distribución de Ejercicios</h2>
-                <div className="h-[400px]">
-                    {data.distribution.length > 0 ? (
-                        <Bar data={chartData} options={chartOptions} />
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-gray-500">No hay datos de distribución disponibles</div>
-                    )}
+// New StatCard component
+function StatCard({
+                      title,
+                      value,
+                      unit,
+                      color,
+                      icon,
+                      description
+                  }: Readonly<{
+    title: string
+    value: number
+    unit: string
+    color: string
+    icon: React.ReactNode
+    description: string
+}>) {
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
+                <div className={cn("p-2 rounded-lg bg-opacity-20", color)}>
+                    {icon}
                 </div>
-                <p className="text-sm text-gray-500 mt-4">Desglose de ejercicios por grupo muscular/categoría</p>
             </div>
-
-            {/* Debug information */}
-            <div className="mt-8 p-4 border border-gray-200 rounded-md bg-gray-50">
-                <h3 className="text-sm font-medium mb-2">Información de Depuración</h3>
-                <div className="text-xs">
-                    <p>Total de ejercicios: {data.totalExercises}</p>
-                    <p>Elementos de distribución: {data.distribution.length}</p>
-                    {data.message && <p>Mensaje: {data.message}</p>}
-                    <details>
-                        <summary>Datos de respuesta en bruto</summary>
-                        <pre className="mt-2 p-2 bg-gray-100 overflow-auto max-h-40">{JSON.stringify(debugInfo, null, 2)}</pre>
-                    </details>
-                </div>
+            <div className="space-y-2">
+                <p className={cn("text-3xl font-bold", color)}>
+                    {value}
+                    <span className="text-lg font-medium text-gray-500 ml-1">
+                        {unit}
+                    </span>
+                </p>
+                <p className="text-sm text-gray-500">{description}</p>
             </div>
         </div>
     )
