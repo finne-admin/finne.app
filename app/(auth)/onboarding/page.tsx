@@ -41,12 +41,12 @@ export default function OnboardingPage() {
     const validateForm = (): boolean => {
         const errors: FormErrors = {}
 
-        if (!formData.firstName.trim()) errors.firstName = 'First name is required'
-        if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
-        if (!formData.password) errors.password = 'Password is required'
-        if (formData.password.length < 8) errors.password = 'Password must be at least 8 characters'
+        if (!formData.firstName.trim()) errors.firstName = 'El nombre es obligatorio'
+        if (!formData.lastName.trim()) errors.lastName = 'El apellido es obligatorio'
+        if (!formData.password) errors.password = 'La contraseña es obligatoria'
+        if (formData.password.length < 8) errors.password = 'La contraseña debe tener al menos 8 caracteres'
         if (formData.password !== formData.confirmPassword) {
-            errors.confirmPassword = 'Passwords do not match'
+            errors.confirmPassword = 'Las contraseñas no coinciden'
         }
 
         setFormErrors(errors)
@@ -93,9 +93,9 @@ export default function OnboardingPage() {
                     refresh_token,
                 }).then(({ data, error }) => {
                     if (error) {
-                        console.error("Error setting session:", error);
+                        console.error("Error al establecer la sesión:", error);
                     } else {
-                        console.log("Session set!", data);
+                        console.log("¡Sesión establecida!", data);
                     }
                 });
             }
@@ -113,8 +113,8 @@ export default function OnboardingPage() {
             if (userError) throw userError
 
             if (!user) {
-                // If user is null, we can’t continue
-                throw new Error('No user found. Please log in again.')
+                // If user is null, we can't continue
+                throw new Error('No se encontró ningún usuario. Por favor, inicia sesión de nuevo.')
             }
 
             // (b) Update Auth user (password + metadata)
@@ -143,7 +143,7 @@ export default function OnboardingPage() {
             // (d) Navigate to the next page
             router.push('/notification')
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred')
+            setError(err instanceof Error ? err.message : 'Ha ocurrido un error')
         } finally {
             setIsLoading(false)
         }
@@ -154,30 +154,30 @@ export default function OnboardingPage() {
                 <div className="relative w-32 h-12 mx-auto">
                     <Image
                         src="/logoprincipalRecurso 4@4x.png"
-                        alt="Finne Logo"
+                        alt="Logo de Finne"
                         fill
                         className="object-contain"
                         priority
                     />
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                    Complete Your Profile
+                    Completa Tu Perfil
                 </h2>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
                 <Card className="border-none shadow-lg">
                     <CardHeader>
-                        <CardTitle className="text-2xl text-center">Welcome to Finne</CardTitle>
+                        <CardTitle className="text-2xl text-center">Bienvenido a Finne</CardTitle>
                         <CardDescription className="text-center">
-                            Set up your account to get started
+                            Configura tu cuenta para empezar
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="firstName">First Name</Label>
+                                    <Label htmlFor="firstName">Nombre</Label>
                                     <Input
                                         id="firstName"
                                         value={formData.firstName}
@@ -190,7 +190,7 @@ export default function OnboardingPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="lastName">Last Name</Label>
+                                    <Label htmlFor="lastName">Apellido</Label>
                                     <Input
                                         id="lastName"
                                         value={formData.lastName}
@@ -204,7 +204,7 @@ export default function OnboardingPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
+                                <Label htmlFor="password">Contraseña</Label>
                                 <Input
                                     id="password"
                                     type="password"
@@ -218,7 +218,7 @@ export default function OnboardingPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
                                 <Input
                                     id="confirmPassword"
                                     type="password"
@@ -246,10 +246,10 @@ export default function OnboardingPage() {
                                 {isLoading ? (
                                     <div className="flex items-center justify-center">
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        <span>Setting up account...</span>
+                                        <span>Configurando cuenta...</span>
                                     </div>
                                 ) : (
-                                    'Complete Setup'
+                                    'Completar Configuración'
                                 )}
                             </Button>
                         </form>
