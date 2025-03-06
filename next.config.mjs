@@ -25,6 +25,15 @@ const nextConfig = {
     },
     images: {
         domains: ['embed-ssl.wistia.com', 'embed.wistia.com'],
+    },
+    async redirects() {
+        return [
+            {
+                source: "/",
+                destination: "/notification",
+                permanent: true, // Use true for 308 status code (permanent redirect), false for 307 (temporary)
+            },
+        ]
     }
 }
 
