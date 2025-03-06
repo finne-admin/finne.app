@@ -3,10 +3,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import React, { useState, useEffect, memo, useMemo } from 'react'
-import { Bell, Settings, HelpCircle, Menu, BellDot, Library, BarChart2, Award, LayoutGrid, LogOut, Search, X, Loader2 } from 'lucide-react'
+import { Bell, Settings, HelpCircle, Menu, BellDot, Library, BarChart2, Award, LayoutGrid, LogOut, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet'
 import { cn } from "@/lib/utils"
 import {usePathname, useRouter} from 'next/navigation'
@@ -217,30 +215,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const headerContent = useMemo(() => (
       <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
         <div className="flex-1 flex items-center max-w-xl ml-12 lg:ml-0">
-          <div className="relative w-full flex items-center">
-            <Search className="absolute left-3 w-6 h-6 text-gray-500" aria-hidden="true" />
-            <Input
-                type="search"
-                placeholder="Buscar..."
-                className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-full bg-gray-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#8BC5B5] focus-visible:border-transparent"
-            />
-          </div>
+          {/*<div className="relative w-full flex items-center">*/}
+          {/*  <Search className="absolute left-3 w-6 h-6 text-gray-500" aria-hidden="true" />*/}
+          {/*  <Input*/}
+          {/*      type="search"*/}
+          {/*      placeholder="Buscar..."*/}
+          {/*      className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-full bg-gray-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#8BC5B5] focus-visible:border-transparent"*/}
+          {/*  />*/}
+          {/*</div>*/}
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-gray-200">
             <HelpCircle className="h-6 w-6 text-gray-600" aria-hidden="true" />
           </Button>
-          <Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-gray-200">
-            <Settings className="h-6 w-6 text-gray-600" aria-hidden="true" />
-          </Button>
+          {/*<Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-gray-200">*/}
+          {/*  <Settings className="h-6 w-6 text-gray-600" aria-hidden="true" />*/}
+          {/*</Button>*/}
           <Button variant="ghost" size="icon" className="hover:bg-gray-200">
             <Bell className="h-6 w-6 text-gray-600" aria-hidden="true" />
           </Button>
-          <Avatar className={cn("hover:bg-gray-200")}>
-            <AvatarImage src="/path-to-image.jpg" alt="Nombre de Usuario" />
-            <AvatarFallback>UN</AvatarFallback>
-          </Avatar>
+          {/*<Avatar className={cn("hover:bg-gray-200")}>*/}
+          {/*  <AvatarImage src="/path-to-image.jpg" alt="Nombre de Usuario" />*/}
+          {/*  <AvatarFallback>UN</AvatarFallback>*/}
+          {/*</Avatar>*/}
         </div>
       </header>
   ), [])
