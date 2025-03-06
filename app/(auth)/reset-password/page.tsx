@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
 
     const validatePassword = (password: string) => {
         if (password.length < 8) {
-            return 'Password must be at least 8 characters long'
+            return 'La contraseña debe tener al menos 8 caracteres'
         }
         return null
     }
@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
         }
 
         if (password !== confirmPassword) {
-            updateFormState({ errorMessage: 'Passwords do not match' })
+            updateFormState({ errorMessage: 'Las contraseñas no coinciden' })
             return
         }
 
@@ -84,15 +84,15 @@ export default function ResetPasswordPage() {
             if (error) throw error
 
             updateFormState({
-                successMessage: 'Password reset successful! Redirecting to login in 5 seconds...',
+                successMessage: '¡Contraseña restablecida con éxito! Redirigiendo al inicio de sesión en 5 segundos...',
                 password: '',
                 confirmPassword: ''
             })
             startRedirectCountdown()
         } catch (error: any) {
-            console.error('Reset password error:', error)
+            console.error('Error al restablecer contraseña:', error)
             updateFormState({
-                errorMessage: error.message || 'Failed to reset password'
+                errorMessage: error.message || 'Error al restablecer la contraseña'
             })
         } finally {
             updateFormState({ isLoading: false })
@@ -118,10 +118,10 @@ export default function ResetPasswordPage() {
                         priority
                     />
                     <h1 className="text-2xl md:text-3xl font-semibold text-white mb-4">
-                        Reset Your Password
+                        Restablece Tu Contraseña
                     </h1>
                     <p className="text-white/90 text-base md:text-lg leading-relaxed">
-                        Create a new secure password for your account.
+                        Crea una nueva contraseña segura para tu cuenta.
                     </p>
                 </div>
                 {/* Waves */}
@@ -159,10 +159,10 @@ export default function ResetPasswordPage() {
                         </div>
 
                         <h2 className="text-2xl sm:text-3xl font-semibold text-[#8BC5B5] mb-4 text-center">
-                            Reset Password
+                            Restablecer Contraseña
                         </h2>
                         <p className="text-gray-600 text-center mb-6">
-                            Please enter your new password.
+                            Por favor, introduce tu nueva contraseña.
                         </p>
 
                         {errorMessage && (
@@ -182,7 +182,7 @@ export default function ResetPasswordPage() {
                         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                             <div className="space-y-2">
                                 <label htmlFor="password" className="text-sm text-gray-700">
-                                    New Password
+                                    Nueva Contraseña
                                 </label>
                                 <div className="relative">
                                     <Input
@@ -190,7 +190,7 @@ export default function ResetPasswordPage() {
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={e => updateFormState({ password: e.target.value, errorMessage: '' })}
-                                        placeholder="Enter your new password"
+                                        placeholder="Introduce tu nueva contraseña"
                                         required
                                         className="w-full pr-10"
                                         disabled={isLoading || !!successMessage}
@@ -199,7 +199,7 @@ export default function ResetPasswordPage() {
                                         type="button"
                                         onClick={() => updateFormState({ showPassword: !showPassword })}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                                     >
                                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </button>
@@ -208,7 +208,7 @@ export default function ResetPasswordPage() {
 
                             <div className="space-y-2">
                                 <label htmlFor="confirmPassword" className="text-sm text-gray-700">
-                                    Confirm New Password
+                                    Confirmar Nueva Contraseña
                                 </label>
                                 <div className="relative">
                                     <Input
@@ -216,7 +216,7 @@ export default function ResetPasswordPage() {
                                         type={showConfirmPassword ? "text" : "password"}
                                         value={confirmPassword}
                                         onChange={e => updateFormState({ confirmPassword: e.target.value, errorMessage: '' })}
-                                        placeholder="Confirm your new password"
+                                        placeholder="Confirma tu nueva contraseña"
                                         required
                                         className="w-full pr-10"
                                         disabled={isLoading || !!successMessage}
@@ -225,7 +225,7 @@ export default function ResetPasswordPage() {
                                         type="button"
                                         onClick={() => updateFormState({ showConfirmPassword: !showConfirmPassword })}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                        aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                                     >
                                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </button>
@@ -240,10 +240,10 @@ export default function ResetPasswordPage() {
                                 {isLoading ? (
                                     <div className="flex items-center justify-center">
                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                                        Resetting Password...
+                                        Restableciendo Contraseña...
                                     </div>
                                 ) : (
-                                    'Reset Password'
+                                    'Restablecer Contraseña'
                                 )}
                             </Button>
                         </form>
@@ -253,7 +253,7 @@ export default function ResetPasswordPage() {
                                 href="/login"
                                 className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
                             >
-                                Back to Login
+                                Volver al Inicio de Sesión
                             </Link>
                         </div>
                     </div>

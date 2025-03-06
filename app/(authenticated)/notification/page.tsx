@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { VideoCard } from "@/components/ui/video-card"
 import { Button } from "@/components/ui/button"
-import {AlertCircle, Loader2} from "lucide-react"
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import Confetti from "react-confetti"
 import { WistiaModalNotification } from "@/components/wistia-modal/wistia-modal-notification"
@@ -72,14 +72,14 @@ export default function NotificationPage() {
 
             if (!tagsResponse.ok) {
                 const errorData = await tagsResponse.json();
-                throw new Error(errorData.error || 'Failed to fetch tags');
+                throw new Error(errorData.error || 'Error al obtener etiquetas');
             }
 
             const { tags, errors } = await tagsResponse.json();
 
             // Log any tag fetch errors
             if (errors?.length) {
-                console.warn('Partial tag fetch errors:', errors);
+                console.warn('Errores parciales al obtener etiquetas:', errors);
             }
 
             // Save to Supabase
@@ -94,11 +94,11 @@ export default function NotificationPage() {
 
             if (error) throw error;
 
-            console.log('Feedback saved successfully with tags:', tags);
+            console.log('Comentarios guardados correctamente con etiquetas:', tags);
 
         } catch (err : any) {
-            setSubmitError(err.message || 'Failed to save feedback');
-            console.error('Submission error:', err);
+            setSubmitError(err.message || 'Error al guardar comentarios');
+            console.error('Error de envío:', err);
         } finally {
             setIsSubmitting(false);
         }
@@ -107,11 +107,11 @@ export default function NotificationPage() {
         const fetchData = async () => {
             try {
                 const res = await fetch("/api/wistia")
-                if (!res.ok) throw new Error("Failed to fetch videos")
+                if (!res.ok) throw new Error("Error al obtener vídeos")
                 const data: WistiaMedia[] = await res.json()
                 setAllVideos(data)
             } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to load exercises")
+                setError(err instanceof Error ? err.message : "Error al cargar ejercicios")
             } finally {
                 setIsLoading(false)
             }
@@ -169,7 +169,7 @@ export default function NotificationPage() {
     }
 
     const handleVideoEnd = () => {
-        console.log("Video ended, current step:", currentStep)
+        console.log("Vídeo finalizado, paso actual:", currentStep)
         if (currentStep === "video1") {
             setCurrentStep("countdown")
         } else if (currentStep === "video2") {
@@ -213,10 +213,10 @@ export default function NotificationPage() {
                 <div className="space-y-6">
                     <div className="text-center">
                         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
-                            Choose Your Exercises
+                            Elige tus Ejercicios
                         </h1>
                         <p className="mt-2 text-sm text-gray-600">
-                            Pick exactly two exercises to begin your session
+                            Selecciona exactamente dos ejercicios para comenzar tu sesión
                         </p>
                     </div>
 
@@ -228,7 +228,7 @@ export default function NotificationPage() {
                         <LoadingSkeleton />
                     ) : exercises.length === 0 ? (
                         <div className="text-center p-6 bg-yellow-50 rounded-lg">
-                            <p className="text-yellow-700">No exercises available</p>
+                            <p className="text-yellow-700">No hay ejercicios disponibles</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -254,8 +254,8 @@ export default function NotificationPage() {
                             <AlertCircle className="w-4 h-4 flex-shrink-0" />
                             <span>
                 {selectedVideos.length === maxSelections
-                    ? "Great! You're ready to start."
-                    : `Select ${maxSelections - selectedVideos.length} more to continue`}
+                    ? "¡Genial! Estás listo para empezar."
+                    : `Selecciona ${maxSelections - selectedVideos.length} más para continuar`}
               </span>
                         </div>
                     )}
@@ -277,7 +277,7 @@ export default function NotificationPage() {
                                 {isStarting ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
                                 ) : (
-                                    "Start Session"
+                                    "Iniciar Ejercicios"
                                 )}
                             </Button>
                         </div>
@@ -309,7 +309,7 @@ export default function NotificationPage() {
             {currentStep === "satisfaction" && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
                     <div className="bg-white p-8 rounded-xl text-center text-gray-900 max-w-md w-full">
-                        <h2 className="text-2xl font-bold mb-4">How did you feel about the exercise?</h2>
+                        <h2 className="text-2xl font-bold mb-4">¿Cómo te has sentido con el ejercicio?</h2>
 
                         {submitError && (
                             <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg">
@@ -328,7 +328,7 @@ export default function NotificationPage() {
                                         "disabled:opacity-50 disabled:cursor-not-allowed",
                                         chosenEmoji === emoji ? "scale-125" : "scale-100"
                                     )}
-                                    aria-label={`Rate ${index + 1} out of 5`}
+                                    aria-label={`Valorar ${index + 1} de 5`}
                                 >
                                     {emoji}
                                 </button>
@@ -338,12 +338,12 @@ export default function NotificationPage() {
                         {isSubmitting && (
                             <div className="mt-4 flex items-center justify-center gap-2 text-gray-600">
                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                <span>Saving your feedback...</span>
+                                <span>Guardando tu valoración...</span>
                             </div>
                         )}
 
                         <p className="mt-6 text-sm text-gray-500">
-                            Your feedback helps improve future sessions
+                            Tu opinión ayuda a mejorar futuras sesiones
                         </p>
                     </div>
                 </div>
@@ -352,10 +352,10 @@ export default function NotificationPage() {
             {currentStep === "end" && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
                     <div className="bg-white p-8 rounded-lg text-center">
-                        <h2 className="text-xl font-semibold mb-4">Thank you!</h2>
+                        <h2 className="text-xl font-semibold mb-4">¡Gracias!</h2>
                         {chosenEmoji && <p className="text-3xl mb-4">{chosenEmoji}</p>}
-                        <p className="text-gray-600 mb-4">We appreciate your feedback.</p>
-                        <Button onClick={closeModal}>Close</Button>
+                        <p className="text-gray-600 mb-4">Agradecemos tu valoración.</p>
+                        <Button onClick={closeModal}>Cerrar</Button>
                     </div>
                 </div>
             )}

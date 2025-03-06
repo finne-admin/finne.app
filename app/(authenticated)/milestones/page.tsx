@@ -9,7 +9,7 @@ export default function TrackingMilestonesPage() {
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 space-y-8">
             {/* Achieved Milestones Section */}
             <section>
-                <h2 className="text-2xl lg:text-3xl font-semibold mb-6 text-gray-900">Achieved Milestones</h2>
+                <h2 className="text-2xl lg:text-3xl font-semibold mb-6 text-gray-900">Logros Conseguidos</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <MilestoneCard
                         icon={
@@ -17,8 +17,8 @@ export default function TrackingMilestonesPage() {
                                 <Award className="w-6 h-6 text-yellow-600" />
                             </div>
                         }
-                        title="10 Sessions Completed"
-                        description="You've completed 10 exercise sessions! Keep it going!"
+                        title="10 Sesiones Completadas"
+                        description="¡Has completado 10 sesiones de ejercicio! ¡Sigue así!"
                     />
                     <MilestoneCard
                         icon={
@@ -26,8 +26,8 @@ export default function TrackingMilestonesPage() {
                                 <Flame className="w-6 h-6 text-orange-600" />
                             </div>
                         }
-                        title="7-Day Streak"
-                        description="You've exercised for 7 consecutive days. Fantastic effort!"
+                        title="Racha de 7 Días"
+                        description="Has hecho ejercicio durante 7 días consecutivos. ¡Esfuerzo fantástico!"
                     />
                     <MilestoneCard
                         icon={
@@ -35,8 +35,8 @@ export default function TrackingMilestonesPage() {
                                 <Clock className="w-6 h-6 text-blue-600" />
                             </div>
                         }
-                        title="100 Minutes of Exercise"
-                        description="You've dedicated 100 minutes to your health. Amazing work!"
+                        title="100 Minutos de Ejercicio"
+                        description="Has dedicado 100 minutos a tu salud. ¡Trabajo increíble!"
                     />
                     <MilestoneCard
                         icon={
@@ -44,8 +44,8 @@ export default function TrackingMilestonesPage() {
                                 <Dumbbell className="w-6 h-6 text-purple-600" />
                             </div>
                         }
-                        title="First Core Strength Session"
-                        description="You've completed your first core strength workout. Keep building!"
+                        title="Primera Sesión de Fuerza Core"
+                        description="Has completado tu primera sesión de fuerza core. ¡Sigue construyendo!"
                     />
                     <MilestoneCard
                         icon={
@@ -53,18 +53,18 @@ export default function TrackingMilestonesPage() {
                                 <Star className="w-6 h-6 text-pink-600" />
                             </div>
                         }
-                        title="Favorite 5 Exercises"
-                        description="You've saved 5 exercises as favorites. Keep exploring!"
+                        title="5 Ejercicios Favoritos"
+                        description="Has guardado 5 ejercicios como favoritos. ¡Sigue explorando!"
                     />
                 </div>
             </section>
 
             {/* Next Milestone Section */}
             <section className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
-                <h2 className="text-2xl lg:text-3xl font-semibold mb-6 text-gray-900">Next Milestone</h2>
+                <h2 className="text-2xl lg:text-3xl font-semibold mb-6 text-gray-900">Próximo Logro</h2>
                 <div>
                     <p className="text-gray-600 mb-4 text-sm lg:text-base">
-                        5 more sessions to reach 20 total exercises.
+                        5 sesiones más para alcanzar 20 ejercicios en total.
                     </p>
                     <Progress value={75} className="h-4 sm:h-6" />
                     <p className="text-right text-sm text-gray-500 mt-2">75%</p>

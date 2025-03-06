@@ -66,12 +66,12 @@ export default function ForgotPasswordPage() {
         const { email } = formState
 
         if (!email.trim()) {
-            updateFormState({ errorMessage: 'Email is required' })
+            updateFormState({ errorMessage: 'El email es obligatorio' })
             return
         }
 
         if (!validateEmail(email)) {
-            updateFormState({ errorMessage: 'Please enter a valid email address' })
+            updateFormState({ errorMessage: 'Por favor, introduce una dirección de email válida' })
             return
         }
 
@@ -85,15 +85,15 @@ export default function ForgotPasswordPage() {
             if (error) throw error
 
             updateFormState({
-                successMessage: 'Password reset email sent! Redirecting to login in 5 seconds...',
+                successMessage: 'Email de restablecimiento enviado. Redirigiendo al inicio de sesión en 5 segundos...',
                 email: '' // Clear email after success
             })
             startRedirectCountdown()
         } catch (error: any) {
-            console.error('Reset password error:', error)
+            console.error('Error de restablecimiento de contraseña:', error)
             const errorMessage = error.status === 429
-                ? 'Too many requests. Please try again later.'
-                : error.message || 'Failed to send reset email'
+                ? 'Demasiadas solicitudes. Por favor, inténtalo más tarde.'
+                : error.message || 'Error al enviar el email de restablecimiento'
             updateFormState({ errorMessage })
         } finally {
             updateFormState({ isLoading: false })
@@ -108,18 +108,18 @@ export default function ForgotPasswordPage() {
             <div className="hidden lg:flex lg:w-1/3 xl:w-1/4 bg-gradient-to-b from-[#8BC5B5] to-[#5B9B8B] p-8 items-center justify-center relative overflow-hidden">
                 <div className="max-w-md text-center z-10">
                     <Image
-                        src="/logoprincipalRecurso 4@4x.png"
-                        alt="Finne Logo"
+                        src="/logonegativoRecurso.png"
+                        alt="Logo de Finne"
                         width={140}
                         height={60}
                         className="mx-auto mb-8 max-w-full h-auto"
                         priority
                     />
                     <h1 className="text-2xl md:text-3xl font-semibold text-white mb-4">
-                        Forgot Your Password?
+                        ¿Has olvidado tu contraseña?
                     </h1>
                     <p className="text-white/90 text-base md:text-lg leading-relaxed">
-                        Don&#39;t worry! We&#39;ll help you reset it in no time.
+                        ¡No te preocupes! Te ayudaremos a restablecerla en un momento.
                     </p>
                 </div>
                 {/* Waves background */}
@@ -148,7 +148,7 @@ export default function ForgotPasswordPage() {
                         <div className="lg:hidden mb-8 text-center">
                             <Image
                                 src="/logoprincipalRecurso 4@4x.png"
-                                alt="Finne Logo"
+                                alt="Logo de Finne"
                                 width={140}
                                 height={60}
                                 className="mx-auto max-w-full h-auto"
@@ -157,10 +157,10 @@ export default function ForgotPasswordPage() {
                         </div>
 
                         <h2 className="text-2xl sm:text-3xl font-semibold text-[#8BC5B5] mb-4 text-center">
-                            Forgot Password
+                            Contraseña Olvidada
                         </h2>
                         <p className="text-gray-600 text-center mb-6">
-                            Enter your email address to reset your password.
+                            Introduce tu dirección de email para restablecer tu contraseña.
                         </p>
 
                         {errorMessage && (
@@ -186,7 +186,7 @@ export default function ForgotPasswordPage() {
                                     id="email"
                                     name="email"
                                     type="email"
-                                    placeholder="Enter your email address"
+                                    placeholder="Introduce tu dirección de email"
                                     value={email}
                                     onChange={handleEmailChange}
                                     required
@@ -206,21 +206,21 @@ export default function ForgotPasswordPage() {
                                 {isLoading ? (
                                     <div className="flex items-center justify-center">
                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                                        Sending Email...
+                                        Enviando Email...
                                     </div>
                                 ) : (
-                                    'Send Reset Link'
+                                    'Enviar Enlace de Restablecimiento'
                                 )}
                             </Button>
                         </form>
 
                         <div className="mt-6 text-center">
-                            <span className="text-gray-600">Remember your password? </span>
+                            <span className="text-gray-600">¿Recuerdas tu contraseña? </span>
                             <Link
                                 href="/login"
                                 className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
                             >
-                                Login
+                                Iniciar Sesión
                             </Link>
                         </div>
                     </div>
