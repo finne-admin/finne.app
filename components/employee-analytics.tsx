@@ -8,7 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, Filter, RefreshCw, Users, Tag, Calendar, TrendingUp, Award, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+    Download,
+    Filter,
+    RefreshCw,
+    Users,
+    Tag,
+    Calendar,
+    TrendingUp,
+    Award,
+    AlertCircle,
+    ChevronDown,
+    ChevronUp,
+} from "lucide-react"
 import { Bar, Line } from "react-chartjs-2"
 import {
     Chart as ChartJS,
@@ -75,6 +87,7 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
     const [userData, setUserData] = useState<UserProfile[]>([])
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [isFilterExpanded, setIsFilterExpanded] = useState(false)
+    const [windowWidth, setWindowWidth] = useState(0)
 
     const supabase = createClientComponentClient()
 
@@ -119,6 +132,18 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
 
         fetchData()
     }, [supabase, isRefreshing])
+
+    // Set window width on client side only
+    useEffect(() => {
+        setWindowWidth(window.innerWidth)
+
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth)
+        }
+
+        window.addEventListener("resize", handleResize)
+        return () => window.removeEventListener("resize", handleResize)
+    }, [])
 
     // Filter data based on selected filters
     const filteredExerciseData = useMemo(() => {
@@ -297,13 +322,6 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
         }
     }, [filteredExerciseData, userData, availableTags])
 
-    // Get top 5 tags by participation for pie chart
-    const topTags = useMemo(() => {
-        return Object.entries(analyticsData.tagParticipation)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-    }, [analyticsData.tagParticipation])
-
     // Prepare chart data
     const tagParticipationChartData = {
         labels: Object.keys(analyticsData.tagParticipation),
@@ -332,30 +350,6 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
         ],
     }
 
-    const tagPieChartData = {
-        labels: topTags.map(([tag]) => tag),
-        datasets: [
-            {
-                data: topTags.map(([_, count]) => count),
-                backgroundColor: [
-                    "rgba(54, 162, 235, 0.7)",
-                    "rgba(255, 99, 132, 0.7)",
-                    "rgba(255, 206, 86, 0.7)",
-                    "rgba(75, 192, 192, 0.7)",
-                    "rgba(153, 102, 255, 0.7)",
-                ],
-                borderColor: [
-                    "rgba(54, 162, 235, 1)",
-                    "rgba(255, 99, 132, 1)",
-                    "rgba(255, 206, 86, 1)",
-                    "rgba(75, 192, 192, 1)",
-                    "rgba(153, 102, 255, 1)",
-                ],
-                borderWidth: 1,
-            },
-        ],
-    }
-
     const satisfactionByTagChartData = {
         labels: Object.keys(analyticsData.satisfactionByTag),
         datasets: [
@@ -373,8 +367,6 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
     const sortedDates = Object.keys(analyticsData.participationTrend).sort(
         (a, b) => new Date(a).getTime() - new Date(b).getTime(),
     )
-
-    console.log('sortedDates', sortedDates)
 
     const trendChartData = {
         labels: sortedDates.map((date) => {
@@ -415,7 +407,7 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
         plugins: {
             legend: {
                 position: "top" as const,
-                display: window.innerWidth > 640, // Hide legend on small screens
+                display: windowWidth > 640, // Hide legend on small screens
             },
             title: {
                 display: true,
@@ -443,31 +435,13 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
         },
     }
 
-    const pieOptions: ChartOptions<"pie"> = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: "right" as const,
-                display: window.innerWidth > 640,
-            },
-            title: {
-                display: true,
-                text: "Top 5 Etiquetas de Ejercicios",
-                font: {
-                    size: 14,
-                },
-            },
-        },
-    }
-
     const satisfactionOptions: ChartOptions<"bar"> = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: {
                 position: "top" as const,
-                display: window.innerWidth > 640,
+                display: windowWidth > 640,
             },
             title: {
                 display: true,
@@ -503,7 +477,7 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
         plugins: {
             legend: {
                 position: "top" as const,
-                display: window.innerWidth > 640,
+                display: windowWidth > 640,
             },
             title: {
                 display: true,
