@@ -28,18 +28,18 @@ export default function LoginPage() {
 
   const validateForm = () => {
     if (!formData.email.trim()) {
-      setErrorMessage('Email is required')
+      setErrorMessage('El correo electrónico es obligatorio')
       return false
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
-      setErrorMessage('Please enter a valid email address')
+      setErrorMessage('Por favor, introduce una dirección de correo electrónico válida')
       return false
     }
 
     if (!formData.password) {
-      setErrorMessage('Password is required')
+      setErrorMessage('La contraseña es obligatoria')
       return false
     }
 
@@ -76,8 +76,8 @@ export default function LoginPage() {
 
       router.push(redirectPath)
     } catch (error) {
-      console.error('Login error:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to login')
+      console.error('Error de inicio de sesión:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Error al iniciar sesión')
     } finally {
       setIsLoading(false)
     }
@@ -97,10 +97,10 @@ export default function LoginPage() {
                 priority
             />
             <h1 className="text-2xl md:text-3xl font-semibold text-white mb-4">
-              Welcome to Your Health & Wellness Hub
+              Bienvenido a Tu Centro de Salud y Bienestar
             </h1>
             <p className="text-white/90 text-base md:text-lg leading-relaxed">
-              Start your journey to a healthier workplace...
+              Comienza tu camino hacia un lugar de trabajo más saludable...
             </p>
           </div>
           {/* Waves */}
@@ -138,10 +138,10 @@ export default function LoginPage() {
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-semibold text-[#8BC5B5] mb-4 text-center">
-                Login
+                Iniciar Sesión
               </h2>
               <p className="text-gray-600 text-center mb-6">
-                Enter your credentials to login your account.
+                Introduce tus credenciales para acceder a tu cuenta.
               </p>
 
               {errorMessage && (
@@ -153,13 +153,13 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm text-gray-700">
-                    Email
+                    Correo Electrónico
                   </label>
                   <Input
                       id="email"
                       name="email"
                       type="email"
-                      placeholder="Enter your email address"
+                      placeholder="Introduce tu correo electrónico"
                       value={formData.email}
                       onChange={handleInputChange}
                       required
@@ -171,14 +171,14 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <label htmlFor="password" className="text-sm text-gray-700">
-                    Password
+                    Contraseña
                   </label>
                   <div className="relative">
                     <Input
                         id="password"
                         name="password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
+                        placeholder="Introduce tu contraseña"
                         value={formData.password}
                         onChange={handleInputChange}
                         required
@@ -190,7 +190,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                     >
                       {showPassword ? (
                           <EyeOff className="h-5 w-5" />
@@ -213,14 +213,14 @@ export default function LoginPage() {
                         htmlFor="remember"
                         className="text-sm text-gray-600 cursor-pointer"
                     >
-                      Remember me
+                      Recordarme
                     </label>
                   </div>
                   <Link
                       href="/forgot-password"
                       className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
                   >
-                    Forgot password?
+                    ¿Olvidaste tu contraseña?
                   </Link>
                 </div>
 
@@ -232,23 +232,13 @@ export default function LoginPage() {
                   {isLoading ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                        Logging in...
+                        Iniciando sesión...
                       </div>
                   ) : (
-                      'Login'
+                      'Iniciar Sesión'
                   )}
                 </Button>
               </form>
-
-              <div className="mt-6 text-center">
-                <span className="text-gray-600">Don&#39;t have an account? </span>
-                <Link
-                    href="/sign-up"
-                    className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                >
-                  Sign Up
-                </Link>
-              </div>
             </div>
           </div>
         </div>

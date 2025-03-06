@@ -24,7 +24,7 @@ type MenuItem = {
 
 // Define menu items without 'as const'
 const regularMenuItems: MenuItem[] = [
-  { icon: BellDot, label: 'Notificación de Ejercicio', href: '/notification' },
+  { icon: BellDot, label: 'Pausa Activa', href: '/notification' },
   { icon: Library, label: 'Biblioteca de Ejercicios', href: '/library' },
   { icon: BarChart2, label: 'Estadísticas', href: '/statistics' },
   { icon: Settings, label: 'Ajustes de Cuenta', href: '/settings' },

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Eye, Pencil, Trash2, Plus, Search } from "lucide-react"
+import { Eye, Pencil, Trash2, Plus, Search } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { InviteEmployeesDialog } from "@/components/InviteEmployeesDialog"
@@ -108,7 +108,7 @@ export function EmployeeTable() {
           setFilteredEmployees(data)
         }
       } catch (error) {
-        console.error("Error fetching employees:", error)
+        console.error("Error al obtener empleados:", error)
       } finally {
         setLoading(false)
       }
@@ -169,7 +169,7 @@ export function EmployeeTable() {
       if (error) throw error
       setEmployees((prev) => prev.filter((emp) => emp.id !== empId))
     } catch (error) {
-      console.error("Error deleting employee:", error)
+      console.error("Error al eliminar empleado:", error)
     }
   }
 
@@ -184,7 +184,7 @@ export function EmployeeTable() {
       setEmployees((prev) => prev.filter((emp) => !selectedEmployees.has(emp.id)))
       setSelectedEmployees(new Set())
     } catch (error) {
-      console.error("Error deleting employees:", error)
+      console.error("Error al eliminar empleados:", error)
     }
   }
 
@@ -198,7 +198,7 @@ export function EmployeeTable() {
           <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <Input
-                placeholder="Search by name or email..."
+                placeholder="Buscar por nombre o email..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -209,23 +209,23 @@ export function EmployeeTable() {
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Select value={statusFilter || "default"} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="default">Todos los Estados</SelectItem>
+                <SelectItem value="active">Activo</SelectItem>
+                <SelectItem value="inactive">Inactivo</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={roleFilter || "default"} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Role" />
+                <SelectValue placeholder="Rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="default">Todos los Roles</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value="user">Usuario</SelectItem>
               </SelectContent>
             </Select>
 
@@ -235,7 +235,7 @@ export function EmployeeTable() {
                     onClick={handleBulkDelete}
                     className="whitespace-nowrap"
                 >
-                  Delete Selected ({selectedEmployees.size})
+                  Eliminar Seleccionados ({selectedEmployees.size})
                 </Button>
             )}
 
@@ -251,7 +251,7 @@ export function EmployeeTable() {
                 }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Employee
+              Añadir Empleado
             </Button>
           </div>
         </div>
@@ -267,11 +267,11 @@ export function EmployeeTable() {
                       onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead>Employee Name</TableHead>
+                <TableHead>Nombre del Empleado</TableHead>
                 <TableHead className="hidden sm:table-cell">Email</TableHead>
-                <TableHead className="hidden md:table-cell">Role</TableHead>
-                <TableHead className="hidden lg:table-cell">Status</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead className="hidden md:table-cell">Rol</TableHead>
+                <TableHead className="hidden lg:table-cell">Estado</TableHead>
+                <TableHead>Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -305,7 +305,7 @@ export function EmployeeTable() {
                                 : "bg-red-100 text-red-800"
                         }`}
                     >
-                      {employee.is_active ? "Active" : "Inactive"}
+                      {employee.is_active ? "Activo" : "Inactivo"}
                     </span>
                         </TableCell>
                         <TableCell>
@@ -335,20 +335,20 @@ export function EmployeeTable() {
         {/* Pagination */}
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-500">
-            Showing {paginatedEmployees.length} of {filteredEmployees.length} employees
+            Mostrando {paginatedEmployees.length} de {filteredEmployees.length} empleados
           </p>
           <div className="flex gap-2">
             <Button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
             >
-              Previous
+              Anterior
             </Button>
             <Button
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
             >
-              Next
+              Siguiente
             </Button>
           </div>
         </div>
