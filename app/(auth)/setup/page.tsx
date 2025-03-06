@@ -93,15 +93,15 @@ export default function SetupPage() {
     const validateField = (name: keyof SetupFormData, value: string): string | undefined => {
         switch (name) {
             case 'firstName':
-                return value.trim() ? undefined : 'First name is required'
+                return value.trim() ? undefined : 'El nombre es obligatorio'
             case 'lastName':
-                return value.trim() ? undefined : 'Last name is required'
+                return value.trim() ? undefined : 'El apellido es obligatorio'
             case 'email':
-                return EMAIL_REGEX.test(value) ? undefined : 'Please enter a valid email address'
+                return EMAIL_REGEX.test(value) ? undefined : 'Por favor, introduce una dirección de email válida'
             case 'password':
                 return value.length >= MIN_PASSWORD_LENGTH
                     ? undefined
-                    : `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+                    : `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`
             default:
                 return undefined
         }
@@ -145,7 +145,7 @@ export default function SetupPage() {
                 }
             } catch (error) {
                 updateState({
-                    error: 'Failed to check setup status',
+                    error: 'Error al comprobar el estado de configuración',
                     isLoading: false
                 })
             } finally {
@@ -200,12 +200,12 @@ export default function SetupPage() {
             )
 
             const data = await response.json()
-            if (!response.ok) throw new Error(data.message || 'Setup failed')
+            if (!response.ok) throw new Error(data.message || 'Error en la configuración')
 
             updateState({ isEmailSent: true, isSubmitting: false })
         } catch (error) {
             updateState({
-                error: error instanceof Error ? error.message : 'An unexpected error occurred',
+                error: error instanceof Error ? error.message : 'Ha ocurrido un error inesperado',
                 isSubmitting: false
             })
         }
@@ -232,7 +232,7 @@ export default function SetupPage() {
             })
         } catch (error) {
             updateState({
-                error: error instanceof Error ? error.message : 'Failed to resend email',
+                error: error instanceof Error ? error.message : 'Error al reenviar el email',
                 isResending: false
             })
         }
@@ -287,15 +287,15 @@ function EmailConfirmationView({
     const instructionItems = [
         {
             icon: <CheckCircle2 className="h-5 w-5 text-[#8ACC9F]" />,
-            text: "Click the link in the email to confirm your account"
+            text: "Haz clic en el enlace del email para confirmar tu cuenta"
         },
         {
             icon: <Clock className="h-5 w-5 text-[#8ACC9F]" />,
-            text: "The link will expire in 24 hours"
+            text: "El enlace caducará en 24 horas"
         },
         {
             icon: <AlertCircle className="h-5 w-5 text-[#8ACC9F]" />,
-            text: "If you don't see the email, check your spam folder"
+            text: "Si no ves el email, comprueba tu carpeta de spam"
         }
     ]
 
@@ -311,10 +311,10 @@ function EmailConfirmationView({
                         <Mail className="h-8 w-8 text-[#4F9A8F]" />
                     </div>
                     <h1 className="text-2xl font-bold text-[#102E41] mb-2">
-                        Check your email
+                        Revisa tu email
                     </h1>
                     <p className="text-[#102E41]/70 mb-8">
-                        We&#39;ve sent a confirmation email to{' '}
+                        Hemos enviado un email de confirmación a{' '}
                         <strong className="font-medium text-[#102E41]">
                             {formData.email}
                         </strong>
@@ -327,7 +327,7 @@ function EmailConfirmationView({
                     aria-labelledby="instructions-heading"
                 >
                     <h2 id="instructions-heading" className="sr-only">
-                        Email Verification Instructions
+                        Instrucciones de Verificación de Email
                     </h2>
                     <div className="space-y-4">
                         {instructionItems.map((item, index) => (
@@ -351,7 +351,7 @@ function EmailConfirmationView({
                                 aria-live="polite"
                                 role="status"
                             >
-                                You can resend the email in {state.timeRemaining} seconds
+                                Puedes reenviar el email en {state.timeRemaining} segundos
                             </p>
                         ) : (
                             <div className="text-center">
@@ -360,13 +360,13 @@ function EmailConfirmationView({
                                     disabled={state.isResending}
                                     variant="outline"
                                     className="gap-2 text-[#4F9A8F] border-[#8ACC9F]/30 hover:bg-[#8ACC9F]/5 transition-colors"
-                                    aria-label={state.isResending ? "Resending verification email..." : "Resend verification email"}
+                                    aria-label={state.isResending ? "Reenviando email de verificación..." : "Reenviar email de verificación"}
                                 >
                                     <RefreshCw
                                         className={`h-4 w-4 ${state.isResending ? 'animate-spin' : ''}`}
                                         aria-hidden="true"
                                     />
-                                    {state.isResending ? 'Resending...' : 'Resend email'}
+                                    {state.isResending ? 'Reenviando...' : 'Reenviar email'}
                                 </Button>
                             </div>
                         )}
@@ -431,27 +431,27 @@ function SetupFormView({
     const formFields: FormField[] = [
         {
             id: 'firstName',  // TypeScript now ensures this must be a key of SetupFormData
-            label: 'First Name',
+            label: 'Nombre',
             type: 'text',
-            placeholder: 'John',
+            placeholder: 'Juan',
             autoComplete: 'given-name',
             value: formData.firstName,
             error: formErrors.firstName
         },
         {
             id: 'lastName',
-            label: 'Last Name',
+            label: 'Apellido',
             type: 'text',
-            placeholder: 'Doe',
+            placeholder: 'García',
             autoComplete: 'family-name',
             value: formData.lastName,
             error: formErrors.lastName
         },
         {
             id: 'email',
-            label: 'Email address',
+            label: 'Dirección de email',
             type: 'email',
-            placeholder: 'you@company.com',
+            placeholder: 'tu@empresa.com',
             autoComplete: 'email',
             value: formData.email,
             error: formErrors.email
@@ -464,17 +464,17 @@ function SetupFormView({
                 <header className="text-center">
                     <Image
                         src="/logoprincipalRecurso 4@4x.png"
-                        alt="Finne Logo"
+                        alt="Logo de Finne"
                         width={170}
                         height={170}
                         className="mx-auto"
                         priority
                     />
                     <h1 className="mt-6 text-3xl font-extrabold text-[#102E41]">
-                        Welcome to Finne
+                        Bienvenido a Finne
                     </h1>
                     <p className="mt-2 text-sm text-[#102E41]/80">
-                        Let&#39;s get your workspace set up
+                        Vamos a configurar tu espacio de trabajo
                     </p>
                 </header>
 
@@ -483,12 +483,12 @@ function SetupFormView({
                     className="bg-white py-8 px-4 shadow-lg rounded-lg sm:px-10 border border-[#8ACC9F]/20"
                     aria-labelledby="form-heading"
                 >
-                    <h2 id="form-heading" className="sr-only">Setup Account Form</h2>
+                    <h2 id="form-heading" className="sr-only">Formulario de Configuración de Cuenta</h2>
                     <form
                         className="space-y-6"
                         onSubmit={handleSubmit}
                         noValidate
-                        aria-label="Setup form"
+                        aria-label="Formulario de configuración"
                     >
                         {/* Regular Form Fields */}
                         {formFields.map((field) => (
@@ -531,7 +531,7 @@ function SetupFormView({
                                 htmlFor="password"
                                 className="block text-sm font-medium text-[#102E41] mb-1"
                             >
-                                Password
+                                Contraseña
                             </label>
                             <div className="relative">
                                 <Input
@@ -544,7 +544,7 @@ function SetupFormView({
                                     onChange={handleFieldChange('password')}
                                     className={`block w-full pr-10 focus:ring-[#8ACC9F] focus:border-[#8ACC9F] sm:text-sm transition-colors
                                         ${formErrors.password ? 'border-red-300' : 'border-gray-300'}`}
-                                    placeholder="Enter your password"
+                                    placeholder="Introduce tu contraseña"
                                     aria-required="true"
                                     aria-invalid={formErrors.password ? 'true' : 'false'}
                                     aria-describedby={formErrors.password ? 'password-error' : undefined}
@@ -553,7 +553,7 @@ function SetupFormView({
                                     type="button"
                                     onClick={togglePasswordVisibility}
                                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 focus:outline-none focus:text-gray-500 transition-colors"
-                                    aria-label={state.showPassword ? "Hide password" : "Show password"}
+                                    aria-label={state.showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                                 >
                                     {state.showPassword ? (
                                         <EyeOff className="h-5 w-5" aria-hidden="true" />
@@ -598,14 +598,14 @@ function SetupFormView({
                         >
                             {state.isSubmitting ? (
                                 <>
-                                    <span className="sr-only">Setting up your account...</span>
+                                    <span className="sr-only">Configurando tu cuenta...</span>
                                     <div className="flex items-center space-x-2">
                                         <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>Starting...</span>
+                                        <span>Iniciando...</span>
                                     </div>
                                 </>
                             ) : (
-                                'Start Setup'
+                                'Iniciar Configuración'
                             )}
                         </Button>
                     </form>

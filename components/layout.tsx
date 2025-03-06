@@ -135,7 +135,7 @@ const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[]
         <SheetHeader className="p-6 text-white border-b border-white/10">
           <SheetTitle className="flex items-center justify-between">
             <Image
-                src="/logoprincipalRecurso 4@4x.png"
+                src="/logonegativoRecurso.png"
                 alt="Finne Logo"
                 width={100}
                 height={40}
@@ -180,7 +180,7 @@ const Sidebar = memo(function Sidebar({ menuItems }: { menuItems: MenuItem[] }) 
       <div className="flex flex-col h-full w-full">
         <div className="p-6">
           <Image
-              src="/logoprincipalRecurso 4@4x.png"
+              src="/logonegativoRecurso.png"
               alt="Finne Logo"
               width={100}
               height={40}
