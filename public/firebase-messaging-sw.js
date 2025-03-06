@@ -21,9 +21,9 @@ messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message:', payload);
 
     // Extract title and body from the data field
-    const notificationTitle = payload.data?.title ?? 'Background Title';
+    const notificationTitle = payload.data?.title ?? '¡Pausa Activa!';
     const notificationOptions = {
-        body: payload.data?.body ?? 'Background Body',
+        body: payload.data?.body ?? '¡Es hora de tu pausa activa! 💪',
         icon: '/logoprincipalRecurso 4@4x.png',
         data: payload.data, // Pass the data to the notification
     };
