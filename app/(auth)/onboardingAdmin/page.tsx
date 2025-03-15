@@ -93,7 +93,7 @@ export default function RegisterPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch("/api/signup", {
+            const response = await fetch("/api/signup/admin", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -139,7 +139,7 @@ export default function RegisterPage() {
                 <div className="relative w-32 h-12 mx-auto">
                     <Image src="/logoprincipalRecurso 4@4x.png" alt="Logo de Finne" fill className="object-contain" priority />
                 </div>
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Crear una cuenta</h2>
+                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Crear una cuenta de Administrador</h2>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
