@@ -485,7 +485,6 @@ export default function SettingsPage() {
             {/* Exercise Preferences Section */}
             <section>
                 <h2 className="text-2xl font-semibold mb-6 text-gray-900">Preferencias de Ejercicio</h2>
-                <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                     {/* Muscle Group */}
                     <div className="bg-white p-6 rounded-lg shadow-sm">
                         <h3 className="text-lg font-medium mb-2 text-gray-900">Grupo Muscular</h3>
@@ -544,41 +543,6 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    {/* Favorite Exercises List */}
-                    <div className="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 className="text-lg font-medium mb-6 text-gray-900">Lista de Ejercicios Favoritos</h3>
-                        <div className="overflow-x-auto sm:overflow-visible">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Título del Ejercicio</TableHead>
-                                        <TableHead>Categoría</TableHead>
-                                        <TableHead>Duración</TableHead>
-                                        <TableHead className="text-right">Acción</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {favoriteExercises.map((exercise) => (
-                                        <TableRow key={exercise.title}>
-                                            <TableCell>{exercise.title}</TableCell>
-                                            <TableCell>{exercise.category}</TableCell>
-                                            <TableCell>{exercise.duration}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                >
-                                                    Eliminar
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-                </div>
             </section>
 
             {/* Notification Settings Section */}
@@ -873,294 +837,294 @@ export default function SettingsPage() {
 
             {/*Configurador de consejos no funcional*/}
 
-            <section>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-semibold text-gray-900">Configuración de Consejos</h2>
-                    {!isEditing && (
-                        <Button
-                            variant="edit"
-                            onClick={() => setIsEditing(true)}
-                            className="flex items-center gap-2"
-                        >
-                            <Pencil className="h-4 w-4" />
-                            Editar Horarios
-                        </Button>
-                    )}
-                </div>
+            {/*<section>*/}
+            {/*    <div className="flex items-center justify-between mb-4">*/}
+            {/*        <h2 className="text-2xl font-semibold text-gray-900">Configuración de Consejos</h2>*/}
+            {/*        {!isEditing && (*/}
+            {/*            <Button*/}
+            {/*                variant="edit"*/}
+            {/*                onClick={() => setIsEditing(true)}*/}
+            {/*                className="flex items-center gap-2"*/}
+            {/*            >*/}
+            {/*                <Pencil className="h-4 w-4" />*/}
+            {/*                Editar Horarios*/}
+            {/*            </Button>*/}
+            {/*        )}*/}
+            {/*    </div>*/}
 
-                <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
-                    {loadingStates.notifications ? (
-                        <div className="space-y-4">
-                            {/* Header Skeleton */}
-                            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"/>
+            {/*    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">*/}
+            {/*        {loadingStates.notifications ? (*/}
+            {/*            <div className="space-y-4">*/}
+            {/*                /!* Header Skeleton *!/*/}
+            {/*                <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"/>*/}
 
-                            {/* Time Slots Skeleton */}
-                            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                                {[1, 2, 3].map((_, index) => (
-                                    <div
-                                        key={index}
-                                        className="h-20 bg-gray-50 rounded-lg p-4"
-                                    >
-                                        <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-2"/>
-                                        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"/>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="mb-6">
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                    Horarios de Consejos de Ejercicios
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    {isEditing
-                                        ? "Añade o elimina horarios en los que te gustaría recibir consejos para hacer ejercicio. Los horarios deben estar separados al menos 15 minutos entre sí."
-                                        : preferences.active
-                                            ? "Tus horarios personalizados de consejos de ejercicios están configurados."
-                                            : "Usando los horarios de consejos predeterminados establecidos por tu administrador."
-                                    }
-                                </p>
-                            </div>
+            {/*                /!* Time Slots Skeleton *!/*/}
+            {/*                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">*/}
+            {/*                    {[1, 2, 3].map((_, index) => (*/}
+            {/*                        <div*/}
+            {/*                            key={index}*/}
+            {/*                            className="h-20 bg-gray-50 rounded-lg p-4"*/}
+            {/*                        >*/}
+            {/*                            <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-2"/>*/}
+            {/*                            <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"/>*/}
+            {/*                        </div>*/}
+            {/*                    ))}*/}
+            {/*                </div>*/}
+            {/*            </div>*/}
+            {/*        ) : (*/}
+            {/*            <>*/}
+            {/*                <div className="mb-6">*/}
+            {/*                    <h3 className="text-lg font-medium text-gray-900 mb-2">*/}
+            {/*                        Horarios de Consejos de Ejercicios*/}
+            {/*                    </h3>*/}
+            {/*                    <p className="text-sm text-gray-500">*/}
+            {/*                        {isEditing*/}
+            {/*                            ? "Añade o elimina horarios en los que te gustaría recibir consejos para hacer ejercicio. Los horarios deben estar separados al menos 15 minutos entre sí."*/}
+            {/*                            : preferences.active*/}
+            {/*                                ? "Tus horarios personalizados de consejos de ejercicios están configurados."*/}
+            {/*                                : "Usando los horarios de consejos predeterminados establecidos por tu administrador."*/}
+            {/*                        }*/}
+            {/*                    </p>*/}
+            {/*                </div>*/}
 
-                            <div className="space-y-6">
-                                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                                    {preferences.times.map((time, index) => (
-                                        <div
-                                            key={index}
-                                            className="bg-gray-50 rounded-lg p-4 relative group"
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className="p-2 rounded-full bg-[#8BC5B5] bg-opacity-20">
-                                                    <Clock className="h-5 w-5 text-[#8BC5B5]" />
-                                                </div>
-                                                {isEditing && isEditingTime === index ? (
-                                                    // Editing Mode UI
-                                                    <div className="flex-1">
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <select
-                                                                value={editHour}
-                                                                onChange={(e) => setEditHour(e.target.value)}
-                                                                className="w-full rounded-md border border-gray-200 p-2 text-sm focus:ring-[#8BC5B5] focus:border-[#8BC5B5] text-gray-900"
-                                                                autoFocus
-                                                            >
-                                                                {Array.from({ length: 24 }, (_, i) => (
-                                                                    <option key={i} value={i.toString().padStart(2, '0')}>
-                                                                        {i.toString().padStart(2, '0')}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                            <select
-                                                                value={editMinute}
-                                                                onChange={(e) => setEditMinute(e.target.value)}
-                                                                className="w-full rounded-md border border-gray-200 p-2 text-sm focus:ring-[#8BC5B5] focus:border-[#8BC5B5] text-gray-900"
-                                                            >
-                                                                {[0, 15, 30, 45].map((minute) => (
-                                                                    <option key={minute} value={minute.toString().padStart(2, '0')}>
-                                                                        {minute.toString().padStart(2, '0')}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                        <div className="flex justify-end gap-2 mt-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    setIsEditingTime(null);
-                                                                    setEditHour('');
-                                                                    setEditMinute('');
-                                                                }}
-                                                            >
-                                                                Cancelar
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleSaveEditedTime(index)}
-                                                                className="bg-[#8BC5B5] hover:bg-[#7AB4A4] text-white"
-                                                            >
-                                                                Guardar
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    // Display Mode UI
-                                                    <div>
-                                                        <p className="font-medium text-gray-900">
-                                                            {format12Hour(time)}
-                                                        </p>
-                                                        <p className="text-sm text-gray-500">
-                                                            Consejo de Ejercicio
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
+            {/*                <div className="space-y-6">*/}
+            {/*                    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">*/}
+            {/*                        {preferences.times.map((time, index) => (*/}
+            {/*                            <div*/}
+            {/*                                key={index}*/}
+            {/*                                className="bg-gray-50 rounded-lg p-4 relative group"*/}
+            {/*                            >*/}
+            {/*                                <div className="flex items-start gap-3">*/}
+            {/*                                    <div className="p-2 rounded-full bg-[#8BC5B5] bg-opacity-20">*/}
+            {/*                                        <Clock className="h-5 w-5 text-[#8BC5B5]" />*/}
+            {/*                                    </div>*/}
+            {/*                                    {isEditing && isEditingTime === index ? (*/}
+            {/*                                        // Editing Mode UI*/}
+            {/*                                        <div className="flex-1">*/}
+            {/*                                            <div className="grid grid-cols-2 gap-2">*/}
+            {/*                                                <select*/}
+            {/*                                                    value={editHour}*/}
+            {/*                                                    onChange={(e) => setEditHour(e.target.value)}*/}
+            {/*                                                    className="w-full rounded-md border border-gray-200 p-2 text-sm focus:ring-[#8BC5B5] focus:border-[#8BC5B5] text-gray-900"*/}
+            {/*                                                    autoFocus*/}
+            {/*                                                >*/}
+            {/*                                                    {Array.from({ length: 24 }, (_, i) => (*/}
+            {/*                                                        <option key={i} value={i.toString().padStart(2, '0')}>*/}
+            {/*                                                            {i.toString().padStart(2, '0')}*/}
+            {/*                                                        </option>*/}
+            {/*                                                    ))}*/}
+            {/*                                                </select>*/}
+            {/*                                                <select*/}
+            {/*                                                    value={editMinute}*/}
+            {/*                                                    onChange={(e) => setEditMinute(e.target.value)}*/}
+            {/*                                                    className="w-full rounded-md border border-gray-200 p-2 text-sm focus:ring-[#8BC5B5] focus:border-[#8BC5B5] text-gray-900"*/}
+            {/*                                                >*/}
+            {/*                                                    {[0, 15, 30, 45].map((minute) => (*/}
+            {/*                                                        <option key={minute} value={minute.toString().padStart(2, '0')}>*/}
+            {/*                                                            {minute.toString().padStart(2, '0')}*/}
+            {/*                                                        </option>*/}
+            {/*                                                    ))}*/}
+            {/*                                                </select>*/}
+            {/*                                            </div>*/}
+            {/*                                            <div className="flex justify-end gap-2 mt-2">*/}
+            {/*                                                <Button*/}
+            {/*                                                    variant="ghost"*/}
+            {/*                                                    size="sm"*/}
+            {/*                                                    onClick={() => {*/}
+            {/*                                                        setIsEditingTime(null);*/}
+            {/*                                                        setEditHour('');*/}
+            {/*                                                        setEditMinute('');*/}
+            {/*                                                    }}*/}
+            {/*                                                >*/}
+            {/*                                                    Cancelar*/}
+            {/*                                                </Button>*/}
+            {/*                                                <Button*/}
+            {/*                                                    size="sm"*/}
+            {/*                                                    onClick={() => handleSaveEditedTime(index)}*/}
+            {/*                                                    className="bg-[#8BC5B5] hover:bg-[#7AB4A4] text-white"*/}
+            {/*                                                >*/}
+            {/*                                                    Guardar*/}
+            {/*                                                </Button>*/}
+            {/*                                            </div>*/}
+            {/*                                        </div>*/}
+            {/*                                    ) : (*/}
+            {/*                                        // Display Mode UI*/}
+            {/*                                        <div>*/}
+            {/*                                            <p className="font-medium text-gray-900">*/}
+            {/*                                                {format12Hour(time)}*/}
+            {/*                                            </p>*/}
+            {/*                                            <p className="text-sm text-gray-500">*/}
+            {/*                                                Consejo de Ejercicio*/}
+            {/*                                            </p>*/}
+            {/*                                        </div>*/}
+            {/*                                    )}*/}
+            {/*                                </div>*/}
 
-                                            {/* Action buttons - Only show when in edit mode and not currently editing this specific time */}
-                                            {isEditing && isEditingTime !== index && (
-                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleStartEditing(index, time)}
-                                                        className="text-gray-500 hover:text-[#8BC5B5]"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setDeleteDialogOpen(index)}
-                                                        className="text-gray-500 hover:text-red-500"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {isEditing && (
-                                        <button
-                                            onClick={() => setIsAddTimeOpen(true)}
-                                            className="h-full min-h-[120px] rounded-lg border-2 border-dashed border-gray-200 hover:border-[#8BC5B5] flex items-center justify-center text-gray-500 hover:text-[#8BC5B5] transition-colors"
-                                        >
-                                            <Plus className="h-6 w-6 mr-2" />
-                                            Añadir Horario
-                                        </button>
-                                    )}
-                                </div>
+            {/*                                /!* Action buttons - Only show when in edit mode and not currently editing this specific time *!/*/}
+            {/*                                {isEditing && isEditingTime !== index && (*/}
+            {/*                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">*/}
+            {/*                                        <Button*/}
+            {/*                                            variant="ghost"*/}
+            {/*                                            size="sm"*/}
+            {/*                                            onClick={() => handleStartEditing(index, time)}*/}
+            {/*                                            className="text-gray-500 hover:text-[#8BC5B5]"*/}
+            {/*                                        >*/}
+            {/*                                            <Pencil className="h-4 w-4" />*/}
+            {/*                                        </Button>*/}
+            {/*                                        <Button*/}
+            {/*                                            variant="ghost"*/}
+            {/*                                            size="sm"*/}
+            {/*                                            onClick={() => setDeleteDialogOpen(index)}*/}
+            {/*                                            className="text-gray-500 hover:text-red-500"*/}
+            {/*                                        >*/}
+            {/*                                            <X className="h-4 w-4" />*/}
+            {/*                                        </Button>*/}
+            {/*                                    </div>*/}
+            {/*                                )}*/}
+            {/*                            </div>*/}
+            {/*                        ))}*/}
+            {/*                        {isEditing && (*/}
+            {/*                            <button*/}
+            {/*                                onClick={() => setIsAddTimeOpen(true)}*/}
+            {/*                                className="h-full min-h-[120px] rounded-lg border-2 border-dashed border-gray-200 hover:border-[#8BC5B5] flex items-center justify-center text-gray-500 hover:text-[#8BC5B5] transition-colors"*/}
+            {/*                            >*/}
+            {/*                                <Plus className="h-6 w-6 mr-2" />*/}
+            {/*                                Añadir Horario*/}
+            {/*                            </button>*/}
+            {/*                        )}*/}
+            {/*                    </div>*/}
 
-                                {isEditing && (
-                                    <div className="flex justify-end gap-3 pt-4 border-t">
-                                        <Button
-                                            variant="cancel"
-                                            onClick={() => {
-                                                setIsEditing(false)
-                                            }}
-                                        >
-                                            Cancelar
-                                        </Button>
-                                        <Button
-                                            onClick={handleSaveTimes}
-                                            className="bg-[#8BC5B5] hover:bg-[#7AB4A4]"
-                                        >
-                                            Guardar Horarios
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </div>
+            {/*                    {isEditing && (*/}
+            {/*                        <div className="flex justify-end gap-3 pt-4 border-t">*/}
+            {/*                            <Button*/}
+            {/*                                variant="cancel"*/}
+            {/*                                onClick={() => {*/}
+            {/*                                    setIsEditing(false)*/}
+            {/*                                }}*/}
+            {/*                            >*/}
+            {/*                                Cancelar*/}
+            {/*                            </Button>*/}
+            {/*                            <Button*/}
+            {/*                                onClick={handleSaveTimes}*/}
+            {/*                                className="bg-[#8BC5B5] hover:bg-[#7AB4A4]"*/}
+            {/*                            >*/}
+            {/*                                Guardar Horarios*/}
+            {/*                            </Button>*/}
+            {/*                        </div>*/}
+            {/*                    )}*/}
+            {/*                </div>*/}
+            {/*            </>*/}
+            {/*        )}*/}
+            {/*    </div>*/}
 
-                {/* Add Time Dialog */}
-                <Dialog open={isAddTimeOpen} onOpenChange={setIsAddTimeOpen}>
-                    <DialogContent className="sm:max-w-[400px] bg-white">
-                        <DialogHeader>
-                            <DialogTitle className={"text-gray-900"}>Añadir Horario de Consejo</DialogTitle>
-                            <DialogDescription className={"text-gray-700"}>
-                                Elige un horario para tu consejo de ejercicio. Los horarios deben estar separados al menos 15 minutos entre sí.
-                            </DialogDescription>
-                        </DialogHeader>
+            {/*    /!* Add Time Dialog *!/*/}
+            {/*    <Dialog open={isAddTimeOpen} onOpenChange={setIsAddTimeOpen}>*/}
+            {/*        <DialogContent className="sm:max-w-[400px] bg-white">*/}
+            {/*            <DialogHeader>*/}
+            {/*                <DialogTitle className={"text-gray-900"}>Añadir Horario de Consejo</DialogTitle>*/}
+            {/*                <DialogDescription className={"text-gray-700"}>*/}
+            {/*                    Elige un horario para tu consejo de ejercicio. Los horarios deben estar separados al menos 15 minutos entre sí.*/}
+            {/*                </DialogDescription>*/}
+            {/*            </DialogHeader>*/}
 
-                        <div className="py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">
-                                        Hora
-                                    </label>
-                                    <select
-                                        value={newHour}
-                                        onChange={(e) => setNewHour(e.target.value)}
-                                        className="w-full rounded-md border border-gray-300 p-2 text-gray-900"
-                                    >
-                                        {Array.from({ length: 24 }, (_, i) => (
-                                            <option key={i} value={i}>
-                                                {i.toString().padStart(2, '0')}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">
-                                        Minuto
-                                    </label>
-                                    <select
-                                        value={newMinute}
-                                        onChange={(e) => setNewMinute(e.target.value)}
-                                        className="w-full rounded-md border border-gray-300 p-2 text-gray-900"
-                                    >
-                                        {[0, 15, 30, 45].map((minute) => (
-                                            <option key={minute} value={minute}>
-                                                {minute.toString().padStart(2, '0')}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+            {/*            <div className="py-4">*/}
+            {/*                <div className="grid grid-cols-2 gap-4">*/}
+            {/*                    <div className="space-y-2">*/}
+            {/*                        <label className="text-sm font-medium text-gray-700">*/}
+            {/*                            Hora*/}
+            {/*                        </label>*/}
+            {/*                        <select*/}
+            {/*                            value={newHour}*/}
+            {/*                            onChange={(e) => setNewHour(e.target.value)}*/}
+            {/*                            className="w-full rounded-md border border-gray-300 p-2 text-gray-900"*/}
+            {/*                        >*/}
+            {/*                            {Array.from({ length: 24 }, (_, i) => (*/}
+            {/*                                <option key={i} value={i}>*/}
+            {/*                                    {i.toString().padStart(2, '0')}*/}
+            {/*                                </option>*/}
+            {/*                            ))}*/}
+            {/*                        </select>*/}
+            {/*                    </div>*/}
+            {/*                    <div className="space-y-2">*/}
+            {/*                        <label className="text-sm font-medium text-gray-700">*/}
+            {/*                            Minuto*/}
+            {/*                        </label>*/}
+            {/*                        <select*/}
+            {/*                            value={newMinute}*/}
+            {/*                            onChange={(e) => setNewMinute(e.target.value)}*/}
+            {/*                            className="w-full rounded-md border border-gray-300 p-2 text-gray-900"*/}
+            {/*                        >*/}
+            {/*                            {[0, 15, 30, 45].map((minute) => (*/}
+            {/*                                <option key={minute} value={minute}>*/}
+            {/*                                    {minute.toString().padStart(2, '0')}*/}
+            {/*                                </option>*/}
+            {/*                            ))}*/}
+            {/*                        </select>*/}
+            {/*                    </div>*/}
+            {/*                </div>*/}
+            {/*            </div>*/}
 
-                        <DialogFooter>
-                            <Button
-                                variant="cancel"
-                                onClick={() => setIsAddTimeOpen(false)}
-                            >
-                                Cancelar
-                            </Button>
-                            <Button
-                                onClick={handleAddTime}
-                                disabled={!isValidNewTime()}
-                            >
-                                Añadir Horario
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+            {/*            <DialogFooter>*/}
+            {/*                <Button*/}
+            {/*                    variant="cancel"*/}
+            {/*                    onClick={() => setIsAddTimeOpen(false)}*/}
+            {/*                >*/}
+            {/*                    Cancelar*/}
+            {/*                </Button>*/}
+            {/*                <Button*/}
+            {/*                    onClick={handleAddTime}*/}
+            {/*                    disabled={!isValidNewTime()}*/}
+            {/*                >*/}
+            {/*                    Añadir Horario*/}
+            {/*                </Button>*/}
+            {/*            </DialogFooter>*/}
+            {/*        </DialogContent>*/}
+            {/*    </Dialog>*/}
 
-                {/* Delete Confirmation Dialog */}
-                <AlertDialog open={deleteDialogOpen !== null} onOpenChange={() => setDeleteDialogOpen(null)}>
-                    <AlertDialogContent className="sm:max-w-[400px] bg-white">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle className="text-red-600">
-                                Eliminar Horario de Consejo
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                                {deleteDialogOpen !== null && preferences.times[deleteDialogOpen] && (
-                                    <div className="space-y-3">
-                                        <p className={"text-gray-900"}>
-                                            ¿Estás seguro de que quieres eliminar este consejo de ejercicio?
-                                        </p>
-                                        <div className="bg-gray-50 p-3 rounded-md">
-                                            <p className="font-medium text-gray-900">
-                                                {format12Hour(preferences.times[deleteDialogOpen])}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                                Esta acción no se puede deshacer.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel onClick={() => setDeleteDialogOpen(null)}>
-                                Cancelar
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={() => {
-                                    if (deleteDialogOpen !== null) {
-                                        handleDeleteTime(deleteDialogOpen)
-                                        setDeleteDialogOpen(null)
-                                    }
-                                }}
-                                className="bg-red-600 hover:bg-red-700 text-white"
-                            >
-                                Eliminar Horario
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </section>
+            {/*    /!* Delete Confirmation Dialog *!/*/}
+            {/*    <AlertDialog open={deleteDialogOpen !== null} onOpenChange={() => setDeleteDialogOpen(null)}>*/}
+            {/*        <AlertDialogContent className="sm:max-w-[400px] bg-white">*/}
+            {/*            <AlertDialogHeader>*/}
+            {/*                <AlertDialogTitle className="text-red-600">*/}
+            {/*                    Eliminar Horario de Consejo*/}
+            {/*                </AlertDialogTitle>*/}
+            {/*                <AlertDialogDescription>*/}
+            {/*                    {deleteDialogOpen !== null && preferences.times[deleteDialogOpen] && (*/}
+            {/*                        <div className="space-y-3">*/}
+            {/*                            <p className={"text-gray-900"}>*/}
+            {/*                                ¿Estás seguro de que quieres eliminar este consejo de ejercicio?*/}
+            {/*                            </p>*/}
+            {/*                            <div className="bg-gray-50 p-3 rounded-md">*/}
+            {/*                                <p className="font-medium text-gray-900">*/}
+            {/*                                    {format12Hour(preferences.times[deleteDialogOpen])}*/}
+            {/*                                </p>*/}
+            {/*                                <p className="text-sm text-gray-500">*/}
+            {/*                                    Esta acción no se puede deshacer.*/}
+            {/*                                </p>*/}
+            {/*                            </div>*/}
+            {/*                        </div>*/}
+            {/*                    )}*/}
+            {/*                </AlertDialogDescription>*/}
+            {/*            </AlertDialogHeader>*/}
+            {/*            <AlertDialogFooter>*/}
+            {/*                <AlertDialogCancel onClick={() => setDeleteDialogOpen(null)}>*/}
+            {/*                    Cancelar*/}
+            {/*                </AlertDialogCancel>*/}
+            {/*                <AlertDialogAction*/}
+            {/*                    onClick={() => {*/}
+            {/*                        if (deleteDialogOpen !== null) {*/}
+            {/*                            handleDeleteTime(deleteDialogOpen)*/}
+            {/*                            setDeleteDialogOpen(null)*/}
+            {/*                        }*/}
+            {/*                    }}*/}
+            {/*                    className="bg-red-600 hover:bg-red-700 text-white"*/}
+            {/*                >*/}
+            {/*                    Eliminar Horario*/}
+            {/*                </AlertDialogAction>*/}
+            {/*            </AlertDialogFooter>*/}
+            {/*        </AlertDialogContent>*/}
+            {/*    </AlertDialog>*/}
+            {/*</section>*/}
         </div>
     );
 }

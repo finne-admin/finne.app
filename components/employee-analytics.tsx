@@ -705,10 +705,7 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
                     </CardHeader>
                     <CardContent className="pt-4">
                         <div className="flex items-center">
-                            <div className="text-3xl font-bold text-blue-600">{analyticsData.participationRate.toFixed(1)}%</div>
-                            <div className="ml-auto flex items-center text-sm bg-blue-50 px-2 py-1 rounded-full">
-                                <span>{new Set(filteredExerciseData.map((item) => item.user_id)).size} empleados</span>
-                            </div>
+                            <div className="text-3xl font-bold text-blue-600">{new Set(filteredExerciseData.map((item) => item.user_id)).size}</div>
                         </div>
                     </CardContent>
                 </Card>
