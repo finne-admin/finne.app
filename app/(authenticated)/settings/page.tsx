@@ -4,7 +4,7 @@ import {useEffect, useState} from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Pencil, Plus, Clock, X } from 'lucide-react'
+import { Loader2, Pencil, Plus, Clock, X, Bell } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -51,6 +51,7 @@ export default function SettingsPage() {
     const supabase = createClientComponentClient()
     const router = useRouter()
 
+    const [userRole, setUserRole] = useState<string | null>(null)
 
 
     // Loading States
@@ -201,6 +202,19 @@ export default function SettingsPage() {
                         first_name: user.user_metadata?.first_name || '',
                         last_name: user.user_metadata?.last_name || ''
                     })
+
+                    // Obtener rol desde tabla "users"
+                    const { data: userData, error: roleError } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single()
+
+                    if (roleError) {
+                        console.warn('No se pudo obtener el rol del usuario:', roleError)
+                    } else {
+                        setUserRole(userData?.role ?? null)
+                    }
                 }
             } catch (error) {
                 console.error('Error al obtener usuario:', error)
@@ -547,19 +561,59 @@ export default function SettingsPage() {
 
             {/* Notification Settings Section */}
             <section>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-semibold text-gray-900">Configuración de Notificaciones</h2>
-                    {!isEditing && (
-                        <Button
-                            variant="edit"
-                            onClick={() => setIsEditing(true)}
-                            className="flex items-center gap-2"
-                        >
-                            <Pencil className="h-4 w-4" />
-                            Editar Horarios
-                        </Button>
-                    )}
-                </div>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-gray-900">Configuración de Notificaciones</h2>
+                <Button
+                id="test-notification-btn"
+                variant="edit"
+                onClick={() => {
+                    // Solicita permiso si aún no lo ha hecho
+                    if (Notification.permission === 'default') {
+                    Notification.requestPermission()
+                    }
+
+                    if (Notification.permission === 'granted') {
+                    new Notification('Test Notification', {
+                        body: 'This is a test push notification from the app.',
+                        icon: '/icon.png' // Opcional: reemplaza con tu ícono si tienes uno
+                    })
+                    } else {
+                    toast.error('Enable browser notifications to test this feature.')
+                    }
+                }}
+                className="flex items-center gap-2 transition duration-200"
+                >
+                <Bell className="h-4 w-4" />
+                Notificar (Prueba)
+                </Button>
+
+                {!isEditing && (
+                    <Button
+                    id="edit-times-btn"
+                    variant="edit"
+                    onClick={() => {
+                      if (userRole === 'admin') {
+                        setIsEditing(true)
+                      } else {
+                        const btn = document.getElementById('edit-times-btn')
+                        if (btn) {
+                          btn.classList.add('animate-shake')
+                          setTimeout(() => btn.classList.remove('animate-shake'), 500)
+                        }
+                        toast.error('Contacta con un administrador para cambiar tu horario')
+                      }
+                    }}
+                    className={`flex items-center gap-2 transition duration-200 ${
+                      userRole !== 'admin' ? 'opacity-50 cursor-not-allowed pointer-events-auto' : ''
+                    }`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Editar Horarios
+                  </Button>
+                  
+                )}
+            </div>
+
 
                 <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
                     {loadingStates.notifications ? (
