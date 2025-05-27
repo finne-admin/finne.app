@@ -584,7 +584,7 @@ export default function SettingsPage() {
                 className="flex items-center gap-2 transition duration-200"
                 >
                 <Bell className="h-4 w-4" />
-                Notificar (Prueba)
+                Notificar (test piloto)
                 </Button>
 
                 {!isEditing && (
