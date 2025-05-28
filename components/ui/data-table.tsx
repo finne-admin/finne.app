@@ -175,14 +175,13 @@ export function EmployeeTable() {
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedEmployees)
-    console.log("IDs a eliminar:", ids)
-    try {
-      const { error } = await supabase
-          .from("users")
-          .delete()
-          .in("id", Array.from(selectedEmployees))
 
+    try {
+    for (const id of ids) {
+      const { error } = await supabase.from("users").delete().eq("id", id)
       if (error) throw error
+    }
+    
       setEmployees((prev) => prev.filter((emp) => !selectedEmployees.has(emp.id)))
       setSelectedEmployees(new Set())
     } catch (error) {
