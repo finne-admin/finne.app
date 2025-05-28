@@ -174,6 +174,8 @@ export function EmployeeTable() {
   }
 
   const handleBulkDelete = async () => {
+    const ids = Array.from(selectedEmployees)
+    console.log("IDs a eliminar:", ids)
     try {
       const { error } = await supabase
           .from("users")
