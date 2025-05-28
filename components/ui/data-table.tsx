@@ -79,6 +79,13 @@ export function EmployeeTable() {
   const [inviteLoading, setInviteLoading] = React.useState(false)
   const [inviteError, setInviteError] = React.useState("")
   const [inviteSuccess, setInviteSuccess] = React.useState("")
+  const [viewUser, setViewUser] = React.useState<Employee | null>(null)
+  const [editUser, setEditUser] = React.useState<Employee | null>(null)
+  const [editLoading, setEditLoading] = React.useState(false)
+  const [editError, setEditError] = React.useState("")
+  const [editSuccess, setEditSuccess] = React.useState("")
+
+
 
   const itemsPerPage = 5
   const supabase = createClientComponentClient()
@@ -174,19 +181,67 @@ export function EmployeeTable() {
   }
 
   const handleBulkDelete = async () => {
-    try {
-      const { error } = await supabase
-          .from("users")
-          .delete()
-          .in("id", Array.from(selectedEmployees))
+    const ids = Array.from(selectedEmployees)
 
+    try {
+    for (const id of ids) {
+      const { error } = await supabase.from("users").delete().eq("id", id)
       if (error) throw error
+    }
+    
       setEmployees((prev) => prev.filter((emp) => !selectedEmployees.has(emp.id)))
       setSelectedEmployees(new Set())
     } catch (error) {
       console.error("Error al eliminar empleados:", error)
     }
   }
+
+  // ---------- Edit & View logic ----------
+  const handleSaveEdit = async () => {
+  if (!editUser) return
+
+  // Validación simple
+  if (!editUser.first_name || !editUser.last_name || !editUser.email) {
+    setEditError("Todos los campos son obligatorios")
+    return
+  }
+
+  try {
+    setEditLoading(true)
+    setEditError("")
+    setEditSuccess("")
+
+    const { error } = await supabase
+      .from("users")
+      .update({
+        first_name: editUser.first_name,
+        last_name: editUser.last_name,
+        email: editUser.email,
+      })
+      .eq("id", editUser.id)
+
+    if (error) throw error
+
+    // Actualizar la lista local
+    setEmployees((prev) =>
+      prev.map((emp) =>
+        emp.id === editUser.id ? { ...emp, ...editUser } : emp
+      )
+    )
+
+    setEditSuccess("Cambios guardados correctamente")
+    setTimeout(() => {
+      setEditUser(null)
+      setEditSuccess("")
+    }, 1500)
+  } catch (err) {
+    console.error("Error al guardar cambios:", err)
+    setEditError("Error al guardar los cambios")
+  } finally {
+    setEditLoading(false)
+  }
+}
+
 
 
 
@@ -310,10 +365,10 @@ export function EmployeeTable() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" onClick={() => setViewUser(employee)}>
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" onClick={() => setEditUser(employee)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
@@ -352,6 +407,66 @@ export function EmployeeTable() {
             </Button>
           </div>
         </div>
+
+                {/* Modal para ver usuario */}
+        {viewUser && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+              <h2 className="text-xl font-semibold mb-4">Detalles del usuario</h2>
+              <p><strong>Nombre:</strong> {viewUser.first_name} {viewUser.last_name}</p>
+              <p><strong>Email:</strong> {viewUser.email}</p>
+              <p><strong>Rol:</strong> {viewUser.role}</p>
+              <p><strong>Activo:</strong> {viewUser.is_active ? "Sí" : "No"}</p>
+              <div className="flex justify-end mt-4">
+                <Button onClick={() => setViewUser(null)}>Cerrar</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para editar usuario */}
+        {editUser && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative">
+              <h2 className="text-xl font-semibold mb-4">Editar usuario</h2>
+
+              {editError && (
+                <p className="text-sm text-red-600 mb-2">{editError}</p>
+              )}
+
+              {editSuccess && (
+                <p className="text-sm text-green-600 mb-2">{editSuccess}</p>
+              )}
+
+              <div className="space-y-4">
+                <Input
+                  value={editUser.first_name}
+                  onChange={(e) => setEditUser({ ...editUser, first_name: e.target.value })}
+                  placeholder="Nombre"
+                />
+                <Input
+                  value={editUser.last_name}
+                  onChange={(e) => setEditUser({ ...editUser, last_name: e.target.value })}
+                  placeholder="Apellido"
+                />
+                <Input
+                  value={editUser.email}
+                  onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
+                  placeholder="Correo electrónico"
+                />
+              </div>
+
+              <div className="flex justify-end mt-4 gap-2">
+                <Button variant="secondary" onClick={() => setEditUser(null)} disabled={editLoading}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={editLoading}>
+                  {editLoading ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <InviteEmployeesDialog isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </div>
