@@ -25,15 +25,12 @@ import {createClientComponentClient} from '@supabase/auth-helpers-nextjs'
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
 
-
-// Memoize menu items to prevent unnecessary recreations
 type MenuItem = {
     icon: LucideIcon;
     label: string;
     href: string;
 }
 
-// Define menu items without 'as const'
 const regularMenuItems: MenuItem[] = [
     {icon: BellDot, label: 'Pausa Activa', href: '/notification'},
     {icon: Library, label: 'Biblioteca de Ejercicios', href: '/library'},
@@ -49,7 +46,7 @@ const adminMenuItem: MenuItem = {
 }
 
 function useAdminCheck() {
-    const [menuItems, setMenuItems] = useState<MenuItem[]>(regularMenuItems)
+    const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null)
     const supabase = createClientComponentClient()
 
     useEffect(() => {
@@ -57,17 +54,17 @@ function useAdminCheck() {
 
         async function checkUserRole() {
             try {
-                // Try to get cached role first
                 const cachedRole = localStorage.getItem('userRole')
-                if (cachedRole === 'admin' && mounted) {
-                    setMenuItems([...regularMenuItems, adminMenuItem])
+                if (cachedRole && mounted) {
+                    const isAdmin = cachedRole === 'admin'
+                    setMenuItems(isAdmin ? [...regularMenuItems, adminMenuItem] : regularMenuItems)
                     return
                 }
 
-                const {data: {user}} = await supabase.auth.getUser()
+                const { data: { user } } = await supabase.auth.getUser()
                 if (!user || !mounted) return
 
-                const {data: userData} = await supabase
+                const { data: userData } = await supabase
                     .from('users')
                     .select('role')
                     .eq('id', user.id)
@@ -75,26 +72,19 @@ function useAdminCheck() {
 
                 if (!mounted) return
 
-                if (userData?.role === 'admin') {
-                    localStorage.setItem('userRole', 'admin')
-                    setMenuItems([...regularMenuItems, adminMenuItem])
-                } else {
-                    localStorage.setItem('userRole', 'user')
-                    setMenuItems(regularMenuItems)
-                }
+                const isAdmin = userData?.role === 'admin'
+                localStorage.setItem('userRole', isAdmin ? 'admin' : 'user')
+                setMenuItems(isAdmin ? [...regularMenuItems, adminMenuItem] : regularMenuItems)
             } catch (error) {
                 console.error('Error checking role:', error)
             }
         }
 
         checkUserRole()
-
-        return () => {
-            mounted = false
-        }
+        return () => { mounted = false }
     }, [supabase])
 
-    return {menuItems}
+    return { menuItems }
 }
 
 const LogoutButton = memo(function LogoutButton() {
@@ -105,9 +95,8 @@ const LogoutButton = memo(function LogoutButton() {
     const handleLogout = async () => {
         setIsLoading(true)
         try {
-            const {error} = await supabase.auth.signOut()
+            const { error } = await supabase.auth.signOut()
             if (error) throw error
-
             localStorage.removeItem('userRole')
             router.push('/login')
         } catch (error) {
@@ -125,12 +114,12 @@ const LogoutButton = memo(function LogoutButton() {
         >
             {isLoading ? (
                 <>
-                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true"/>
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
                     <span className="font-medium">Cerrando sesión...</span>
                 </>
             ) : (
                 <>
-                    <LogOut className="h-5 w-5" aria-hidden="true"/>
+                    <LogOut className="h-5 w-5" aria-hidden="true" />
                     <span className="font-medium">Cerrar sesión</span>
                 </>
             )}
@@ -138,7 +127,7 @@ const LogoutButton = memo(function LogoutButton() {
     )
 })
 
-const MobileNav = memo(function MobileNav({menuItems}: { menuItems: MenuItem[] }) {
+const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[] }) {
     const pathname = usePathname()
 
     return (
@@ -153,7 +142,7 @@ const MobileNav = memo(function MobileNav({menuItems}: { menuItems: MenuItem[] }
                         priority
                     />
                     <SheetClose className="rounded-full p-2 hover:bg-white/10">
-                        <X className="h-5 w-5 text-white"/>
+                        <X className="h-5 w-5 text-white" />
                     </SheetClose>
                 </SheetTitle>
             </SheetHeader>
@@ -170,7 +159,7 @@ const MobileNav = memo(function MobileNav({menuItems}: { menuItems: MenuItem[] }
                                 pathname === item.href && "bg-white/20 text-white"
                             )}
                         >
-                            <item.icon className="h-5 w-5" aria-hidden="true"/>
+                            <item.icon className="h-5 w-5" aria-hidden="true" />
                             <span className="font-medium">{item.label}</span>
                         </Link>
                     ))}
@@ -178,13 +167,13 @@ const MobileNav = memo(function MobileNav({menuItems}: { menuItems: MenuItem[] }
             </div>
 
             <div className="p-6 border-t border-white/10">
-                <LogoutButton/>
+                <LogoutButton />
             </div>
         </div>
     )
 })
 
-const Sidebar = memo(function Sidebar({menuItems}: { menuItems: MenuItem[] }) {
+const Sidebar = memo(function Sidebar({ menuItems }: { menuItems: MenuItem[] }) {
     const pathname = usePathname()
 
     return (
@@ -209,55 +198,47 @@ const Sidebar = memo(function Sidebar({menuItems}: { menuItems: MenuItem[] }) {
                                 pathname === item.href && "bg-white/20 text-white"
                             )}
                         >
-                            <item.icon className="h-5 w-5" aria-hidden="true"/>
+                            <item.icon className="h-5 w-5" aria-hidden="true" />
                             <span>{item.label}</span>
                         </Link>
                     ))}
                 </nav>
             </div>
             <div className="mt-auto p-6">
-                <LogoutButton/>
+                <LogoutButton />
             </div>
         </div>
     )
 })
 
-export function Layout({children}: { children: React.ReactNode }) {
-    const {menuItems} = useAdminCheck()
+export function Layout({ children }: { children: React.ReactNode }) {
+    const { menuItems } = useAdminCheck()
 
     const headerContent = useMemo(() => (
         <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
-            <div className="flex-1 flex items-center max-w-xl ml-12 lg:ml-0">
-                {/*<div className="relative w-full flex items-center">*/}
-                {/*  <Search className="absolute left-3 w-6 h-6 text-gray-500" aria-hidden="true" />*/}
-                {/*  <Input*/}
-                {/*      type="search"*/}
-                {/*      placeholder="Buscar..."*/}
-                {/*      className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-full bg-gray-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#8BC5B5] focus-visible:border-transparent"*/}
-                {/*  />*/}
-                {/*</div>*/}
-            </div>
-
+            <div className="flex-1 flex items-center max-w-xl ml-12 lg:ml-0"></div>
             <div className="flex items-center gap-3 sm:gap-4">
-
                 <Link href="/help/notifications">
                     <Button variant="ghost" size="icon" className="hover:bg-gray-200">
-                        <HelpCircle className="h-6 w-6 text-gray-600" aria-hidden="true"/>
+                        <HelpCircle className="h-6 w-6 text-gray-600" aria-hidden="true" />
                     </Button>
                 </Link>
-                {/*<Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-gray-200">*/}
-                {/*  <Settings className="h-6 w-6 text-gray-600" aria-hidden="true" />*/}
-                {/*</Button>*/}
                 <Button variant="ghost" size="icon" className="hover:bg-gray-200">
-                    <Bell className="h-6 w-6 text-gray-600" aria-hidden="true"/>
+                    <Bell className="h-6 w-6 text-gray-600" aria-hidden="true" />
                 </Button>
-                {/*<Avatar className={cn("hover:bg-gray-200")}>*/}
-                {/*  <AvatarImage src="/path-to-image.jpg" alt="Nombre de Usuario" />*/}
-                {/*  <AvatarFallback>UN</AvatarFallback>*/}
-                {/*</Avatar>*/}
             </div>
         </header>
     ), [])
+
+    // Esperar a que se carguen los roles
+    if (!menuItems) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+                <span className="ml-2 text-gray-600">Cargando...</span>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen flex">
@@ -270,20 +251,20 @@ export function Layout({children}: { children: React.ReactNode }) {
                         className="lg:hidden fixed left-2 top-2 z-50"
                         aria-label="Abrir menú"
                     >
-                        <Menu className="h-6 w-6"/>
+                        <Menu className="h-6 w-6" />
                     </Button>
                 </SheetTrigger>
                 <SheetContent
                     side="left"
                     className="w-80 p-0 bg-gradient-to-b from-[#8BC5B5] to-[#5B9B8B] border-none z-[9999]"
                 >
-                    <MobileNav menuItems={menuItems}/>
+                    <MobileNav menuItems={menuItems} />
                 </SheetContent>
             </Sheet>
 
             {/* Desktop Sidebar */}
             <div className="hidden lg:flex w-64 bg-[#8BC5B5] text-white">
-                <Sidebar menuItems={menuItems}/>
+                <Sidebar menuItems={menuItems} />
             </div>
 
             {/* Main Content */}
