@@ -54,29 +54,27 @@ function useAdminCheck() {
 
     async function checkUserRole() {
       try {
-        const cachedRole = localStorage.getItem('userRole')
-        if (cachedRole && mounted) {
-          const isAdmin = cachedRole === 'admin'
-          setMenuItems(isAdmin ? [...regularMenuItems, adminMenuItem] : regularMenuItems)
-          return
-        }
-
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !mounted) return
 
-        const { data: userData } = await supabase
+        const { data: userData, error } = await supabase
           .from('users')
           .select('role')
           .eq('id', user.id)
           .single()
 
         if (!mounted) return
+        if (error) {
+          console.error('Error fetching user role:', error)
+          setMenuItems(regularMenuItems)
+          return
+        }
 
         const isAdmin = userData?.role === 'admin'
-        localStorage.setItem('userRole', isAdmin ? 'admin' : 'user')
         setMenuItems(isAdmin ? [...regularMenuItems, adminMenuItem] : regularMenuItems)
       } catch (error) {
         console.error('Error checking role:', error)
+        setMenuItems(regularMenuItems)
       }
     }
 
@@ -97,7 +95,6 @@ const LogoutButton = memo(function LogoutButton() {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      localStorage.removeItem('userRole')
       router.push('/login')
     } catch (error) {
       console.error('Error logging out:', error)
