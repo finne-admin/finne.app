@@ -14,8 +14,13 @@ interface InviteEmployeesDialogProps {
 
 export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmployeesDialogProps>) {
 
+    type EmailWithRole = {
+    email: string
+    role: "user" | "admin"
+    }
+
     const [emailInput, setEmailInput] = React.useState("")
-    const [emailList, setEmailList] = React.useState<string[]>([])
+    const [emailList, setEmailList] = React.useState<EmailWithRole[]>([])
     const [inviteLoading, setInviteLoading] = React.useState(false)
     const [inviteError, setInviteError] = React.useState("")
     const [inviteSuccess, setInviteSuccess] = React.useState("")
@@ -33,7 +38,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
             return
         }
 
-        setEmailList((prev) => [...prev, trimmed])
+        setEmailList((prev) => [...prev, { email: trimmed, role: "user" }])
         setEmailInput("")
     }
 
@@ -42,6 +47,15 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
         setInviteSuccess("")
         setEmailList((prev) => prev.filter((_, i) => i !== index))
     }
+
+    function toggleRole(index: number) {
+        setEmailList((prev) =>
+            prev.map((item, i) =>
+            i === index ? { ...item, role: item.role === "user" ? "admin" : "user" } : item
+            )
+        )
+    }
+
 
     async function handleInviteAll() {
         setInviteLoading(true)
@@ -54,19 +68,19 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
                 return
             }
 
-            for (const email of emailList) {
-                const response = await fetch('/api/admin/invite', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email }),
-                })
+            for (const { email, role } of emailList) {
+            const response = await fetch('/api/admin/invite', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, role }),
+            })
 
-                if (!response.ok) {
-                    const errorData = await response.json()
-                    throw new Error(errorData.error || 'Failed to send invite')
-                }
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Failed to send invite')
+            }
             }
 
             setInviteSuccess(`Invites sent to ${emailList.length} email(s).`)
@@ -136,20 +150,30 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
 
                                     {emailList.length > 0 && (
                                         <ul className="mt-4 space-y-2">
-                                            {emailList.map((email, index) => (
-                                                <li
-                                                    key={index}
-                                                    className="flex items-center justify-between p-2 border rounded-md"
+                                            {emailList.map((item, index) => (
+                                            <li
+                                                key={index}
+                                                className="flex items-center justify-between p-2 border rounded-md"
+                                            >
+                                                <span className="text-sm">{item.email}</span>
+                                                <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => toggleRole(index)}
+                                                    title={`Invite as ${item.role === 'user' ? 'Admin' : 'User'}`}
                                                 >
-                                                    <span className="text-sm">{email}</span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleRemoveEmail(index)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
-                                                </li>
+                                                    {item.role === "admin" ? "A" : "U"}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleRemoveEmail(index)}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                                </div>
+                                            </li>
                                             ))}
                                         </ul>
                                     )}
