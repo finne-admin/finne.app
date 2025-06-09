@@ -17,6 +17,8 @@ import { es } from "date-fns/locale/es"
 import "react-datepicker/dist/react-datepicker.css"
 import Image from "next/image"
 
+import { createClient } from "@/lib/supabase"
+
 // Register Spanish locale for the date picker
 registerLocale("es", es)
 
@@ -92,37 +94,54 @@ export default function RegisterPage() {
         if (!validateForm()) return
         setIsLoading(true)
 
+        const supabase = createClient()
+
         try {
-            const response = await fetch("/api/signup/admin", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
+            const { data: { user } } = await supabase.auth.getUser()
+
+            if (user) {
+                const { error: insertError } = await supabase.from("users").insert({
+                    id: user.id,
+                    email: user.email,
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    date_of_birth: formData.dateOfBirth?.toISOString(),
+                    sex: formData.sex,
+                    role: user.user_metadata?.role ?? "admin"
+                })
+
+                if (insertError) throw new Error("Error guardando datos: " + insertError.message)
+
+                setSuccess("Datos guardados correctamente.")
+                setTimeout(() => router.push("/login"), 4000)
+            } else {
+                const { error: signUpError } = await supabase.auth.signUp({
                     email: formData.email,
                     password: formData.password,
-                    dateOfBirth: formData.dateOfBirth?.toISOString(),
-                    sex: formData.sex
+                    options: {
+                        data: {
+                            first_name: formData.firstName,
+                            last_name: formData.lastName,
+                            sex: formData.sex,
+                            date_of_birth: formData.dateOfBirth?.toISOString(),
+                            role: "admin"
+                        }
+                    }
                 })
-            })
 
-            const result = await response.json()
+                if (signUpError) throw new Error("Error al registrar: " + signUpError.message)
 
-            if (!response.ok) {
-                throw new Error(result.error || "Registration failed")
+                setSuccess("Cuenta de administrador creada correctamente.")
+                setTimeout(() => router.push("/login"), 4000)
             }
 
-            setSuccess(result.message)
-            setTimeout(() => router.push("/login"), 5000)
-
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Registration failed")
+            setError(err instanceof Error ? err.message : "Error en el registro")
         } finally {
             setIsLoading(false)
         }
     }
+
 
     // Custom styles for the date picker to match the application's design
     const datePickerCustomStyles = {
