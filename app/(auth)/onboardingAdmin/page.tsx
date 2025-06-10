@@ -100,21 +100,44 @@ export default function RegisterPage() {
             const { data: { user } } = await supabase.auth.getUser()
 
             if (user) {
-                const { error: insertError } = await supabase.from("users").insert({
-                    id: user.id,
-                    email: user.email,
-                    first_name: formData.firstName,
-                    last_name: formData.lastName,
-                    date_of_birth: formData.dateOfBirth?.toISOString(),
-                    sex: formData.sex,
-                    role: user.user_metadata?.role ?? "admin"
+                // Verificamos si ya tiene fila en la tabla "users"
+                const { data: existingUser, error: fetchError } = await supabase
+                    .from("users")
+                    .select("id")
+                    .eq("id", user.id)
+                    .single()
+
+                if (!existingUser) {
+                    const { error: insertError } = await supabase.from("users").insert({
+                        id: user.id,
+                        email: user.email,
+                        first_name: formData.firstName,
+                        last_name: formData.lastName,
+                        date_of_birth: formData.dateOfBirth?.toISOString(),
+                        sex: formData.sex,
+                        role: user.user_metadata?.role ?? "admin"
+                    })
+
+                    if (insertError) throw new Error("Error guardando datos: " + insertError.message)
+                }
+
+                // También actualizamos metadata por si no se hizo en el momento de la invitación
+                const { error: updateError } = await supabase.auth.updateUser({
+                    data: {
+                        first_name: formData.firstName,
+                        last_name: formData.lastName,
+                        date_of_birth: formData.dateOfBirth?.toISOString(),
+                        sex: formData.sex,
+                        role: "admin"
+                    }
                 })
 
-                if (insertError) throw new Error("Error guardando datos: " + insertError.message)
+                if (updateError) throw new Error("Error actualizando perfil: " + updateError.message)
 
                 setSuccess("Datos guardados correctamente.")
                 setTimeout(() => router.push("/login"), 4000)
             } else {
+                // Registro manual (sin invitación previa)
                 const { error: signUpError } = await supabase.auth.signUp({
                     email: formData.email,
                     password: formData.password,
@@ -131,7 +154,7 @@ export default function RegisterPage() {
 
                 if (signUpError) throw new Error("Error al registrar: " + signUpError.message)
 
-                setSuccess("Cuenta de administrador creada correctamente.")
+                setSuccess("Cuenta de administrador creada correctamente. Revisa tu correo para verificar tu cuenta.")
                 setTimeout(() => router.push("/login"), 4000)
             }
 
@@ -141,6 +164,7 @@ export default function RegisterPage() {
             setIsLoading(false)
         }
     }
+
 
 
     // Custom styles for the date picker to match the application's design
