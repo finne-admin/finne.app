@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server'
 import {supabaseAdmin} from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
-    const { email } = await request.json()
+    const { email, role } = await request.json()
+
+    const redirectTo = role === 'admin'
+    ? 'https://piloto.finne.app/onboardingAdmin/'
+    : 'https://piloto.finne.app/onboarding/'
+
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        data: {
-            role: 'user'
-        }
+    data: {
+        role: role || 'user'
+    },
+    redirectTo
     })
 
     if (error) {
