@@ -144,6 +144,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
                                             placeholder="john.doe@example.com"
                                             value={emailInput}
                                             onChange={(e) => setEmailInput(e.target.value)}
+                                            className="text-[color:#4F7C6B]"
                                         />
                                         <Button onClick={handleAddEmail}>Add</Button>
                                     </div>
@@ -155,14 +156,14 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
                                                 key={index}
                                                 className="flex items-center justify-between p-2 border rounded-md"
                                             >
-                                                <span className="text-sm text-green-700">{item.email}</span>
+                                                <span className="text-sm text-[color:#4F7C6B]">{item.email}</span>
                                                 <div className="flex items-center gap-2">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => toggleRole(index)}
                                                     title={`Invite as ${item.role === 'user' ? 'Admin' : 'User'}`}
-                                                    className="text-green-700"
+                                                    className="text-[color:#4F7C6B] hover:text-[color:#3A5B4D] focus:outline-none"
                                                 >
                                                     {item.role === "admin" ? "A" : "U"}
                                                 </Button>
