@@ -172,8 +172,15 @@ export function EmployeeTable() {
   // ---------- Delete logic ----------
   const handleDelete = async (empId: string) => {
     try {
-      const { error } = await supabase.from("users").delete().eq("id", empId)
-      if (error) throw error
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: empId }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || "Error al eliminar usuario")
+
       setEmployees((prev) => prev.filter((emp) => emp.id !== empId))
     } catch (error) {
       console.error("Error al eliminar empleado:", error)
@@ -184,17 +191,24 @@ export function EmployeeTable() {
     const ids = Array.from(selectedEmployees)
 
     try {
-    for (const id of ids) {
-      const { error } = await supabase.from("users").delete().eq("id", id)
-      if (error) throw error
-    }
-    
+      for (const id of ids) {
+        const res = await fetch("/api/admin/delete-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: id }),
+        })
+
+        const result = await res.json()
+        if (!res.ok) throw new Error(result.error || "Error al eliminar usuario")
+      }
+
       setEmployees((prev) => prev.filter((emp) => !selectedEmployees.has(emp.id)))
       setSelectedEmployees(new Set())
     } catch (error) {
       console.error("Error al eliminar empleados:", error)
     }
   }
+
 
   // ---------- Edit & View logic ----------
   const handleSaveEdit = async () => {
