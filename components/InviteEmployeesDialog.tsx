@@ -155,13 +155,14 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
                                                 key={index}
                                                 className="flex items-center justify-between p-2 border rounded-md"
                                             >
-                                                <span className="text-sm">{item.email}</span>
+                                                <span className="text-sm text-green-700">{item.email}</span>
                                                 <div className="flex items-center gap-2">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => toggleRole(index)}
                                                     title={`Invite as ${item.role === 'user' ? 'Admin' : 'User'}`}
+                                                    className="text-green-700"
                                                 >
                                                     {item.role === "admin" ? "A" : "U"}
                                                 </Button>
