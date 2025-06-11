@@ -112,6 +112,14 @@ export default function RegisterAdminPage() {
           role: user.user_metadata?.role ?? "admin"
         })
         if (insertError) throw insertError
+      } else {
+        const { error: updateError } = await supabase.from("users").update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          date_of_birth: formData.dateOfBirth?.toISOString(),
+          sex: formData.sex
+        }).eq("id", user.id)
+        if (updateError) throw updateError
       }
 
       const { error: updateError } = await supabase.auth.updateUser({
