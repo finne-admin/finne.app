@@ -16,6 +16,7 @@ import { es } from "date-fns/locale/es"
 import "react-datepicker/dist/react-datepicker.css"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase"
+import { useEffect } from "react"
 
 registerLocale("es", es)
 
@@ -62,6 +63,29 @@ export default function RegisterPage() {
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
+
+    // ESTABLECER SESIÓN SI LLEGA DESDE INVITACIÓN
+    useEffect(() => {
+    const hash = window.location.hash
+    if (!hash) return
+
+    const params = new URLSearchParams(hash.replace("#", "?"))
+    const access_token = params.get("access_token")
+    const refresh_token = params.get("refresh_token")
+
+    if (access_token && refresh_token) {
+        const supabase = createClient()
+        supabase.auth.setSession({ access_token, refresh_token })
+        .then(({ error }) => {
+            if (error) {
+            console.error("Error al establecer sesión desde URL:", error)
+            } else {
+            // Limpia el hash de la URL tras iniciar sesión
+            window.location.replace(window.location.pathname)
+            }
+        })
+    }
+    }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
