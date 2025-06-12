@@ -37,17 +37,24 @@ export function Tutorial({ onClose }: TutorialProps) {
           content: "Este breve tutorial te guiará por las funciones principales de Finne."
         },
         {
-          target: ".text-gray-400.placeholder-gray-400",
-          title: "Buscador",
-          content: "Puedes buscar ejercicios o contenido rápidamente desde aquí."
+        target: 'body',
+        placement: 'center',
+        title: "Activa las notificaciones del navegador",
+        content: (
+            <div className="text-sm">
+            <p className="mb-3">
+                Para recibir recordatorios, haz clic en el icono del candado de la barra del navegador (arriba a la izquierda) y permite las notificaciones.
+            </p>
+            <img
+                src="/tutorial/permiso-notificaciones.png"
+                alt="Activar notificaciones"
+                className="rounded-md border shadow w-full max-w-xs mx-auto"
+            />
+            </div>
+        )
         },
         {
-          target: ".text-gray-600 svg:nth-child(3)",
-          title: "Notificaciones",
-          content: "Aquí recibirás recordatorios para tu pausa activa."
-        },
-        {
-          target: "a[href='/notifications']",
+          target: "a[href='/notification']",
           title: "Pausa Activa",
           content: "Desde aquí accedes a tus sesiones diarias."
         },
@@ -74,8 +81,8 @@ export function Tutorial({ onClose }: TutorialProps) {
         content: "Desde aquí gestionas empleados y monitorizas la actividad."
       }
 
-      const finalSteps = isAdmin
-        ? [...commonSteps.slice(0, 5), adminStep, ...commonSteps.slice(5)]
+        const finalSteps = isAdmin
+        ? [...commonSteps, adminStep]
         : commonSteps
 
       setSteps(finalSteps)
