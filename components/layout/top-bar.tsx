@@ -29,27 +29,20 @@ export function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hidden sm:inline-flex"
-          onClick={startTutorial}
-          title="Iniciar Tutorial"
-        >
-          <PlayCircle className="h-5 w-5 text-green-600" />
-        </Button>
         <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
           <HelpCircle className="h-5 w-5 text-gray-600" />
         </Button>
         <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
           <Settings className="h-5 w-5 text-gray-600" />
         </Button>
+        <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
+          <PlayCircle className="h-5 w-5 text-green-600" />
+        </Button>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5 text-gray-600" />
           <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
         </Button>
       </div>
-
       {isOpen && <Tutorial onClose={stopTutorial} />}
     </div>
   )
