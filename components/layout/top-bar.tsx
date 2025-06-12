@@ -1,12 +1,15 @@
 'use client'
 
-import { Bell, HelpCircle, Search, Settings } from 'lucide-react'
+import { Bell, HelpCircle, Search, Settings, PlayCircle } from 'lucide-react'
 import Image from 'next/image'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useTutorialState } from '@/components/tutorial/useTutorial'
+import { Tutorial } from '@/components/tutorial/tutorial' 
 
 export function TopBar() {
+  const { isOpen, startTutorial, stopTutorial } = useTutorialState()
+
   return (
     <div className="h-16 border-b flex items-center justify-between px-4 bg-white sticky top-0 z-10">
       <div className="flex items-center gap-8">
@@ -26,6 +29,15 @@ export function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden sm:inline-flex"
+          onClick={startTutorial}
+          title="Iniciar Tutorial"
+        >
+          <PlayCircle className="h-5 w-5 text-green-600" />
+        </Button>
         <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
           <HelpCircle className="h-5 w-5 text-gray-600" />
         </Button>
@@ -36,12 +48,9 @@ export function TopBar() {
           <Bell className="h-5 w-5 text-gray-600" />
           <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
         </Button>
-        <Avatar>
-          <AvatarImage src="/placeholder.svg" />
-          <AvatarFallback>JD</AvatarFallback>
-        </Avatar>
       </div>
+
+      {isOpen && <Tutorial onClose={stopTutorial} />}
     </div>
   )
 }
-
