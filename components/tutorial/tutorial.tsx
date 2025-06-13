@@ -46,7 +46,7 @@ export function Tutorial({ onClose }: TutorialProps) {
                 Para recibir recordatorios, haz clic en el icono del candado de la barra del navegador (arriba a la izquierda) y permite las notificaciones.
             </p>
             <img
-                src="/tutorial/permiso-notificaciones.png"
+                src="permiso-notificaciones.png"
                 alt="Activar notificaciones"
                 className="rounded-md border shadow w-full max-w-xs mx-auto"
             />
