@@ -5,8 +5,8 @@ export async function POST(request: Request) {
     const { email, role } = await request.json()
 
     const redirectTo = role === 'admin'
-    ? 'https://stn.finne.app/onboardingAdmin/'
-    : 'https://stn.finne.app/onboarding/'
+    ? 'https://piloto.finne.app/onboardingAdmin/'
+    : 'https://piloto.finne.app/onboarding/'
 
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
