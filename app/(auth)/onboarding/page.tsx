@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +15,6 @@ import { es } from "date-fns/locale/es"
 import "react-datepicker/dist/react-datepicker.css"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase"
-import { useEffect } from "react"
 
 registerLocale("es", es)
 
@@ -48,7 +46,35 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [hasSession, setHasSession] = useState(false)
   const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash) return
+
+    const params = new URLSearchParams(hash.replace("#", "?"))
+    const access_token = params.get("access_token")
+    const refresh_token = params.get("refresh_token")
+
+    if (access_token && refresh_token) {
+      supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+        if (!error) {
+          window.location.replace(window.location.pathname)
+        }
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setFormData((prev) => ({ ...prev, email: user.email || "" }))
+        setHasSession(true)
+      }
+    })
+  }, [])
 
   const validateForm = (): boolean => {
     const errors: FormErrors = {}
@@ -64,29 +90,6 @@ export default function RegisterPage() {
     return Object.keys(errors).length === 0
   }
 
-    // ESTABLECER SESIÓN SI LLEGA DESDE INVITACIÓN
-    useEffect(() => {
-    const hash = window.location.hash
-    if (!hash) return
-
-    const params = new URLSearchParams(hash.replace("#", "?"))
-    const access_token = params.get("access_token")
-    const refresh_token = params.get("refresh_token")
-
-    if (access_token && refresh_token) {
-        const supabase = createClient()
-        supabase.auth.setSession({ access_token, refresh_token })
-        .then(({ error }) => {
-            if (error) {
-            console.error("Error al establecer sesión desde URL:", error)
-            } else {
-            // Limpia el hash de la URL tras iniciar sesión
-            window.location.replace(window.location.pathname)
-            }
-        })
-    }
-    }, [])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -94,51 +97,75 @@ export default function RegisterPage() {
     if (!validateForm()) return
     setIsLoading(true)
 
-    const supabase = createClient()
-
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No se ha autenticado correctamente. Asegúrate de haber usado el enlace del email.")
 
-      const { data: existingUser } = await supabase.from("users").select("id").eq("id", user.id).maybeSingle()
-      if (!existingUser) {
-        const { error: insertError } = await supabase.from("users").insert({
-          id: user.id,
-          email: user.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          date_of_birth: formData.dateOfBirth?.toISOString(),
-          sex: formData.sex,
-          role: user.user_metadata?.role ?? "user"
+      if (user) {
+        // Invitación: actualizar datos
+        const { data: existingUser } = await supabase.from("users").select("id").eq("id", user.id).maybeSingle()
+        if (!existingUser) {
+          await supabase.from("users").insert({
+            id: user.id,
+            email: user.email,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            date_of_birth: formData.dateOfBirth?.toISOString(),
+            sex: formData.sex,
+            role: "user"
+          })
+        } else {
+          await supabase.from("users").update({
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            date_of_birth: formData.dateOfBirth?.toISOString(),
+            sex: formData.sex
+          }).eq("id", user.id)
+        }
+
+        await supabase.auth.updateUser({
+          password: formData.password,
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            date_of_birth: formData.dateOfBirth?.toISOString(),
+            sex: formData.sex,
+            role: "user"
+          }
         })
-        if (insertError) throw insertError
       } else {
-        const { error: updateError } = await supabase.from("users").update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          date_of_birth: formData.dateOfBirth?.toISOString(),
-          sex: formData.sex
-        }).eq("id", user.id)
-        if (updateError) throw updateError
-      }
+        // Registro directo: signUp
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              role: "user",
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              date_of_birth: formData.dateOfBirth?.toISOString(),
+              sex: formData.sex
+            }
+          }
+        })
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: formData.password,
-        data: {
+        if (signUpError) throw signUpError
+
+        await supabase.from("users").insert({
+          id: data.user?.id,
+          email: formData.email,
           first_name: formData.firstName,
           last_name: formData.lastName,
           date_of_birth: formData.dateOfBirth?.toISOString(),
           sex: formData.sex,
           role: "user"
-        }
-      })
-      if (updateError) throw updateError
+        })
+      }
 
       setSuccess("Registro completado correctamente.")
       setTimeout(() => router.push("/login"), 3000)
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error durante el registro")
+    } catch (err: any) {
+      setError(err.message || "Error durante el registro")
     } finally {
       setIsLoading(false)
     }
