@@ -1,13 +1,13 @@
 'use client'
 
-import {useEffect, useState} from 'react'
+import {use, useEffect, useState} from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Pencil, Plus, Clock, X, Bell } from 'lucide-react'
 import {
     Table,
-    TableBody,
+    TableBody,  
     TableCell,
     TableHead,
     TableHeader,
@@ -584,7 +584,7 @@ export default function SettingsPage() {
                 className="flex items-center gap-2 transition duration-200"
                 >
                 <Bell className="h-4 w-4" />
-                Notificar (Prueba)
+                Notificar ( anestudio )
                 </Button>
 
                 {!isEditing && (
@@ -592,7 +592,7 @@ export default function SettingsPage() {
                     id="edit-times-btn"
                     variant="edit"
                     onClick={() => {
-                      if (userRole === 'admin') {
+                      if (userRole === 'admin' || userRole === 'user') {
                         setIsEditing(true)
                       } else {
                         const btn = document.getElementById('edit-times-btn')
