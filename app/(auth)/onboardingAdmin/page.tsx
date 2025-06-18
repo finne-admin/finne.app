@@ -177,7 +177,7 @@ export default function RegisterAdminPage() {
         <div className="relative w-32 h-12 mx-auto">
           <Image src="/logoprincipalRecurso 4@4x.png" alt="Logo de Finne" fill className="object-contain" priority />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Crear cuenta de Administrador</h2>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Crear cuenta de administrador</h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
