@@ -223,7 +223,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           variant="ghost"
           size="icon"
           className="hover:bg-gray-200"
-          onClick={startTutorial}
+          onClick={() => {
+            localStorage.setItem("tutorialShown", "false")
+            startTutorial()
+          }}
           title="Iniciar Tutorial"
         >
           <PlayCircle className="h-6 w-6 text-green-600" />
