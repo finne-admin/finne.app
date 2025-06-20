@@ -37,21 +37,21 @@ export function Tutorial({ onClose }: TutorialProps) {
           content: "Este breve tutorial te guiará por las funciones principales de Finne."
         },
         {
-        target: 'body',
-        placement: 'center',
-        title: "Activa las notificaciones del navegador",
-        content: (
+          target: 'body',
+          placement: 'center',
+          title: "Activa las notificaciones del navegador",
+          content: (
             <div className="text-sm">
-            <p className="mb-3">
-                Para recibir recordatorios, haz clic en el icono del candado de la barra del navegador (arriba a la izquierda) y permite las notificaciones.
-            </p>
-            <img
+              <p className="mb-3">
+                Para recibir recordatorios, haz clic en el icono de opciones de la barra del navegador (arriba a la izquierda o a la derecha) y permite las notificaciones.
+              </p>
+              <img
                 src="permiso-notificaciones.png"
                 alt="Activar notificaciones"
                 className="rounded-md border shadow w-full max-w-xs mx-auto"
-            />
+              />
             </div>
-        )
+          )
         },
         {
           target: "a[href='/notification']",
@@ -64,14 +64,19 @@ export function Tutorial({ onClose }: TutorialProps) {
           content: "Explora todos los ejercicios disponibles."
         },
         {
-          target: "a[href='/milestones']",
-          title: "Logros",
-          content: "Visualiza tus progresos y premios acumulados."
+          target: "a[href='/statistics']",
+          title: "Estadísticas",
+          content: "Consulta tus progresos y métricas de actividad."
         },
         {
           target: "a[href='/settings']",
           title: "Ajustes",
           content: "Cambia tu perfil, notificaciones y preferencias."
+        },
+        {
+          target: "a[href='/milestones']",
+          title: "Logros",
+          content: "Visualiza tus progresos y premios acumulados."
         }
       ]
 
@@ -81,7 +86,7 @@ export function Tutorial({ onClose }: TutorialProps) {
         content: "Desde aquí gestionas empleados y monitorizas la actividad."
       }
 
-        const finalSteps = isAdmin
+      const finalSteps = isAdmin
         ? [...commonSteps, adminStep]
         : commonSteps
 
@@ -107,13 +112,25 @@ export function Tutorial({ onClose }: TutorialProps) {
       scrollToFirstStep
       showProgress
       showSkipButton
+      spotlightPadding={10}
+      spotlightClicks={true}
+      disableScrolling={false}
+      disableOverlayClose={true}
+      locale={{
+        back: "Atrás",
+        close: "Cerrar",
+        last: "Finalizar",
+        next: "Siguiente",
+        skip: "Saltar"
+      }}
       styles={{
         options: {
           zIndex: 10000,
           primaryColor: "#5BA69B",
           textColor: "#333",
           arrowColor: "#fff",
-          backgroundColor: "#fff"
+          backgroundColor: "#fff",
+          overlayColor: "rgba(0, 0, 0, 0.4)"
         }
       }}
       callback={handleCallback}
