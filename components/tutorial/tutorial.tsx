@@ -13,12 +13,15 @@ interface TutorialProps {
 export function Tutorial({ onClose }: TutorialProps) {
   const router = useRouter()
   const [steps, setSteps] = useState<Step[]>([])
+  const [shouldRun, setShouldRun] = useState(false)
 
   useEffect(() => {
+    const alreadyShown = localStorage.getItem("tutorial_shown")
+    if (alreadyShown === "true") return
+
     async function fetchRole() {
       const supabase = createClientComponentClient()
       const { data: { user } } = await supabase.auth.getUser()
-
       if (!user) return
 
       const { data: userData } = await supabase
@@ -86,11 +89,10 @@ export function Tutorial({ onClose }: TutorialProps) {
         content: "Desde aquí gestionas empleados y monitorizas la actividad."
       }
 
-      const finalSteps = isAdmin
-        ? [...commonSteps, adminStep]
-        : commonSteps
+      const finalSteps = isAdmin ? [...commonSteps, adminStep] : commonSteps
 
       setSteps(finalSteps)
+      setShouldRun(true)
     }
 
     fetchRole()
@@ -99,18 +101,19 @@ export function Tutorial({ onClose }: TutorialProps) {
   const handleCallback = (data: CallBackProps) => {
     const { status } = data
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      localStorage.setItem("tutorial_shown", "true")
       onClose()
     }
   }
 
-  if (steps.length === 0) return null
+  if (!shouldRun || steps.length === 0) return null
 
   return (
     <Joyride
       steps={steps}
       continuous
       scrollToFirstStep
-      showProgress={false}
+      showProgress={true}
       showSkipButton
       spotlightPadding={10}
       spotlightClicks={true}
