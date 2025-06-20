@@ -13,13 +13,12 @@ interface TutorialProps {
 export function Tutorial({ onClose }: TutorialProps) {
   const router = useRouter()
   const [steps, setSteps] = useState<Step[]>([])
-  const [shouldRun, setShouldRun] = useState(false)
+  const [run, setRun] = useState(false)
 
   useEffect(() => {
-    const alreadyShown = localStorage.getItem("tutorial_shown")
-    if (alreadyShown === "true") return
+    const shown = localStorage.getItem("tutorial_shown")
 
-    async function fetchRole() {
+    async function fetchRoleAndInit() {
       const supabase = createClientComponentClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -90,12 +89,12 @@ export function Tutorial({ onClose }: TutorialProps) {
       }
 
       const finalSteps = isAdmin ? [...commonSteps, adminStep] : commonSteps
-
       setSteps(finalSteps)
-      setShouldRun(true)
+
+      if (!shown) setRun(true)
     }
 
-    fetchRole()
+    fetchRoleAndInit()
   }, [])
 
   const handleCallback = (data: CallBackProps) => {
@@ -106,10 +105,11 @@ export function Tutorial({ onClose }: TutorialProps) {
     }
   }
 
-  if (!shouldRun || steps.length === 0) return null
+  if (steps.length === 0) return null
 
   return (
     <Joyride
+      run={run}
       steps={steps}
       continuous
       scrollToFirstStep
