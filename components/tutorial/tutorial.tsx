@@ -110,7 +110,7 @@ export function Tutorial({ onClose }: TutorialProps) {
       steps={steps}
       continuous
       scrollToFirstStep
-      showProgress
+      showProgress={false}
       showSkipButton
       spotlightPadding={10}
       spotlightClicks={true}
