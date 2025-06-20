@@ -1,11 +1,17 @@
-// components/tutorial/useTutorial.ts
-import { useState } from "react"
+import { useState } from 'react'
 
 export function useTutorialState() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const startTutorial = () => setIsOpen(true)
-  const stopTutorial = () => setIsOpen(false)
+  const startTutorial = () => {
+    localStorage.removeItem("tutorialShown") // Eliminar el flag
+    setIsOpen(true)
+  }
+
+  const stopTutorial = () => {
+    localStorage.setItem("tutorialShown", "true") // Guardar que ya se mostró
+    setIsOpen(false)
+  }
 
   return { isOpen, startTutorial, stopTutorial }
-}   
+}
