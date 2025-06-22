@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useTutorialState } from '@/components/tutorial/useTutorial'
-import { Tutorial } from '@/components/tutorial/tutorial'
+import { Tutorial } from '@/components/tutorial/Tutorial'
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
 
@@ -224,7 +224,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           size="icon"
           className="hover:bg-gray-200"
           onClick={() => {
-            localStorage.setItem("tutorialShown", "false")
             startTutorial()
           }}
           title="Iniciar Tutorial"
@@ -281,7 +280,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {headerContent}
         <main className="bg-gray-50">
           {children}
-          {isOpen && <Tutorial onClose={stopTutorial} />}
+          <Tutorial onClose={stopTutorial} run={isOpen} />
         </main>
       </div>
     </div>

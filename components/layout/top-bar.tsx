@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { useTutorialState } from '@/components/tutorial/useTutorial'
-import { Tutorial } from '@/components/tutorial/tutorial' 
+import { Tutorial } from '@/components/tutorial/Tutorial' 
 
 export function TopBar() {
   const { isOpen, startTutorial, stopTutorial } = useTutorialState()
@@ -43,7 +43,6 @@ export function TopBar() {
           <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
         </Button>
       </div>
-      {isOpen && <Tutorial onClose={stopTutorial} />}
     </div>
   )
 }
