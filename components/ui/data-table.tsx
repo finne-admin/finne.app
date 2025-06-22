@@ -84,7 +84,8 @@ export function EmployeeTable() {
   const [editLoading, setEditLoading] = React.useState(false)
   const [editError, setEditError] = React.useState("")
   const [editSuccess, setEditSuccess] = React.useState("")
-
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = React.useState(false)
 
 
   const itemsPerPage = 5
@@ -299,13 +300,13 @@ export function EmployeeTable() {
             </Select>
 
             {selectedEmployees.size > 0 && (
-                <Button
-                    variant="colorRed"
-                    onClick={handleBulkDelete}
-                    className="whitespace-nowrap"
-                >
-                  Eliminar Seleccionados ({selectedEmployees.size})
-                </Button>
+              <Button
+                variant="colorRed"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="whitespace-nowrap"
+              >
+                Eliminar Seleccionados ({selectedEmployees.size})
+              </Button>
             )}
 
             {/* Button to open Headless UI dialog */}
@@ -388,7 +389,7 @@ export function EmployeeTable() {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDelete(employee.id)}
+                                onClick={() => setConfirmDeleteId(employee.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -476,6 +477,54 @@ export function EmployeeTable() {
                 </Button>
                 <Button onClick={handleSaveEdit} disabled={editLoading}>
                   {editLoading ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmDeleteId && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+              <h2 className="text-lg font-semibold mb-4">¿Eliminar usuario?</h2>
+              <p className="mb-4">¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.</p>
+              <div className="flex justify-end gap-3">
+                <Button variant="secondary" onClick={() => setConfirmDeleteId(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    await handleDelete(confirmDeleteId)
+                    setConfirmDeleteId(null)
+                  }}
+                >
+                  Eliminar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showBulkDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+              <h2 className="text-lg font-semibold mb-4">¿Eliminar empleados seleccionados?</h2>
+              <p className="text-sm text-gray-600">
+                Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar los empleados seleccionados?
+              </p>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button variant="secondary" onClick={() => setShowBulkDeleteConfirm(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    await handleBulkDelete()
+                    setShowBulkDeleteConfirm(false)
+                  }}
+                >
+                  Eliminar
                 </Button>
               </div>
             </div>
