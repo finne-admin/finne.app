@@ -8,16 +8,13 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 interface TutorialProps {
   onClose: () => void
+  run: boolean
 }
 
-export function Tutorial({ onClose }: TutorialProps) {
-  const router = useRouter()
+export function Tutorial({ onClose, run }: TutorialProps) {
   const [steps, setSteps] = useState<Step[]>([])
-  const [run, setRun] = useState(false)
 
   useEffect(() => {
-    const shown = localStorage.getItem("tutorial_shown")
-
     async function fetchRoleAndInit() {
       const supabase = createClientComponentClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -90,8 +87,6 @@ export function Tutorial({ onClose }: TutorialProps) {
 
       const finalSteps = isAdmin ? [...commonSteps, adminStep] : commonSteps
       setSteps(finalSteps)
-
-      if (!shown) setRun(true)
     }
 
     fetchRoleAndInit()
@@ -105,7 +100,7 @@ export function Tutorial({ onClose }: TutorialProps) {
     }
   }
 
-  if (steps.length === 0) return null
+  if (!run || steps.length === 0) return null
 
   return (
     <Joyride
