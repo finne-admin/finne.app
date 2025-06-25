@@ -9,23 +9,34 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 1. Eliminar tokens de notificación primero (para no perder la referencia)
-    const { error: tokenError } = await supabaseAdmin
-      .from("fcm_tokens")
-      .delete()
-      .eq("user_id", userId)
+    // 1. Eliminar registros relacionados
+    const tablesToClean = [
+      "exercise_favorites",
+      "exercise_satisfaction",
+      "notification_preferences",
+      "fcm_tokens",
+      "users"
+    ]
 
-    if (tokenError) throw new Error("Error eliminando tokens: " + tokenError.message)
+    for (const table of tablesToClean) {
+      const { error } = await supabaseAdmin
+        .from(table)
+        .delete()
+        .eq("user_id", userId)
+      if (error && table !== "users") {
+        throw new Error(`Error eliminando en ${table}: ${error.message}`)
+      }
+      // excepción: en 'users' la columna es 'id', no 'user_id'
+      if (table === "users") {
+        const { error: userError } = await supabaseAdmin
+          .from("users")
+          .delete()
+          .eq("id", userId)
+        if (userError) throw new Error("Error eliminando en users: " + userError.message)
+      }
+    }
 
-    // 2. Eliminar de tabla users
-    const { error: userError } = await supabaseAdmin
-      .from("users")
-      .delete()
-      .eq("id", userId)
-
-    if (userError) throw new Error("Error eliminando en users: " + userError.message)
-
-    // 3. Eliminar del sistema de autenticación (auth)
+    // 2. Eliminar del sistema de autenticación (auth)
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
     if (authError) throw new Error("Error eliminando en Auth: " + authError.message)
 
