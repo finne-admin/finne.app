@@ -15,16 +15,13 @@ import {
   LayoutGrid,
   LogOut,
   X,
-  Loader2,
-  PlayCircle
+  Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useTutorialState } from '@/components/tutorial/useTutorial'
-import { Tutorial } from '@/components/tutorial/Tutorial'
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
 
@@ -96,14 +93,31 @@ const LogoutButton = memo(function LogoutButton() {
   const handleLogout = async () => {
     setIsLoading(true)
     try {
+      // 1. Obtener el usuario actual
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw userError || new Error("Usuario no encontrado")
+
+      // 2. Eliminar sus tokens FCM
+      const { error: deleteError } = await supabase
+        .from("fcm_tokens")
+        .delete()
+        .eq("user_id", user.id)
+
+      if (deleteError) {
+        console.warn("No se pudo eliminar el token FCM:", deleteError.message)
+      }
+
+      // 3. Cerrar sesión
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+
       router.push('/login')
     } catch (error) {
       console.error('Error logging out:', error)
       setIsLoading(false)
     }
   }
+
 
   return (
     <Button
@@ -213,23 +227,11 @@ const Sidebar = memo(function Sidebar({ menuItems }: { menuItems: MenuItem[] }) 
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { menuItems } = useAdminCheck()
-  const { isOpen, startTutorial, stopTutorial } = useTutorialState()
 
   const headerContent = useMemo(() => (
     <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
       <div className="flex-1 flex items-center max-w-xl ml-12 lg:ml-0"></div>
       <div className="flex items-center gap-3 sm:gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hover:bg-gray-200"
-          onClick={() => {
-            startTutorial()
-          }}
-          title="Iniciar Tutorial"
-        >
-          <PlayCircle className="h-6 w-6 text-green-600" />
-        </Button>
         <Link href="/help/notifications">
           <Button variant="ghost" size="icon" className="hover:bg-gray-200">
             <HelpCircle className="h-6 w-6 text-gray-600" aria-hidden="true" />
@@ -240,7 +242,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Button>
       </div>
     </header>
-  ), [startTutorial])
+  ), [])
 
   if (!menuItems) {
     return (
@@ -278,10 +280,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1">
         {headerContent}
-        <main className="bg-gray-50">
-          {children}
-          <Tutorial onClose={stopTutorial} run={isOpen} />
-        </main>
+        <main className="bg-gray-50">{children}</main>
       </div>
     </div>
   )
