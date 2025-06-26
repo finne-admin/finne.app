@@ -93,14 +93,31 @@ const LogoutButton = memo(function LogoutButton() {
   const handleLogout = async () => {
     setIsLoading(true)
     try {
+      // 1. Obtener el usuario actual
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw userError || new Error("Usuario no encontrado")
+
+      // 2. Eliminar sus tokens FCM
+      const { error: deleteError } = await supabase
+        .from("fcm_tokens")
+        .delete()
+        .eq("user_id", user.id)
+
+      if (deleteError) {
+        console.warn("No se pudo eliminar el token FCM:", deleteError.message)
+      }
+
+      // 3. Cerrar sesión
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+
       router.push('/login')
     } catch (error) {
       console.error('Error logging out:', error)
       setIsLoading(false)
     }
   }
+
 
   return (
     <Button
