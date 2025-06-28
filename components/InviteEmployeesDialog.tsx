@@ -83,7 +83,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
             }
             }
 
-            setInviteSuccess(`Invites sent to ${emailList.length} email(s).`)
+            setInviteSuccess(`Invitaciones enviadas a ${emailList.length} email(s).`)
             setEmailList([])
             setTimeout(() => {
                 setInviteSuccess("")
@@ -125,7 +125,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
                         >
                             <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                                 <Dialog.Title as="h3" className="text-lg font-medium text-gray-900">
-                                    Invite Employees
+                                    Invitar Empleados
                                 </Dialog.Title>
 
                                 {inviteError && (
@@ -137,7 +137,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
 
                                 <div className="mt-4">
                                     <label className="block mb-1 text-sm font-medium text-gray-700">
-                                        Email Address
+                                        Email de invitación
                                     </label>
                                     <div className="flex gap-2">
                                         <Input
@@ -146,7 +146,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
                                             onChange={(e) => setEmailInput(e.target.value)}
                                             className="text-[color:#4F7C6B]"
                                         />
-                                        <Button onClick={handleAddEmail}>Add</Button>
+                                        <Button onClick={handleAddEmail}>Añadir</Button>
                                     </div>
 
                                     {emailList.length > 0 && (
@@ -183,14 +183,14 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
 
                                 <div className="mt-6 flex justify-end space-x-3">
                                     <Button variant="secondary" onClick={onClose}>
-                                        Cancel
+                                        Cancelar
                                     </Button>
                                     <Button
                                         className="bg-[#8BC5B5] hover:bg-[#7AB4A4] text-white"
                                         onClick={handleInviteAll}
                                         disabled={inviteLoading || emailList.length === 0}
                                     >
-                                        {inviteLoading ? "Sending..." : "Send Invites"}
+                                        {inviteLoading ? "Enviando..." : "Enviar Invitaciones"}
                                     </Button>
                                 </div>
                             </Dialog.Panel>
