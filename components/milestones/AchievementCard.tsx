@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 
 export type Logro = {
   id: string
@@ -24,8 +25,6 @@ export function AchievementCard({ logro }: { logro: Logro }) {
     setTimeout(() => {
       setReclamado(true)
       setAnimando(false)
-      // Aquí puedes disparar una animación, toast, sumar puntos, etc.
-      // Por ejemplo: toast.success(`+${logro.puntos} PA por "${logro.titulo}"`)
     }, 1000)
   }
 
@@ -34,15 +33,21 @@ export function AchievementCard({ logro }: { logro: Logro }) {
   const esReclamado = reclamado
 
   return (
-    <div
+    <motion.div
       onClick={handleClick}
+      initial={false}
+      animate={
+        animando
+          ? { scale: [1, 1.1, 0.95, 1.05, 1], boxShadow: '0 0 16px gold' }
+          : { scale: 1, boxShadow: 'none' }
+      }
+      transition={{ duration: 0.8, ease: 'easeInOut' }}
       className={cn(
         'flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all cursor-pointer max-w-md w-full',
         esBloqueado && 'bg-muted text-muted-foreground cursor-default',
         esCompletado &&
           'bg-yellow-100 border-yellow-400 hover:border-yellow-500 ring-1 ring-yellow-300',
-        esReclamado && 'bg-white border border-gray-200',
-        animando && 'animate-pulse'
+        esReclamado && 'bg-white border border-gray-200'
       )}
     >
       <div className="text-3xl">{logro.icono}</div>
@@ -60,6 +65,6 @@ export function AchievementCard({ logro }: { logro: Logro }) {
       {esReclamado && (
         <div className="text-sm text-green-600 font-semibold">+{logro.puntos} PA</div>
       )}
-    </div>
+    </motion.div>
   )
 }
