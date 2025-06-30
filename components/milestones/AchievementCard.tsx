@@ -47,7 +47,7 @@ export function AchievementCard({ logro }: { logro: Logro }) {
         esBloqueado && 'bg-muted text-muted-foreground cursor-default',
         esCompletado &&
           'bg-yellow-100 border-yellow-400 hover:border-yellow-500 ring-1 ring-yellow-300',
-        esReclamado && 'bg-white border border-gray-200'
+        esReclamado && 'bg-green-50 border-green-400 text-green-900'
       )}
     >
       <div className="text-3xl">{logro.icono}</div>
@@ -57,6 +57,11 @@ export function AchievementCard({ logro }: { logro: Logro }) {
           {esCompletado && !animando && (
             <span className="text-xs text-yellow-800 bg-yellow-200 px-2 py-0.5 rounded ml-2">
               ¡Completado!
+            </span>
+          )}
+          {esReclamado && !animando && (
+            <span className="text-xs text-green-800 bg-green-200 px-2 py-0.5 rounded ml-2">
+              Reclamado
             </span>
           )}
         </h3>
