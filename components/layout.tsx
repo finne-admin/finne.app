@@ -39,7 +39,7 @@ const regularMenuItems: MenuItem[] = [
   { icon: Library, label: 'Biblioteca de Ejercicios', href: '/library' },
   { icon: BarChart2, label: 'Estadísticas', href: '/statistics' },
   { icon: Settings, label: 'Ajustes de Cuenta', href: '/settings' },
-  { icon: Award, label: 'Seguimiento de Logros', href: '/milestones' }
+  { icon: Award, label: 'Logros', href: '/milestones' }
 ]
 
 const adminMenuItem: MenuItem = {
