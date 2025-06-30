@@ -299,7 +299,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {children}
           <Tutorial onClose={stopTutorial} run={isOpen} />
         </main>
-        <main className="bg-gray-50">{children}</main>
       </div>
     </div>
   )
