@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { label: 'Resumen', href: '/milestones' },
+  { label: 'Perfil', href: '/milestones' },
   { label: 'Logros', href: '/milestones/logros' },
   { label: 'Ranking', href: '/milestones/ranking' },
   { label: 'Recompensas', href: '/milestones/recompensas' },
