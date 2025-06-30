@@ -38,7 +38,7 @@ const retosMock: Reto[] = [
 export function RetosActivos() {
   return (
     <div className="max-w-4xl mx-auto space-y-4">
-      <h2 className="text-xl font-bold mb-2">Retos activos</h2>
+      <h2 className="text-xl font-bold mb-2">Retos semanales</h2>
       {retosMock.map((reto) => (
         <RetoCard key={reto.id} reto={reto} />
       ))}
