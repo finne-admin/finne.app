@@ -49,6 +49,11 @@ export function PerfilResumen() {
     fetchData()
   }, [])
 
+  useEffect(() => {
+    console.log('⚠️ Render PerfilResumen')
+  }, [])
+
+
   if (!perfil) {
     return (
       <div className="space-y-4">
