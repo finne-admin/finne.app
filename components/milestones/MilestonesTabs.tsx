@@ -16,7 +16,7 @@ export function MilestonesTabs() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex gap-2 border-b border-muted mb-4">
+    <nav className="flex gap-2 border-b border-gray-300 mb-4">
       {tabs.map(({ label, href }) => {
         const isActive =
           pathname === href || (href !== '/milestones' && pathname.startsWith(href))
@@ -28,8 +28,8 @@ export function MilestonesTabs() {
             className={cn(
               'px-4 py-2 text-sm font-medium rounded-t-md transition-colors',
               isActive
-                ? 'bg-white text-primary border border-b-transparent'
-                : 'text-muted-foreground hover:text-primary'
+                ? 'bg-white text-emerald-600 border border-b-transparent shadow-sm'
+                : 'text-gray-600 hover:text-emerald-700'
             )}
           >
             {label}
