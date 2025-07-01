@@ -295,7 +295,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1">
         {headerContent}
-        <main className="bg-gray-50">
+        <main className="flex flex-col min-h-[calc(100vh-4rem)] bg-gray-50 overflow-y-auto">
           {children}
           <Tutorial onClose={stopTutorial} run={isOpen} />
         </main>
