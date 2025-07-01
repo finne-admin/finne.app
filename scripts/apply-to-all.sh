@@ -13,7 +13,16 @@ CURRENT_BRANCH=$(git branch --show-current)
 for BR in "${BRANCHES[@]}"; do
   echo "⏳ Aplicando commit $COMMIT en rama $BR..."
   git checkout $BR || { echo "❌ No se pudo cambiar a $BR"; exit 1; }
-  git cherry-pick $COMMIT || { echo "❌ Error al aplicar cherry-pick en $BR"; git cherry-pick --abort; exit 1; }
+  git cherry-pick $COMMIT || {
+    if grep -q "cherry-pick is now empty" <<< "$(git status)"; then
+      echo "⚠️ Commit vacío en $BR, se omite."
+      git cherry-pick --skip
+    else
+      echo "❌ Error real al aplicar cherry-pick en $BR"
+      git cherry-pick --abort
+      exit 1
+    fi
+  }
   git push origin $BR || { echo "❌ Error al hacer push en $BR"; exit 1; }
   echo "✅ Commit aplicado en $BR"
 done
