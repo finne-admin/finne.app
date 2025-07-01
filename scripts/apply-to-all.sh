@@ -25,5 +25,6 @@ git checkout $CURRENT_BRANCH
 # ./scripts/apply-to-all.sh HEAD
 # ./scripts/apply-to-all.sh <commit-hash>
 
+# USO BASH GIT
 # bash scripts/apply-to-all.sh HEAD
 # bash scripts/apply-to-all.sh <commit-hash>
