@@ -591,26 +591,12 @@ export default function SettingsPage() {
                     <Button
                     id="edit-times-btn"
                     variant="edit"
-                    onClick={() => {
-                      if (userRole === 'admin' || userRole === 'user') {
-                        setIsEditing(true)
-                      } else {
-                        const btn = document.getElementById('edit-times-btn')
-                        if (btn) {
-                          btn.classList.add('animate-shake')
-                          setTimeout(() => btn.classList.remove('animate-shake'), 500)
-                        }
-                        toast.error('Contacta con un administrador para cambiar tu horario')
-                      }
-                    }}
-                    className={`flex items-center gap-2 transition duration-200 ${
-                      userRole !== 'admin' ? 'opacity-50 cursor-not-allowed pointer-events-auto' : ''
-                    }`}
-                  >
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 transition duration-200"
+                    >
                     <Pencil className="h-4 w-4" />
                     Editar Horarios
-                  </Button>
-                  
+                    </Button>
                 )}
             </div>
 
