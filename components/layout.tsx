@@ -293,12 +293,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Sidebar menuItems={menuItems} />
       </div>
 
-      <div className="flex-1">
+      <div className="flex flex-col h-screen flex-1">
         {headerContent}
-        <main className="bg-gray-50">
+        <main className="flex-1 overflow-y-auto bg-gray-50">
           {children}
-          <Tutorial onClose={stopTutorial} run={isOpen} />
         </main>
+        <Tutorial onClose={stopTutorial} run={isOpen} />
       </div>
     </div>
   )
