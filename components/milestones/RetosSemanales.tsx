@@ -35,13 +35,17 @@ const retosMock: Reto[] = [
   }
 ]
 
-export function RetosActivos() {
+export function RetosSemanales() {
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
-      <h2 className="text-xl font-bold mb-2">Retos semanales</h2>
-      {retosMock.map((reto) => (
-        <RetoCard key={reto.id} reto={reto} />
-      ))}
-    </div>
+    <section className="overflow-x-auto pb-4">
+      <h2 className="text-lg font-semibold text-gray-900 mb-3 px-1">Retos semanales</h2>
+      <div className="flex gap-4 min-w-full">
+        {retosMock.map((reto) => (
+          <div key={reto.id} className="min-w-[250px]">
+            <RetoCard reto={reto} />
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
