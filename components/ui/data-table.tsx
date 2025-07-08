@@ -216,7 +216,6 @@ export function EmployeeTable() {
 const handleSaveEdit = async () => {
   if (!editUser) return;
 
-  // Validación simple
   if (!editUser.first_name || !editUser.last_name || !editUser.email) {
     setEditError("Todos los campos son obligatorios");
     return;
@@ -227,8 +226,8 @@ const handleSaveEdit = async () => {
     setEditError("");
     setEditSuccess("");
 
-    // 1. Actualizar los datos en la tabla 'users'
-    const { error } = await supabase
+    // 1. Actualizar datos básicos
+    const { error: updateError } = await supabase
       .from("users")
       .update({
         first_name: editUser.first_name,
@@ -237,9 +236,12 @@ const handleSaveEdit = async () => {
       })
       .eq("id", editUser.id);
 
-    if (error) throw error;
+    if (updateError) {
+      console.error("Error al actualizar datos básicos:", updateError.message);
+      throw new Error(updateError.message);
+    }
 
-    // 2. Si hay nueva contraseña, hacer fetch al endpoint backend
+    // 2. Cambiar contraseña si es necesario
     if (editUser.new_password && editUser.new_password.length >= 6) {
       const res = await fetch("/api/admin/change-password", {
         method: "POST",
@@ -251,10 +253,14 @@ const handleSaveEdit = async () => {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Error al cambiar la contraseña");
+
+      if (!res.ok) {
+        console.error("Error en el endpoint de contraseña:", result.error || result.message);
+        throw new Error(result.error || result.message || "Error al actualizar la contraseña");
+      }
     }
 
-    // 3. Actualizar la lista local de empleados
+    // 3. Actualizar localmente
     setEmployees((prev) =>
       prev.map((emp) =>
         emp.id === editUser.id ? { ...emp, ...editUser } : emp
@@ -266,13 +272,15 @@ const handleSaveEdit = async () => {
       setEditUser(null);
       setEditSuccess("");
     }, 1500);
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error al guardar cambios:", err);
-    setEditError("Error al guardar los cambios");
+    setEditError(err.message || "Error desconocido al guardar los cambios");
   } finally {
     setEditLoading(false);
   }
 };
+
+
 
 
   return (
@@ -488,7 +496,9 @@ const handleSaveEdit = async () => {
                   type="password"
                   placeholder="Nueva contraseña (opcional)"
                   value={editUser.new_password || ""}
-                  onChange={(e) => setEditUser({ ...editUser, new_password: e.target.value })}
+                  onChange={(e) =>
+                    setEditUser({ ...editUser, new_password: e.target.value })
+                  }
                 />
               </div>
 
