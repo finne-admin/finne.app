@@ -252,12 +252,8 @@ const handleSaveEdit = async () => {
         }),
       });
 
-      const result = await res.json();
-
-      if (!res.ok) {
-        console.error("Error en el endpoint de contraseña:", result.error || result.message);
-        throw new Error(result.error || result.message || "Error al actualizar la contraseña");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al cambiar contraseña");
     }
 
     // 3. Actualizar localmente
