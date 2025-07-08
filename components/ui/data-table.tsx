@@ -213,63 +213,66 @@ export function EmployeeTable() {
 
 
   // ---------- Edit & View logic ----------
-  const handleSaveEdit = async () => {
-    if (!editUser) return;
+const handleSaveEdit = async () => {
+  if (!editUser) return;
 
-    // Validación simple
-    if (!editUser.first_name || !editUser.last_name || !editUser.email) {
-      setEditError("Todos los campos son obligatorios");
-      return;
+  // Validación simple
+  if (!editUser.first_name || !editUser.last_name || !editUser.email) {
+    setEditError("Todos los campos son obligatorios");
+    return;
+  }
+
+  try {
+    setEditLoading(true);
+    setEditError("");
+    setEditSuccess("");
+
+    // 1. Actualizar los datos en la tabla 'users'
+    const { error } = await supabase
+      .from("users")
+      .update({
+        first_name: editUser.first_name,
+        last_name: editUser.last_name,
+        email: editUser.email,
+      })
+      .eq("id", editUser.id);
+
+    if (error) throw error;
+
+    // 2. Si hay nueva contraseña, hacer fetch al endpoint backend
+    if (editUser.new_password && editUser.new_password.length >= 6) {
+      const res = await fetch("/api/admin/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: editUser.id,
+          newPassword: editUser.new_password,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Error al cambiar la contraseña");
     }
 
-    try {
-      setEditLoading(true);
-      setEditError("");
+    // 3. Actualizar la lista local de empleados
+    setEmployees((prev) =>
+      prev.map((emp) =>
+        emp.id === editUser.id ? { ...emp, ...editUser } : emp
+      )
+    );
+
+    setEditSuccess("Cambios guardados correctamente");
+    setTimeout(() => {
+      setEditUser(null);
       setEditSuccess("");
-
-      // Actualizar los datos del usuario en la tabla 'users'
-      const { error } = await supabase
-        .from("users")
-        .update({
-          first_name: editUser.first_name,
-          last_name: editUser.last_name,
-          email: editUser.email,
-        })
-        .eq("id", editUser.id);
-
-      if (error) throw error;
-
-      // 🔐 Si hay una nueva contraseña, actualizarla también usando Supabase Admin
-      if (editUser.new_password && editUser.new_password.length >= 6) {
-        const { error: pwdError } = await supabase.auth.admin.updateUserById(editUser.id, {
-          password: editUser.new_password,
-        });
-
-        if (pwdError) throw pwdError;
-      }
-
-      // Actualizar la lista local
-      setEmployees((prev) =>
-        prev.map((emp) =>
-          emp.id === editUser.id ? { ...emp, ...editUser } : emp
-        )
-      );
-
-      setEditSuccess("Cambios guardados correctamente");
-      setTimeout(() => {
-        setEditUser(null);
-        setEditSuccess("");
-      }, 1500);
-    } catch (err) {
-      console.error("Error al guardar cambios:", err);
-      setEditError("Error al guardar los cambios");
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-
-
+    }, 1500);
+  } catch (err) {
+    console.error("Error al guardar cambios:", err);
+    setEditError("Error al guardar los cambios");
+  } finally {
+    setEditLoading(false);
+  }
+};
 
 
   return (
