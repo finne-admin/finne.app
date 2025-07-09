@@ -37,6 +37,7 @@ export default function RootLayout({
         <SessionContextProvider supabaseClient={supabase}>
           <PerfilResumenRefProvider> {/* 👈 Ahora está envuelto aquí */}
             <Toaster />
+            <div id="puntos-globales" className="pointer-events-none fixed inset-0 z-[9999]" />
             {children}
           </PerfilResumenRefProvider>
         </SessionContextProvider>
