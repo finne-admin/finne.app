@@ -21,14 +21,11 @@ export function PuntoVolador({ from, to }: PuntoVoladorProps) {
         left: to.x,
         top: to.y,
         scale: 0.8,
-        opacity: 0,
+        opacity: 0.5,
     }}
     transition={{
         duration: 1.4,
         ease: [0.42, 0, 0.58, 1],
-    }}
-    style={{
-        boxShadow: '0 0 8px rgba(52, 211, 153, 0.8)', // verde-emerald
     }}
     />
   )
