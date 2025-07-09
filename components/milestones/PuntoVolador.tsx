@@ -10,23 +10,26 @@ interface PuntoVoladorProps {
 export function PuntoVolador({ from, to }: PuntoVoladorProps) {
   return (
     <motion.div
-      className="fixed w-2 h-2 rounded-full bg-emerald-500 z-50 pointer-events-none"
-      initial={{
+    className="fixed w-3 h-3 rounded-full bg-emerald-400 shadow-md shadow-emerald-500 z-50 pointer-events-none"
+    initial={{
         left: from.x,
         top: from.y,
-        scale: 1,
+        scale: 1.2,
         opacity: 1,
-      }}
-      animate={{
+    }}
+    animate={{
         left: to.x,
         top: to.y,
         scale: 0.8,
         opacity: 0,
-      }}
-      transition={{
-        duration: 1,
-        ease: 'easeInOut',
-      }}
+    }}
+    transition={{
+        duration: 1.4,
+        ease: [0.42, 0, 0.58, 1],
+    }}
+    style={{
+        boxShadow: '0 0 8px rgba(52, 211, 153, 0.8)', // verde-emerald
+    }}
     />
   )
 }
