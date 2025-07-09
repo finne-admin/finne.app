@@ -32,6 +32,26 @@ const retosMock: Reto[] = [
     puntos: 100,
     completado: true,
     reclamado: true
+  },
+  {
+    id: 'cosas_nuevas',
+    titulo: 'Explora cosas nuevas',
+    descripcion: 'Prueba 3 categorías distintas de ejercicios.',
+    progresoActual: 3,
+    progresoTotal: 3,
+    puntos: 30,
+    completado: true,
+    reclamado: false
+  },
+  {
+    id: 'reto_cardio',
+    titulo: 'Cardio Express',
+    descripcion: 'Completa un reto de ejercicios cardio.',
+    progresoActual: 1,
+    progresoTotal: 1,
+    puntos: 40,
+    completado: false,
+    reclamado: false
   }
 ]
 
