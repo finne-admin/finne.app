@@ -275,17 +275,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Button>
         </Link>
         <Link href="/settings">
-          <Image
-            src={avatarUrl || "/default-avatar.png"}
-            alt="Avatar"
-            width={36}
-            height={36}
-            className="rounded-full border border-gray-300 hover:scale-105 transition"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              target.src = "/default-avatar.png"
-            }}
-          />
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt="Avatar"
+              width={36}
+              height={36}
+              className="rounded-full border border-gray-300 hover:scale-105 transition"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.src = "/default-avatar.png"
+              }}
+            />
+          ) : (
+            <Image
+              src="/default-avatar.png"
+              alt="Default avatar"
+              width={36}
+              height={36}
+              className="rounded-full border border-gray-300 hover:scale-105 transition"
+            />
+          )}
         </Link>
       </div>
     </header>
