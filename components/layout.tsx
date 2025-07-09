@@ -232,6 +232,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { menuItems } = useAdminCheck()
   const { isOpen, startTutorial, stopTutorial } = useTutorialState()
 
+  const supabase = createClientComponentClient()
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single()
+
+      if (!error && data?.avatar_url) {
+        setAvatarUrl(data.avatar_url)
+      }
+    }
+
+    fetchAvatar()
+  }, [])
+  
   const headerContent = useMemo(() => (
     <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
       <div className="flex-1 flex items-center max-w-xl ml-12 lg:ml-0"></div>
@@ -252,9 +274,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <HelpCircle className="h-6 w-6 text-gray-600" aria-hidden="true" />
           </Button>
         </Link>
-        <Button variant="ghost" size="icon" className="hover:bg-gray-200">
-          <Bell className="h-6 w-6 text-gray-600" aria-hidden="true" />
-        </Button>
+        <Link href="/settings">
+          <Image
+            src={avatarUrl || "/default-avatar.png"} // opcionalmente pon un fallback local
+            alt="Avatar"
+            width={36}
+            height={36}
+            className="rounded-full border border-gray-300 hover:scale-105 transition"
+          />
+        </Link>
       </div>
     </header>
   ), [startTutorial])
