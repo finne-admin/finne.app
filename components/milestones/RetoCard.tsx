@@ -54,7 +54,7 @@ export function RetoCard({ reto }: { reto: Reto }) {
     }
 
     // Crear 7 puntos flotantes con leves variaciones
-    const nuevosPuntos = Array.from({ length: 7 }, (_, i) => ({
+    const nuevosPuntos = Array.from({ length: 10 }, (_, i) => ({
       x: from.x + Math.random() * 30 - 15,
       y: from.y + Math.random() * 20 - 10,
       toX: to.x + Math.random() * 20 - 10,
