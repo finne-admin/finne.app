@@ -36,7 +36,7 @@ export function PuntoVolador({ from, to }: PuntoVoladorProps) {
         opacity: [1, 0.8, 0],
       }}
       transition={{
-        duration: 1.4,
+        duration: 2,
         ease: 'easeInOut',
       }}
     />
