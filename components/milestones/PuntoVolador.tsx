@@ -1,7 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface PuntoVoladorProps {
   from: { x: number; y: number }
@@ -9,57 +8,73 @@ interface PuntoVoladorProps {
 }
 
 export function PuntoVolador({ from, to }: PuntoVoladorProps) {
-  const [pathId] = useState(() => `path-${Math.random().toString(36).slice(2)}`)
   const [show, setShow] = useState(true)
+  const [pathId] = useState(() => `path-${crypto.randomUUID()}`)
 
-  // Curvatura controlada
-  const controlX = from.x + (Math.random() * 300 - 150)
-  const controlY = from.y - 200
-  const path = `M ${from.x} ${from.y} Q ${controlX} ${controlY}, ${to.x} ${to.y}`
-
-  // Ocultar punto después del vuelo
+  // Ocultar tras la animación
   useEffect(() => {
-    const timeout = setTimeout(() => setShow(false), 1400)
+    const timeout = setTimeout(() => {
+      setShow(false)
+    }, 1600)
     return () => clearTimeout(timeout)
   }, [])
 
   if (!show) return null
+  if (!from || !to || isNaN(from.x) || isNaN(to.x)) return null
+
+  const controlOffsetX = (Math.random() > 0.5 ? -1 : 1) * 100
+  const controlOffsetY = (Math.random() > 0.5 ? -1 : 1) * 100
+
+  const cx = from.x + controlOffsetX
+  const cy = from.y + controlOffsetY
 
   return (
-    <svg className="fixed top-0 left-0 w-full h-full pointer-events-none z-50" style={{ overflow: 'visible' }}>
-      <motion.circle
-        r={6 + Math.random() * 3}
-        fill="url(#puntoGradient)"
-        style={{
-          filter: 'blur(1px) drop-shadow(0 0 4px rgba(16,185,129,0.8))',
-        }}
-        initial={{ opacity: 1, scale: 1.1 }}
-        animate={{ opacity: 0, scale: 0.7 }}
-        transition={{ duration: 1.4, ease: 'easeInOut' }}
-      >
+    <svg className="fixed left-0 top-0 w-full h-full pointer-events-none z-50" style={{ overflow: 'visible' }}>
+      {/* Trayectoria curva */}
+      <path
+        id={pathId}
+        d={`M${from.x},${from.y} Q${cx},${cy} ${to.x},${to.y}`}
+        fill="none"
+        stroke="transparent"
+      />
+
+      {/* Punto animado */}
+      <circle r="6" fill="url(#grad)" opacity="0.8">
         <animateMotion
           dur="1.4s"
-          repeatCount="1"
+          begin="0s"
           fill="freeze"
-          keyPoints="0;1"
+          keySplines="0.2 0 0.2 1"
           keyTimes="0;1"
+          calcMode="spline"
         >
           <mpath xlinkHref={`#${pathId}`} />
         </animateMotion>
-      </motion.circle>
 
-      <path
-        id={pathId}
-        d={path}
-        fill="none"
-        stroke="transparent"
-        strokeWidth="2"
-      />
+        {/* Desvanecimiento */}
+        <animate
+          attributeName="opacity"
+          from="0.8"
+          to="0"
+          dur="1.4s"
+          begin="0s"
+          fill="freeze"
+        />
+        <animate
+          attributeName="r"
+          from="6"
+          to="3"
+          dur="1.4s"
+          begin="0s"
+          fill="freeze"
+        />
+      </circle>
 
+      {/* Estela suave */}
       <defs>
-        <radialGradient id="puntoGradient" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#6ee7b7" />
-          <stop offset="100%" stopColor="#10b981" />
+        <radialGradient id="grad" r="50%" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="#34d399" stopOpacity="1" />
+          <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
         </radialGradient>
       </defs>
     </svg>
