@@ -8,34 +8,35 @@ const tabs = [
   { label: 'Perfil', href: '/milestones' },
   { label: 'Logros', href: '/milestones/logros' },
   { label: 'Ranking', href: '/milestones/ranking' },
-  { label: 'Recompensas', href: '/milestones/recompensas' },
-  { label: 'Retos', href: '/milestones/retos' }
+  { label: 'Recompensas', href: '/milestones/recompensas' }
 ]
 
 export function MilestonesTabs() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex gap-2 border-b border-gray-300 mb-4">
-      {tabs.map(({ label, href }) => {
-        const isActive =
-          pathname === href || (href !== '/milestones' && pathname.startsWith(href))
+    <nav className="flex justify-center border-b border-gray-300 mb-6">
+      <div className="flex gap-2">
+        {tabs.map(({ label, href }) => {
+          const isActive =
+            pathname === href || (href !== '/milestones' && pathname.startsWith(href))
 
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'px-4 py-2 text-sm font-medium rounded-t-md transition-colors',
-              isActive
-                ? 'bg-white text-emerald-600 border border-b-transparent shadow-sm'
-                : 'text-gray-600 hover:text-emerald-700'
-            )}
-          >
-            {label}
-          </Link>
-        )
-      })}
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'w-36 text-center px-4 py-2 text-sm font-medium rounded-t-md transition-colors',
+                isActive
+                  ? 'bg-white text-emerald-600 border border-b-transparent shadow-sm'
+                  : 'text-gray-600 hover:text-emerald-700'
+              )}
+            >
+              {label}
+            </Link>
+          )
+        })}
+      </div>
     </nav>
   )
 }
