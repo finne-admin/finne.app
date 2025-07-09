@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
 import { motion, AnimatePresence } from 'framer-motion'
+import { PuntoVolador } from '@/components/milestones/PuntoVolador'
+import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
+
 
 export type Reto = {
   id: string
@@ -19,6 +22,9 @@ export type Reto = {
 export function RetoCard({ reto }: { reto: Reto }) {
   const [reclamado, setReclamado] = useState(reto.reclamado)
   const [showAnim, setShowAnim] = useState(false)
+  const [puntosVoladores, setPuntosVoladores] = useState<{ x: number; y: number; toX: number; toY: number }[]>([])
+  const cardRef = useRef<HTMLDivElement>(null)
+  const perfilRef = usePerfilResumenRef()
 
   const progresoPorcentaje = Math.min(
     100,
@@ -28,18 +34,44 @@ export function RetoCard({ reto }: { reto: Reto }) {
   const puedeReclamar = reto.completado && !reclamado
 
   const handleReclamar = () => {
-    if (!puedeReclamar) return
+    if (!puedeReclamar || !cardRef.current || !perfilRef?.current) return
+
     setReclamado(true)
     setShowAnim(true)
 
-    // Ocultar animación tras 1.2s
+    const fromRect = cardRef.current.getBoundingClientRect()
+    const toRect = perfilRef.current.getBoundingClientRect()
+
+    const from = {
+      x: fromRect.left + fromRect.width / 2,
+      y: fromRect.top + fromRect.height / 2,
+    }
+
+    const to = {
+      x: toRect.left + toRect.width / 2,
+      y: toRect.top + toRect.height / 2,
+    }
+
+    // Crear 7 puntos flotantes con leves variaciones
+    const nuevosPuntos = Array.from({ length: 7 }, (_, i) => ({
+      x: from.x + Math.random() * 30 - 15,
+      y: from.y + Math.random() * 20 - 10,
+      toX: to.x + Math.random() * 20 - 10,
+      toY: to.y + Math.random() * 20 - 10,
+    }))
+
+    setPuntosVoladores(nuevosPuntos)
+
+    // Limpiar animación después de 1.2s
     setTimeout(() => {
       setShowAnim(false)
+      setPuntosVoladores([])
     }, 1200)
   }
 
   return (
     <motion.div
+      ref={cardRef}
       onClick={handleReclamar}
       initial={false}
       animate={
@@ -62,7 +94,18 @@ export function RetoCard({ reto }: { reto: Reto }) {
         !reto.completado && 'bg-muted/20 text-muted-foreground cursor-default'
       )}
     >
-      {/* ANIMACIÓN DE PUNTOS */}
+      {/* PUNTOS ANIMADOS */}
+      <AnimatePresence>
+        {puntosVoladores.map((punto, index) => (
+          <PuntoVolador
+            key={index}
+            from={{ x: punto.x, y: punto.y }}
+            to={{ x: punto.toX, y: punto.toY }}
+          />
+        ))}
+      </AnimatePresence>
+
+      {/* Texto flotante +XP */}
       <AnimatePresence>
         {showAnim && (
           <motion.div
