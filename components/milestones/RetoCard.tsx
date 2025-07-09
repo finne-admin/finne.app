@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PuntoVolador } from '@/components/milestones/PuntoVolador'
 import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
+import { PuntoVoladorPortal } from '@/components/animations/PuntoVoladorPortal'
 
 
 export type Reto = {
@@ -95,15 +96,16 @@ export function RetoCard({ reto }: { reto: Reto }) {
       )}
     >
       {/* PUNTOS ANIMADOS */}
-      <AnimatePresence>
-        {puntosVoladores.map((punto, index) => (
-          <PuntoVolador
-            key={index}
+    <AnimatePresence>
+    {puntosVoladores.map((punto, index) => (
+        <PuntoVoladorPortal key={index}>
+        <PuntoVolador
             from={{ x: punto.x, y: punto.y }}
             to={{ x: punto.toX, y: punto.toY }}
-          />
-        ))}
-      </AnimatePresence>
+        />
+        </PuntoVoladorPortal>
+    ))}
+    </AnimatePresence>
 
       {/* Texto flotante +XP */}
       <AnimatePresence>
