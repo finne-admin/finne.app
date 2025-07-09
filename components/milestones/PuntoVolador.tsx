@@ -9,16 +9,32 @@ interface PuntoVoladorProps {
 }
 
 export function PuntoVolador({ from, to }: PuntoVoladorProps) {
-  const [startOffset, setStartOffset] = useState({ x: 0, y: 0 })
+  const [control, setControl] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
-    // Desviación inicial aleatoria (dirección "contraria")
-    const angle = Math.random() * Math.PI * 2
-    const distance = 80 + Math.random() * 40
-    const offsetX = Math.cos(angle) * distance
-    const offsetY = Math.sin(angle) * distance
-    setStartOffset({ x: offsetX, y: offsetY })
-  }, [])
+    // Calcular vector desde origen a destino
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+
+    // Perpendicular hacia una dirección aleatoria (izquierda o derecha)
+    const normalX = -dy
+    const normalY = dx
+
+    const magnitude = Math.sqrt(normalX * normalX + normalY * normalY)
+    const unitX = normalX / magnitude
+    const unitY = normalY / magnitude
+
+    // Factor de curvatura: mayor = más arco
+    const curvature = 100 + Math.random() * 50
+    const sign = Math.random() < 0.5 ? -1 : 1
+
+    const cx = from.x + dx / 2 + unitX * curvature * sign
+    const cy = from.y + dy / 2 + unitY * curvature * sign
+
+    setControl({ x: cx, y: cy })
+  }, [from, to])
+
+  if (!control) return null
 
   return (
     <motion.div
@@ -30,13 +46,13 @@ export function PuntoVolador({ from, to }: PuntoVoladorProps) {
         opacity: 1,
       }}
       animate={{
-        x: [from.x, from.x + startOffset.x, to.x],
-        y: [from.y, from.y + startOffset.y, to.y],
+        x: [from.x, control.x, to.x],
+        y: [from.y, control.y, to.y],
         scale: [1.2, 1, 0.8],
-        opacity: [1, 0.8, 0],
+        opacity: [1, 0.8, 0.3, 0],
       }}
       transition={{
-        duration: 1.2,
+        duration: 1.3,
         ease: 'easeInOut',
       }}
     />
