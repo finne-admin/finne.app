@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { usePerfilResumenRef } from '@/context/usePerfilResumenRef' // ✅ Usamos el contexto
 
 type PerfilData = {
   name: string
@@ -15,6 +16,7 @@ type PerfilData = {
 
 export function PerfilResumen() {
   const [perfil, setPerfil] = useState<PerfilData | null>(null)
+  const ref = usePerfilResumenRef() // ✅ Este es el ref que usarás
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,11 +51,6 @@ export function PerfilResumen() {
     fetchData()
   }, [])
 
-  useEffect(() => {
-    console.log('⚠️ Render PerfilResumen')
-  }, [])
-
-
   if (!perfil) {
     return (
       <div className="space-y-4">
@@ -65,7 +62,10 @@ export function PerfilResumen() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 max-w-xl mx-auto">
+    <div
+      ref={ref} // ✅ Referencia que usará RetoCard para animar los puntos hacia aquí
+      className="bg-white rounded-xl shadow-md border border-gray-200 p-6 max-w-xl mx-auto"
+    >
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

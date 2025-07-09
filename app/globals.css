@@ -97,3 +97,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* Scrollbar personalizado solo visible en hover */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+}
