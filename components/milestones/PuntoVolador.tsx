@@ -9,52 +9,39 @@ interface PuntoVoladorProps {
 }
 
 export function PuntoVolador({ from, to }: PuntoVoladorProps) {
-  const [control, setControl] = useState<{ x: number; y: number } | null>(null)
+  const [pathId] = useState(() => `path-${Math.random().toString(36).slice(2)}`)
 
-  useEffect(() => {
-    // Calcular vector desde origen a destino
-    const dx = to.x - from.x
-    const dy = to.y - from.y
+  const controlX = from.x + (Math.random() * 300 - 150) // curva lateral aleatoria
+  const controlY = from.y - 200 // curva hacia arriba
 
-    // Perpendicular hacia una dirección aleatoria (izquierda o derecha)
-    const normalX = -dy
-    const normalY = dx
-
-    const magnitude = Math.sqrt(normalX * normalX + normalY * normalY)
-    const unitX = normalX / magnitude
-    const unitY = normalY / magnitude
-
-    // Factor de curvatura: mayor = más arco
-    const curvature = 100 + Math.random() * 50
-    const sign = Math.random() < 0.5 ? -1 : 1
-
-    const cx = from.x + dx / 2 + unitX * curvature * sign
-    const cy = from.y + dy / 2 + unitY * curvature * sign
-
-    setControl({ x: cx, y: cy })
-  }, [from, to])
-
-  if (!control) return null
+  const path = `M ${from.x} ${from.y} Q ${controlX} ${controlY}, ${to.x} ${to.y}`
 
   return (
-    <motion.div
-      className="fixed w-3 h-3 rounded-full bg-emerald-400 shadow-md shadow-emerald-500 z-50 pointer-events-none"
-      initial={{
-        x: from.x,
-        y: from.y,
-        scale: 1.2,
-        opacity: 1,
-      }}
-      animate={{
-        x: [from.x, control.x, to.x],
-        y: [from.y, control.y, to.y],
-        scale: [1.2, 1, 0.8],
-        opacity: [1, 0.8, 0.3, 0],
-      }}
-      transition={{
-        duration: 1.3,
-        ease: 'easeInOut',
-      }}
-    />
+    <svg className="fixed top-0 left-0 w-full h-full pointer-events-none z-50" style={{ overflow: 'visible' }}>
+      <motion.circle
+        r="6"
+        fill="#34d399" // emerald-400
+        stroke="#10b981"
+        strokeWidth="1"
+      >
+        <animateMotion
+          dur="1.4s"
+          repeatCount="1"
+          fill="freeze"
+          keyPoints="0;1"
+          keyTimes="0;1"
+        >
+          <mpath xlinkHref={`#${pathId}`} />
+        </animateMotion>
+      </motion.circle>
+
+      <path
+        id={pathId}
+        d={path}
+        fill="none"
+        stroke="transparent" // Debug: cambia a 'red' si quieres ver el path
+        strokeWidth="2"
+      />
+    </svg>
   )
 }
