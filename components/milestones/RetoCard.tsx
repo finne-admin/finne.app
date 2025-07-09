@@ -107,21 +107,6 @@ export function RetoCard({ reto }: { reto: Reto }) {
     ))}
     </AnimatePresence>
 
-      {/* Texto flotante +XP */}
-      <AnimatePresence>
-        {showAnim && (
-          <motion.div
-            initial={{ opacity: 1, y: 0 }}
-            animate={{ opacity: 0, y: -40 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
-            className="absolute top-4 right-4 text-emerald-500 font-bold text-sm pointer-events-none"
-          >
-            +{reto.puntos} PA
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div>
         <h3 className="text-sm font-semibold mb-1 leading-tight">{reto.titulo}</h3>
         <p className="text-xs text-gray-600">{reto.descripcion}</p>
