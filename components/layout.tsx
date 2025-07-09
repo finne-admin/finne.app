@@ -276,16 +276,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Link>
         <Link href="/settings">
           <Image
-            src={avatarUrl || "/default-avatar.png"} // opcionalmente pon un fallback local
+            src={avatarUrl || "/default-avatar.png"}
             alt="Avatar"
             width={36}
             height={36}
             className="rounded-full border border-gray-300 hover:scale-105 transition"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              target.src = "/default-avatar.png"
+            }}
           />
         </Link>
       </div>
     </header>
-  ), [startTutorial])
+  ), [startTutorial, avatarUrl])
 
   if (!menuItems) {
     return (
