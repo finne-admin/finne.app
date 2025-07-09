@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export type Reto = {
   id: string
@@ -32,7 +33,7 @@ export function RetoCard({ reto }: { reto: Reto }) {
   }
 
   return (
-    <div
+    <motion.div
       onClick={handleReclamar}
       className={cn(
         'p-4 rounded-xl border shadow-sm transition-all cursor-pointer max-w-xs w-full h-[160px] flex flex-col justify-between',
@@ -40,6 +41,7 @@ export function RetoCard({ reto }: { reto: Reto }) {
         reclamado && 'bg-white border-gray-200',
         !reto.completado && 'bg-muted/20 text-muted-foreground cursor-default'
       )}
+      whileTap={puedeReclamar ? { scale: 0.97 } : {}}
     >
       <div>
         <h3 className="text-sm font-semibold mb-1 leading-tight">{reto.titulo}</h3>
@@ -52,10 +54,23 @@ export function RetoCard({ reto }: { reto: Reto }) {
           <span>{reto.progresoActual} / {reto.progresoTotal}</span>
           <span className="font-semibold text-emerald-600">+{reto.puntos} PA</span>
         </div>
-        <div className="text-[11px] h-4 mt-1 text-green-700 font-medium">
-          {reclamado ? 'Recompensa reclamada' : ''}
+
+        <div className="h-4 mt-1 text-[11px] font-medium">
+          <AnimatePresence>
+            {reclamado && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="text-green-700"
+              >
+                Recompensa reclamada
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
