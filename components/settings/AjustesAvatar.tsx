@@ -51,9 +51,14 @@ export function AjustesAvatar() {
     const filePath = fileName
 
     // Borra imagen anterior personalizada si había una
-    if (selected?.includes(`custom_${user.id}`)) {
-      await supabase.storage.from('avatars').remove([selected.split('/').pop()!])
+    const previousFile = selected?.includes(`custom_${user.id}`)
+    ? selected.split('/').pop()
+    : null
+
+    if (previousFile) {
+    await supabase.storage.from('avatars').remove([previousFile])
     }
+
 
     // Sube nueva imagen
     const { error: uploadError } = await supabase.storage
