@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Loader2, Upload } from 'lucide-react'
@@ -17,6 +17,7 @@ export function AjustesAvatar() {
   const supabase = createClientComponentClient()
   const [selected, setSelected] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSetAvatar = async (url: string) => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -38,16 +39,27 @@ export function AjustesAvatar() {
     if (!file) return
 
     setUploading(true)
+
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setUploading(false)
+      return
+    }
 
     const fileExt = file.name.split('.').pop()
     const fileName = `custom_${user.id}.${fileExt}`
+    const filePath = fileName
 
+    // Borra imagen anterior personalizada si había una
+    if (selected?.includes(`custom_${user.id}`)) {
+      await supabase.storage.from('avatars').remove([selected.split('/').pop()!])
+    }
+
+    // Sube nueva imagen
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(fileName, file, {
-        upsert: true,
+      .upload(filePath, file, {
+        cacheControl: '3600',
         contentType: file.type,
       })
 
@@ -71,6 +83,7 @@ export function AjustesAvatar() {
     }
 
     setUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   return (
@@ -99,6 +112,7 @@ export function AjustesAvatar() {
           <input
             type="file"
             accept="image/*"
+            ref={fileInputRef}
             onChange={handleFileChange}
             className="block w-full text-sm text-gray-700"
           />
