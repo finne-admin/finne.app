@@ -47,11 +47,12 @@ export function AjustesAvatar() {
     }
 
     const fileExt = file.name.split('.').pop()
-    const fileName = `custom_${user.id}.${fileExt}`
+    const email = user.email?.replace(/[^a-zA-Z0-9]/g, '_') || 'user'
+    const fileName = `${email}_${user.id}.${fileExt}`
     const filePath = fileName
 
     // Borra imagen anterior personalizada si había una
-    const previousFile = selected?.includes(`custom_${user.id}`)
+    const previousFile = selected?.includes(`${user.id}`)
     ? selected.split('/').pop()
     : null
 
