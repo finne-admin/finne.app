@@ -65,11 +65,11 @@ export async function POST(request: Request) {
 
     // ✅ Avatares disponibles
     const avatarOptions = [
-        "https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/avatar1.png",
-        "https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/avatar2.png",
-        "https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/avatar3.png",
-        "https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/avatar4.png",
-        "https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/avatar5.png",
+        'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default1.png',
+        'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default2.png',
+        'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default3.png',
+        'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default4.png',
+        'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default5.png',
     ]
     const randomAvatar = avatarOptions[Math.floor(Math.random() * avatarOptions.length)]
 
