@@ -64,6 +64,9 @@ export function AjustesAvatar() {
     if (!user) return
 
     const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels)
+    console.log('✅ Blob generado:', croppedBlob)
+    console.log('📦 Tipo:', typeof croppedBlob)
+    console.log('🧪 Es instancia de Blob:', croppedBlob instanceof Blob)
     const fileName = `${user.email}_${user.id}.png`
 
     // Borrar el anterior personalizado si existe
