@@ -6,7 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Upload, Loader2 } from 'lucide-react'
 import getCroppedImg from '@/components/utils/cropImage'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from '@/components/ui/dialog'
 import { Area } from 'react-easy-crop'
 
 
@@ -122,6 +122,10 @@ export function AjustesAvatar() {
 
       <Dialog open={openCropper} onOpenChange={setOpenCropper}>
         <DialogContent className="max-w-md">
+            <DialogHeader>
+                <DialogTitle>Selecciona tu imagen</DialogTitle>
+                <DialogDescription>Recorta y ajusta tu imagen antes de subirla.</DialogDescription>
+            </DialogHeader>
           <div className="relative w-full h-80 bg-black">
             <Cropper
               image={imageSrc!}
