@@ -70,6 +70,31 @@ export function AjustesAvatar() {
     const timestamp = Date.now()
     const fileName = `${user.email}_${user.id}_${timestamp}.png`
 
+    // Buscar y eliminar imágenes anteriores del mismo usuario
+    const { data: listData, error: listError } = await supabase
+      .storage
+      .from('avatars')
+      .list('', { limit: 1000 }) // Asegúrate de ajustar si tienes más de 1000 archivos
+
+    if (listError) {
+      console.error('Error listando archivos:', listError)
+    } else {
+      const toDelete = listData
+        ?.filter((file) => file.name.includes(user.id))
+        .map((file) => file.name)
+
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .storage
+          .from('avatars')
+          .remove(toDelete)
+        if (deleteError) {
+          console.error('Error borrando antiguos:', deleteError)
+        }
+      }
+    }
+
+    // Subir la nueva imagen
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(fileName, croppedBlob, {
@@ -84,8 +109,6 @@ export function AjustesAvatar() {
     }
 
     const publicUrl = `https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/${fileName}`
-    console.log('✅ Nueva URL:', publicUrl)
-
     await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
 
     setSelected(publicUrl)
