@@ -1,14 +1,18 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import Cropper from 'react-easy-crop'
+import Cropper, { Area } from 'react-easy-crop'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Upload, Loader2 } from 'lucide-react'
 import getCroppedImg from '@/components/utils/cropImage'
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from '@/components/ui/dialog'
-import { Area } from 'react-easy-crop'
-
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogHeader,
+} from '@/components/ui/dialog'
 
 const avatarOptions = [
   'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/avatar1.png',
@@ -28,7 +32,6 @@ export function AjustesAvatar() {
   const [openCropper, setOpenCropper] = useState(false)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
-
   const handleSetAvatar = async (url: string) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -37,12 +40,12 @@ export function AjustesAvatar() {
     await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
   }
 
-    const onCropComplete = useCallback(
+  const onCropComplete = useCallback(
     (_: Area, croppedPixels: Area) => {
-        setCroppedAreaPixels(croppedPixels)
+      setCroppedAreaPixels(croppedPixels)
     },
     []
-    )
+  )
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -64,28 +67,25 @@ export function AjustesAvatar() {
     if (!user) return
 
     const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels)
-    console.log('✅ Blob generado:', croppedBlob)
-    console.log('📦 Tipo:', typeof croppedBlob)
-    console.log('🧪 Es instancia de Blob:', croppedBlob instanceof Blob)
-    const fileName = `${user.email}_${user.id}.png`
-
-    // Borrar el anterior personalizado si existe
-    await supabase.storage.from('avatars').remove([`${user.email}_${user.id}.png`])
+    const timestamp = Date.now()
+    const fileName = `${user.email}_${user.id}_${timestamp}.png`
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(fileName, croppedBlob, {
         contentType: 'image/png',
-        upsert: true
+        upsert: true,
       })
 
     if (uploadError) {
-      console.error('Error subiendo imagen:', uploadError)
+      console.error('❌ Error subiendo imagen:', uploadError)
       setUploading(false)
       return
     }
 
     const publicUrl = `https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/${fileName}`
+    console.log('✅ Nueva URL:', publicUrl)
+
     await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
 
     setSelected(publicUrl)
@@ -125,10 +125,10 @@ export function AjustesAvatar() {
 
       <Dialog open={openCropper} onOpenChange={setOpenCropper}>
         <DialogContent className="max-w-md">
-            <DialogHeader>
-                <DialogTitle>Selecciona tu imagen</DialogTitle>
-                <DialogDescription>Recorta y ajusta tu imagen antes de subirla.</DialogDescription>
-            </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Selecciona tu imagen</DialogTitle>
+            <DialogDescription>Recorta y ajusta tu imagen antes de subirla.</DialogDescription>
+          </DialogHeader>
           <div className="relative w-full h-80 bg-black">
             <Cropper
               image={imageSrc!}
