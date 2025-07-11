@@ -1,9 +1,14 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useCallback, useState } from 'react'
+import Cropper from 'react-easy-crop'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
-import { Loader2, Upload } from 'lucide-react'
+import { Upload, Loader2 } from 'lucide-react'
+import getCroppedImg from '@/components/utils/cropImage'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Area } from 'react-easy-crop'
+
 
 const avatarOptions = [
   'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/avatar1.png',
@@ -17,56 +22,58 @@ export function AjustesAvatar() {
   const supabase = createClientComponentClient()
   const [selected, setSelected] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [openCropper, setOpenCropper] = useState(false)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
+
 
   const handleSetAvatar = async (url: string) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+
     setSelected(url)
-
-    const { error } = await supabase
-      .from('users')
-      .update({ avatar_url: url })
-      .eq('id', user.id)
-
-    if (error) {
-      console.error('Error actualizando avatar:', error)
-    }
+    await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
   }
+
+    const onCropComplete = useCallback(
+    (_: Area, croppedPixels: Area) => {
+        setCroppedAreaPixels(croppedPixels)
+    },
+    []
+    )
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImageSrc(reader.result as string)
+      setOpenCropper(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleUploadCropped = async () => {
+    if (!imageSrc || !croppedAreaPixels) return
     setUploading(true)
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setUploading(false)
-      return
-    }
+    if (!user) return
 
-    const fileExt = file.name.split('.').pop()
-    const email = user.email?.replace(/[^a-zA-Z0-9]/g, '_') || 'user'
-    const fileName = `${email}_${user.id}.${fileExt}`
-    const filePath = fileName
+    const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels)
+    const fileName = `${user.email}_${user.id}.png`
 
-    // Borra imagen anterior personalizada si había una
-    const previousFile = selected?.includes(`${user.id}`)
-    ? selected.split('/').pop()
-    : null
+    // Borrar el anterior personalizado si existe
+    await supabase.storage.from('avatars').remove([`${user.email}_${user.id}.png`])
 
-    if (previousFile) {
-    await supabase.storage.from('avatars').remove([previousFile])
-    }
-
-
-    // Sube nueva imagen
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        contentType: file.type,
+      .upload(fileName, croppedBlob, {
+        contentType: 'image/png',
+        upsert: true
       })
 
     if (uploadError) {
@@ -76,20 +83,11 @@ export function AjustesAvatar() {
     }
 
     const publicUrl = `https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/${fileName}`
+    await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
 
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ avatar_url: publicUrl })
-      .eq('id', user.id)
-
-    if (updateError) {
-      console.error('Error actualizando URL:', updateError)
-    } else {
-      setSelected(publicUrl)
-    }
-
+    setSelected(publicUrl)
     setUploading(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    setOpenCropper(false)
   }
 
   return (
@@ -114,26 +112,41 @@ export function AjustesAvatar() {
         <label className="block text-sm font-medium text-gray-700">
           O sube tu propia imagen
         </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-700"
-          />
-          <Button variant="secondary" disabled={uploading}>
-            {uploading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                Subir
-              </>
-            )}
-          </Button>
-        </div>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="block w-full text-sm text-gray-700"
+        />
       </div>
+
+      <Dialog open={openCropper} onOpenChange={setOpenCropper}>
+        <DialogContent className="max-w-md">
+          <div className="relative w-full h-80 bg-black">
+            <Cropper
+              image={imageSrc!}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setOpenCropper(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUploadCropped} disabled={uploading}>
+              {uploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                'Guardar'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
