@@ -14,7 +14,7 @@ export function TodosLosLogros() {
       if (!user) return
 
       // Traer todos los logros del catálogo
-      const { data: catalogo } = await supabase.from('achievements').select('*')
+      const { data: catalogo } = await supabase.from('achievements_catalog').select('*')
 
       // Traer progreso del usuario
       const { data: progreso } = await supabase
