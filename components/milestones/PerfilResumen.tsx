@@ -28,7 +28,7 @@ export function PerfilResumen() {
 
       const { data, error } = await supabase
         .from('users')
-        .select('exp, name')
+        .select('exp, first_name, last_name')
         .eq('id', user.id)
         .single()
 
@@ -41,14 +41,19 @@ export function PerfilResumen() {
 
       const progreso = Math.round(((exp - xpForThisLevel) / (xpForNextLevel - xpForThisLevel)) * 100)
       const titulo = getTitleFromLevel(level)
+      const nombre =
+      (data.first_name && data.last_name)
+        ? `${data.first_name} ${data.last_name}`
+        : user.email || 'Usuario'
+
 
       const { count: logrosDesbloqueados } = await supabase
         .from('user_achievements')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-
+        
       setPerfil({
-        name: data.name || user.email || 'Usuario',
+        name: nombre,
         nivel: level,
         puntos: exp,
         logros: logrosDesbloqueados || 0,
