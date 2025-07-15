@@ -17,9 +17,9 @@ export function TodosLosLogros() {
       const { data: catalogo } = await supabase.from('achievements_catalog').select('*')
 
       // Traer progreso del usuario
-      const { data: progreso } = await supabase
+      const { data: progreso, error } = await supabase
         .from('user_achievements')
-        .select('achievement_id, completado, reclamado')
+        .select('achievement_id,completado,reclamado')
         .eq('user_id', user.id)
 
       const mapa = new Map(progreso?.map(p => [p.achievement_id, p]))

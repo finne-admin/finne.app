@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PuntoVolador } from '@/components/milestones/PuntoVolador'
 import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
 import { PuntoVoladorPortal } from '@/components/animations/PuntoVoladorPortal'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 
 export type Reto = {
@@ -34,9 +35,47 @@ export function RetoCard({ reto }: { reto: Reto }) {
 
   const puedeReclamar = reto.completado && !reclamado
 
-  const handleReclamar = () => {
+  const handleReclamar = async () => {
     if (!puedeReclamar || !cardRef.current || !perfilRef?.current) return
 
+    const supabase = createClientComponentClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // 1. Marcar como reclamado
+    const { error: updateError } = await supabase
+      .from('user_weekly_challenges')
+      .update({
+        reclamado: true,
+        reclamado_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id)
+      .eq('challenge_id', reto.id)
+
+    if (updateError) {
+      console.error('Error al marcar reto como reclamado:', updateError)
+      return
+    }
+
+    // 2. Sumar experiencia con función SQL
+    const { error: expError } = await supabase.rpc('increment_user_exp', {
+      user_id_input: user.id,
+      amount: reto.puntos
+    })
+
+    if (expError) {
+      console.error('Error al añadir exp del reto:', expError)
+    }
+
+    // 3. (opcional) registrar acción
+    await supabase.from('activity_points').insert({
+      user_id: user.id,
+      action_type: 'reto',
+      points: reto.puntos,
+      metadata: { challenge_id: reto.id }
+    })
+
+    // 4. Animación de puntos
     setReclamado(true)
     setShowAnim(true)
 
@@ -53,7 +92,6 @@ export function RetoCard({ reto }: { reto: Reto }) {
       y: toRect.top + toRect.height / 2,
     }
 
-    // Crear 7 puntos flotantes con leves variaciones
     const nuevosPuntos = Array.from({ length: 10 }, (_, i) => ({
       x: from.x + Math.random() * 30 - 15,
       y: from.y + Math.random() * 20 - 10,
@@ -63,7 +101,6 @@ export function RetoCard({ reto }: { reto: Reto }) {
 
     setPuntosVoladores(nuevosPuntos)
 
-    // Limpiar animación después de 1.2s
     setTimeout(() => {
       setShowAnim(false)
       setPuntosVoladores([])
