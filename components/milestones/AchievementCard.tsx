@@ -3,6 +3,8 @@
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+
 
 export type Logro = {
   id: string
@@ -21,12 +23,53 @@ export function AchievementCard({ logro }: { logro: Logro }) {
   const handleClick = async () => {
     if (!logro.completado || reclamado) return
 
+    const supabase = createClientComponentClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
     setAnimando(true)
+
+    // 1. Marca como reclamado
+    const { error: updateError } = await supabase
+      .from('user_achievements')
+      .update({
+        reclamado: true,
+        reclamado_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id)
+      .eq('achievement_id', logro.id)
+
+    if (updateError) {
+      console.error('Error al marcar logro como reclamado:', updateError)
+      setAnimando(false)
+      return
+    }
+
+    // 2. Suma puntos al usuario usando la función SQL
+    const { data: nuevaExp, error: expError } = await supabase.rpc('increment_user_exp', {
+      user_id_input: user.id,
+      amount: logro.puntos
+    })
+
+    if (expError) {
+      console.error('Error al añadir exp:', expError)
+    }
+
+    // 3. (opcional) Añadir a activity_points
+    await supabase.from('activity_points').insert({
+      user_id: user.id,
+      action_type: 'logro',
+      points: logro.puntos,
+      metadata: { achievement_id: logro.id }
+    })
+
+    // 4. UI
     setTimeout(() => {
       setReclamado(true)
       setAnimando(false)
     }, 1000)
   }
+
 
   const esBloqueado = !logro.completado && !reclamado
   const esCompletado = logro.completado && !reclamado
