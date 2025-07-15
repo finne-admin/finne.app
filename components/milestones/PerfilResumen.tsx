@@ -5,6 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePerfilResumenRef } from '@/context/usePerfilResumenRef' // ✅ Usamos el contexto
+import { getLevelFromXP, getXPForNextLevel, getTitleFromLevel } from '@/lib/exp'
 
 type PerfilData = {
   name: string
@@ -12,6 +13,7 @@ type PerfilData = {
   puntos: number
   logros: number
   progreso: number // porcentaje al siguiente nivel
+  titulo: string
 }
 
 export function PerfilResumen() {
@@ -24,32 +26,40 @@ export function PerfilResumen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // ⚠️ Datos simulados de ejemplo
-      const puntosTotales = 380
-      const logrosDesbloqueados = 3
+      const { data, error } = await supabase
+        .from('users')
+        .select('exp, name')
+        .eq('id', user.id)
+        .single()
 
-      const niveles = [
-        { nivel: 1, min: 0, max: 199 },
-        { nivel: 2, min: 200, max: 499 },
-        { nivel: 3, min: 500, max: 999 },
-        { nivel: 4, min: 1000, max: 1499 },
-        { nivel: 5, min: 1500, max: Infinity }
-      ]
+      if (error || !data) return
 
-      const nivelActual = niveles.find(n => puntosTotales >= n.min && puntosTotales <= n.max) || niveles[0]
-      const progreso = Math.min(100, Math.round(((puntosTotales - nivelActual.min) / (nivelActual.max - nivelActual.min)) * 100))
+      const exp = data.exp || 0
+      const level = getLevelFromXP(exp)
+      const xpForThisLevel = getXPForNextLevel(level - 1)
+      const xpForNextLevel = getXPForNextLevel(level)
+
+      const progreso = Math.round(((exp - xpForThisLevel) / (xpForNextLevel - xpForThisLevel)) * 100)
+      const titulo = getTitleFromLevel(level)
+
+      const { count: logrosDesbloqueados } = await supabase
+        .from('user_achievements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
 
       setPerfil({
-        name: user.user_metadata?.name || user.email || 'Usuario',
-        nivel: nivelActual.nivel,
-        puntos: puntosTotales,
-        logros: logrosDesbloqueados,
-        progreso
+        name: data.name || user.email || 'Usuario',
+        nivel: level,
+        puntos: exp,
+        logros: logrosDesbloqueados || 0,
+        progreso,
+        titulo
       })
     }
 
     fetchData()
   }, [])
+
 
   if (!perfil) {
     return (
@@ -73,6 +83,9 @@ export function PerfilResumen() {
           </h2>
           <p className="text-gray-700 dark:text-gray-300">
             Nivel {perfil.nivel} · {perfil.puntos} PA
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {perfil.titulo}
           </p>
         </div>
         <div className="text-right">
