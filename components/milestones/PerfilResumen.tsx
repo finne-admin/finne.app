@@ -64,7 +64,13 @@ export function PerfilResumen() {
         .eq('user_id', user.id)
         .gte('created_at', desde)
 
-      const pausasArray = pausas?.map(p => p.created_at) || []
+      const pausasArray = (pausas?.map(p =>
+        DateTime.fromISO(p.created_at, { zone: 'utc' })
+          .setZone('Europe/Madrid')
+          .toISODate()
+      ).filter((d): d is string => typeof d === 'string')) || []
+
+
       const racha = getActiveStreak(pausasArray)
 
       setPerfil({
