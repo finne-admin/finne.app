@@ -1,26 +1,25 @@
+// utils/getActiveStreak.ts
 import { DateTime } from 'luxon'
 
-type Pausa = { fecha: string } // YYYY-MM-DD
+export function getActiveStreak(dates: string[]): number {
+  const uniqueDates = Array.from(new Set(dates)) // por si hay múltiples pausas el mismo día
+  const parsedDates = uniqueDates
+    .map((d) => DateTime.fromISO(d).startOf('day'))
+    .filter((d) => d.weekday <= 5) // 1 = lunes, 7 = domingo → solo L-V
+    .sort((a, b) => b.toMillis() - a.toMillis()) // más recientes primero
 
-export function calcularRacha(pauses: Pausa[]) {
-  const fechasActivas = new Set(
-    pauses.map(p => DateTime.fromISO(p.fecha).toISODate())
-  )
+  let streak = 0
+  let current = DateTime.local().startOf('day')
 
-  let racha = 0
-  let hoy = DateTime.now().startOf('day')
-
-  // Desde hoy hacia atrás, solo días laborables (L-V)
-  for (let i = 0; i < 30; i++) {
-    if (hoy.weekday <= 5) {
-      if (fechasActivas.has(hoy.toISODate())) {
-        racha++
-      } else {
-        break
-      }
+  for (const date of parsedDates) {
+    if (date.equals(current)) {
+      streak++
+      current = current.minus({ days: 1 })
+      while (current.weekday > 5) current = current.minus({ days: 1 }) // saltar finde
+    } else {
+      break
     }
-    hoy = hoy.minus({ days: 1 })
   }
 
-  return racha
+  return streak
 }
