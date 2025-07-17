@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
 import { getLevelFromXP, getXPForNextLevel, getTitleFromLevel } from '@/lib/exp'
 import { DateTime } from 'luxon'
-import { calcularRacha } from '@/components/utils/getActiveStreak'
+import { getActiveStreak } from '@/components/utils/getActiveStreak'
 
 
 type PerfilData = {
@@ -64,8 +64,8 @@ export function PerfilResumen() {
         .eq('user_id', user.id)
         .gte('created_at', desde)
 
-      const pausasArray = pausas?.map(p => ({ fecha: p.created_at })) || []
-      const racha = calcularRacha(pausasArray)
+      const pausasArray = pausas?.map(p => p.created_at) || []
+      const racha = getActiveStreak(pausasArray)
 
       setPerfil({
         name: nombre,
