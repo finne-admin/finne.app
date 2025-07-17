@@ -1,16 +1,52 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { startOfWeek, addDays, format, endOfWeek, isSameDay } from 'date-fns'
 
-const diasSemana = ['L', 'M', 'X', 'J', 'V'] // Fin de semana eliminado
+const diasSemana = ['L', 'M', 'X', 'J', 'V']
 
 export function ActividadSemanal() {
-  const [actividad, setActividad] = useState<boolean[]>([])
+  const [actividad, setActividad] = useState<boolean[]>([false, false, false, false, false])
 
   useEffect(() => {
-    // 🔧 Simulación: días activos esta semana (L-V)
-    // true = se hizo al menos 1 pausa ese día
-    setActividad([true, true, false, true, false]) // Solo 5 días
+    const fetchActividad = async () => {
+      const supabase = createClientComponentClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const hoy = new Date()
+      const lunes = startOfWeek(hoy, { weekStartsOn: 1 }) // lunes
+      const viernes = addDays(lunes, 4)
+
+      const { data: pausas, error } = await supabase
+        .from('active_pauses')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', lunes.toISOString())
+        .lte('created_at', endOfWeek(viernes, { weekStartsOn: 1 }).toISOString())
+
+      if (error) {
+        console.error('Error cargando pausas activas:', error)
+        return
+      }
+
+      const actividadPorDia = [false, false, false, false, false] // L-V
+
+      pausas?.forEach((pausa) => {
+        const fecha = new Date(pausa.created_at)
+        for (let i = 0; i < 5; i++) {
+          const dia = addDays(lunes, i)
+          if (isSameDay(dia, fecha)) {
+            actividadPorDia[i] = true
+          }
+        }
+      })
+
+      setActividad(actividadPorDia)
+    }
+
+    fetchActividad()
   }, [])
 
   return (
