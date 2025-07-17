@@ -70,6 +70,8 @@ export function PerfilResumen() {
           .toISODate()
       ).filter((d): d is string => typeof d === 'string')) || []
 
+      console.log('Pausas convertidas a fechas:', pausasArray)
+      console.log('Hoy es:', DateTime.local().startOf('day').toISODate())
 
       const racha = getActiveStreak(pausasArray)
 
