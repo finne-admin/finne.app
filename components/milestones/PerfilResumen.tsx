@@ -1,24 +1,28 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import { usePerfilResumenRef } from '@/context/usePerfilResumenRef' // ✅ Usamos el contexto
+import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
 import { getLevelFromXP, getXPForNextLevel, getTitleFromLevel } from '@/lib/exp'
+import { DateTime } from 'luxon'
+import { calcularRacha } from '@/components/utils/getActiveStreak'
+
 
 type PerfilData = {
   name: string
   nivel: number
   puntos: number
   logros: number
-  progreso: number // porcentaje al siguiente nivel
+  progreso: number
   titulo: string
+  racha: number
 }
 
 export function PerfilResumen() {
   const [perfil, setPerfil] = useState<PerfilData | null>(null)
-  const ref = usePerfilResumenRef() // ✅ Este es el ref que usarás
+  const ref = usePerfilResumenRef()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,6 +30,7 @@ export function PerfilResumen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      // Datos básicos
       const { data, error } = await supabase
         .from('users')
         .select('exp, first_name, last_name')
@@ -38,33 +43,43 @@ export function PerfilResumen() {
       const level = getLevelFromXP(exp)
       const xpForThisLevel = getXPForNextLevel(level - 1)
       const xpForNextLevel = getXPForNextLevel(level)
-
       const progreso = Math.round(((exp - xpForThisLevel) / (xpForNextLevel - xpForThisLevel)) * 100)
       const titulo = getTitleFromLevel(level)
       const nombre =
-      (data.first_name && data.last_name)
-        ? `${data.first_name} ${data.last_name}`
-        : user.email || 'Usuario'
+        (data.first_name && data.last_name)
+          ? `${data.first_name} ${data.last_name}`
+          : user.email || 'Usuario'
 
-
+      // Logros desbloqueados
       const { count: logrosDesbloqueados } = await supabase
         .from('user_achievements')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        
+
+      // Días con pausas activas en los últimos 30 días
+      const desde = DateTime.now().minus({ days: 30 }).toISO()
+      const { data: pausas } = await supabase
+        .from('activity_pauses')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', desde)
+
+      const pausasArray = pausas?.map(p => ({ fecha: p.created_at })) || []
+      const racha = calcularRacha(pausasArray)
+
       setPerfil({
         name: nombre,
         nivel: level,
         puntos: exp,
         logros: logrosDesbloqueados || 0,
         progreso,
-        titulo
+        titulo,
+        racha
       })
     }
 
     fetchData()
   }, [])
-
 
   if (!perfil) {
     return (
@@ -78,7 +93,7 @@ export function PerfilResumen() {
 
   return (
     <div
-      ref={ref} // ✅ Referencia que usará RetoCard para animar los puntos hacia aquí
+      ref={ref}
       className="bg-white rounded-xl shadow-md border border-gray-200 p-6 max-w-xl mx-auto"
     >
       <div className="flex items-center justify-between mb-4">
@@ -93,9 +108,15 @@ export function PerfilResumen() {
             {perfil.titulo}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Logros desbloqueados</p>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">{perfil.logros}</p>
+        <div className="text-right space-y-1">
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Logros</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">{perfil.logros}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Racha</p>
+            <p className="text-lg font-bold text-emerald-600">{perfil.racha} días</p>
+          </div>
         </div>
       </div>
 
