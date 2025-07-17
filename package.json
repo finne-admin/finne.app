@@ -28,6 +28,7 @@
     "@supabase/auth-helpers-shared": "^0.7.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.7",
+    "@types/luxon": "^3.6.2",
     "antd": "^5.22.3",
     "chartjs-adapter-date-fns": "^3.0.0",
     "chartjs-chart-matrix": "^2.0.1",
