@@ -12,7 +12,7 @@ export default function MilestonesPage() {
           <PerfilResumen />
           <ActividadSemanal />
         </div>
-        <div className="h-full self-stretch flex">
+        <div className="h-full self-stretch">
           <LogrosDesbloqueados />
         </div>
       </div>
