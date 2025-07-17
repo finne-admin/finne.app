@@ -26,10 +26,10 @@ export function TodosLosLogros() {
 
       const logrosConProgreso: Logro[] = catalogo?.map(item => ({
         id: item.id,
-        titulo: item.titulo,
-        descripcion: item.descripcion,
-        icono: item.icono,
-        puntos: item.puntos,
+        titulo: item.title,
+        descripcion: item.description,
+        icono: item.icon,
+        puntos: item.points,
         completado: mapa.get(item.id)?.completado || false,
         reclamado: mapa.get(item.id)?.reclamado || false
       })) || []
