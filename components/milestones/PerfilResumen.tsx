@@ -59,7 +59,7 @@ export function PerfilResumen() {
       // Días con pausas activas en los últimos 30 días
       const desde = DateTime.now().minus({ days: 30 }).toISO()
       const { data: pausas } = await supabase
-        .from('activity_pauses')
+        .from('active_pauses')
         .select('created_at')
         .eq('user_id', user.id)
         .gte('created_at', desde)
@@ -69,9 +69,6 @@ export function PerfilResumen() {
           .setZone('Europe/Madrid')
           .toISODate()
       ).filter((d): d is string => typeof d === 'string')) || []
-
-      console.log('Pausas convertidas a fechas:', pausasArray)
-      console.log('Hoy es:', DateTime.local().startOf('day').toISODate())
 
       const racha = getActiveStreak(pausasArray)
 
