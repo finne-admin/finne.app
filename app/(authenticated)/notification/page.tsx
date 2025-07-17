@@ -48,7 +48,15 @@ export default function NotificationPage() {
     const [progress, setProgress] = useState(100)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string|null>(null)
+    const [user, setUser] = useState<any>(null)
 
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            setUser(user)
+        }
+        fetchUser()
+    }, [])
 
     const maxSelections = 2
 
@@ -168,11 +176,15 @@ export default function NotificationPage() {
         setCurrentStep("video1")
     }
 
-    const handleVideoEnd = () => {
+    const handleVideoEnd = async () => {
         console.log("Vídeo finalizado, paso actual:", currentStep)
         if (currentStep === "video1") {
             setCurrentStep("countdown")
         } else if (currentStep === "video2") {
+            // Registrar pausa activa tras completar los dos vídeos
+            if (user?.id) {
+                await supabase.from('active_pauses').insert({ user_id: user.id })
+            }
             setCurrentStep("satisfaction")
         }
         setIsStarting(false) // Reset starting state
