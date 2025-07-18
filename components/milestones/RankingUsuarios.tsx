@@ -65,7 +65,7 @@ export function RankingUsuarios() {
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-6">
-      <h2 className="text-xl font-bold mb-4">Ranking mensual</h2>
+      <h2 className="text-xl font-bold mb-4">Ranking de temporada</h2>
       <div className="divide-y">
         {usuarios.map((usuario, index) => {
           const isTop3 = index < 3
