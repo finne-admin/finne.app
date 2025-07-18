@@ -1,28 +1,67 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useUser } from '@supabase/auth-helpers-react'
 
-const usuarios = [
-  { id: 1, nombre: 'Marta Sánchez', puntos: 1380 },
-  { id: 2, nombre: 'Pedro López', puntos: 1275 },
-  { id: 3, nombre: 'Carla Vidal', puntos: 1240 },
-  { id: 4, nombre: 'Luis Romero', puntos: 1160 },
-  { id: 5, nombre: 'Elena Torres', puntos: 1100 },
-  { id: 6, nombre: 'David Martínez', puntos: 1050 },
-  { id: 7, nombre: 'Andrea Ruiz', puntos: 970 },
-  { id: 8, nombre: 'Jorge Navarro', puntos: 930 },
-  { id: 9, nombre: 'Lucía Pérez', puntos: 920 },
-  { id: 10, nombre: 'Carlos Gómez', puntos: 900 }
-]
-
-const miPosicion = 18
-const totalUsuarios = 42
+type Usuario = {
+  id: string
+  first_name: string
+  last_name: string
+  avatar_url: string | null
+  periodical_exp: number
+}
 
 export function RankingUsuarios() {
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [haloTop1, setHaloTop1] = useState(false)
+  const [miPosicion, setMiPosicion] = useState<number | null>(null)
+  const [totalUsuarios, setTotalUsuarios] = useState<number | null>(null)
+
+  const user = useUser()
+  const supabase = createClientComponentClient()
+
+  useEffect(() => {
+    const fetchRanking = async () => {
+      const { data: ranking, error } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, avatar_url, periodical_exp')
+        .order('periodical_exp', { ascending: false })
+        .limit(10)
+
+      if (error) {
+        console.error('Error cargando ranking:', error)
+        return
+      }
+
+      setUsuarios(ranking || [])
+
+      if (user?.id) {
+        const { data: allUsers, error: posError } = await supabase
+          .from('users')
+          .select('id, periodical_exp')
+
+        if (posError) {
+          console.error('Error obteniendo posición:', posError)
+          return
+        }
+
+        if (allUsers) {
+          const ordenados = allUsers
+            .sort((a, b) => b.periodical_exp - a.periodical_exp)
+            .map((u) => u.id)
+
+          setMiPosicion(ordenados.indexOf(user.id) + 1)
+          setTotalUsuarios(allUsers.length)
+        }
+      }
+    }
+
+    fetchRanking()
+  }, [user?.id])
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-6">
@@ -50,7 +89,7 @@ export function RankingUsuarios() {
                 transition: {
                   duration: index === 0 ? 2 : 0.6,
                   delay: index * 0.3,
-                  repeat: index === 0 ? 0 : 0, // solo una vez
+                  repeat: 0,
                   type: index === 0 ? 'tween' : 'spring',
                   stiffness: index === 0 ? undefined : 500,
                   damping: index === 0 ? undefined : 10
@@ -77,22 +116,42 @@ export function RankingUsuarios() {
                   {index + 1}
                 </span>
                 {isTop3 && <Trophy className="h-4 w-4 text-yellow-500" />}
-                <span className="text-sm text-gray-800">{usuario.nombre}</span>
+
+                {usuario.avatar_url ? (
+                  <img
+                    src={usuario.avatar_url}
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                    ?
+                  </div>
+                )}
+
+                <span className="text-sm text-gray-800">
+                  {usuario.first_name} {usuario.last_name}
+                </span>
               </div>
-              <div className="text-sm font-medium text-emerald-600">{usuario.puntos} PA</div>
+
+              <div className="text-sm font-medium text-emerald-600">
+                {usuario.periodical_exp} PA
+              </div>
             </Wrapper>
           )
         })}
       </div>
 
-      <motion.div
-        className="mt-6 text-sm text-gray-600 text-center"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        Estás en el puesto <strong>{miPosicion}</strong> de {totalUsuarios}
-      </motion.div>
+      {miPosicion && totalUsuarios && (
+        <motion.div
+          className="mt-6 text-sm text-gray-600 text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          Estás en el puesto <strong>{miPosicion}</strong> de {totalUsuarios}
+        </motion.div>
+      )}
     </div>
   )
 }
