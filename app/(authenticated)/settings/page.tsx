@@ -568,16 +568,21 @@ export default function SettingsPage() {
             <section>
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold text-gray-900">Configuración de Notificaciones</h2>
-                    <div className="flex items-center justify-between mt-6">
-                    <label htmlFor="weekendNotifications" className="text-sm text-gray-700">
-                        Permitir notificaciones en fines de semana
-                    </label>
-                    <Switch
-                        id="weekendNotifications"
-                        checked={preferences.allow_weekend_notifications ?? true}
-                        onCheckedChange={(checked) =>
-                        setPreferences((prev) => ({ ...prev, allow_weekend_notifications: checked }))
-                        }
+                <div className="bg-white px-4 py-3 rounded-lg shadow-sm flex items-center justify-between mb-6">
+                <label htmlFor="weekendNotifications" className="text-sm text-gray-900">
+                    Permitir notificaciones en fines de semana
+                </label>
+                <Switch
+                    id="weekendNotifications"
+                    checked={preferences.allow_weekend_notifications ?? true}
+                    onCheckedChange={async (checked) => {
+                    const updatedPreferences = {
+                        ...preferences,
+                        allow_weekend_notifications: checked
+                    };
+                    setPreferences(updatedPreferences);
+                    await savePreferences(updatedPreferences);
+                    }}
                 />
                 </div>
                 <Button
