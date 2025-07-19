@@ -46,6 +46,7 @@ interface NotificationPreferences {
     active: boolean;
     times: string[];
     isCustomized: boolean;
+    allow_weekend_notifications?: boolean;
 }
 
 export default function SettingsPage() {
@@ -255,9 +256,10 @@ export default function SettingsPage() {
                     setPreferences({
                         active: prefData.active,
                         times: prefData.times || [],
-                        isCustomized: prefData.active
+                        isCustomized: prefData.active,
+                        allow_weekend_notifications: prefData.allow_weekend_notifications ?? true,
                     })
-                } else {
+                    } else {
                     // If no preferences exist, use default times
                     setPreferences({
                         active: false,
@@ -314,6 +316,7 @@ export default function SettingsPage() {
                     user_id: user?.id,
                     active: newPrefs.active,
                     times: newPrefs.times,
+                    allow_weekend_notifications: newPrefs.allow_weekend_notifications ?? true,
                 })
 
             if (error) throw error
@@ -565,6 +568,18 @@ export default function SettingsPage() {
             <section>
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold text-gray-900">Configuración de Notificaciones</h2>
+                    <div className="flex items-center justify-between mt-6">
+                    <label htmlFor="weekendNotifications" className="text-sm text-gray-700">
+                        Permitir notificaciones en fines de semana
+                    </label>
+                    <Switch
+                        id="weekendNotifications"
+                        checked={preferences.allow_weekend_notifications ?? true}
+                        onCheckedChange={(checked) =>
+                        setPreferences((prev) => ({ ...prev, allow_weekend_notifications: checked }))
+                        }
+                />
+                </div>
                 <Button
                 id="test-notification-btn"
                 variant="edit"
