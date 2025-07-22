@@ -34,7 +34,6 @@ export function AchievementCard({ logro }: { logro: Logro }) {
       .from('user_achievements')
       .update({
         reclamado: true,
-        reclamado_at: new Date().toISOString()
       })
       .eq('user_id', user.id)
       .eq('achievement_id', logro.id)

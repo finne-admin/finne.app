@@ -47,7 +47,6 @@ export function RetoCard({ reto }: { reto: Reto }) {
       .from('user_weekly_challenges')
       .update({
         reclamado: true,
-        reclamado_at: new Date().toISOString()
       })
       .eq('user_id', user.id)
       .eq('challenge_id', reto.id)
