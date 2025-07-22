@@ -57,7 +57,7 @@
     // Comprueba si el usuario ya tiene ese logro
     async function hasAchievement(userId: string, achievementId: number) {
     const { data, error } = await supabase
-        .from('achievements')
+        .from('achievements_catalog')
         .select('id')
         .eq('user_id', userId)
         .eq('achievement_id', achievementId)
@@ -69,7 +69,7 @@
     // Otorga el logro
     async function grantAchievement(userId: string, achievementId: number) {
     const { error } = await supabase
-        .from('achievements')
+        .from('achievements_catalog')
         .insert({ user_id: userId, achievement_id: achievementId })
 
     if (error) {
