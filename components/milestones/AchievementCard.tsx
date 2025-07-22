@@ -1,10 +1,9 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-
 
 export type Logro = {
   id: string
@@ -20,10 +19,31 @@ export function AchievementCard({ logro }: { logro: Logro }) {
   const [reclamado, setReclamado] = useState(logro.reclamado)
   const [animando, setAnimando] = useState(false)
 
+  const supabase = createClientComponentClient()
+
+  const fetchReclamado = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from('user_achievements')
+      .select('reclamado')
+      .eq('user_id', user.id)
+      .eq('achievement_id', logro.id)
+      .maybeSingle()
+
+    if (!error && data) {
+      setReclamado(data.reclamado)
+    }
+  }
+
+  useEffect(() => {
+    fetchReclamado()
+  }, [])
+
   const handleClick = async () => {
     if (!logro.completado || reclamado) return
 
-    const supabase = createClientComponentClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -32,9 +52,7 @@ export function AchievementCard({ logro }: { logro: Logro }) {
     // 1. Marca como reclamado
     const { error: updateError } = await supabase
       .from('user_achievements')
-      .update({
-        reclamado: true,
-      })
+      .update({ reclamado: true })
       .eq('user_id', user.id)
       .eq('achievement_id', logro.id)
 
@@ -44,8 +62,8 @@ export function AchievementCard({ logro }: { logro: Logro }) {
       return
     }
 
-    // 2. Suma puntos al usuario usando la función SQL
-    const { data: nuevaExp, error: expError } = await supabase.rpc('increment_user_exp', {
+    // 2. Suma puntos al usuario
+    const { error: expError } = await supabase.rpc('increment_user_exp', {
       user_id_input: user.id,
       amount: logro.puntos
     })
@@ -54,7 +72,7 @@ export function AchievementCard({ logro }: { logro: Logro }) {
       console.error('Error al añadir exp:', expError)
     }
 
-    // 3. (opcional) Añadir a activity_points
+    // 3. Añadir a activity_points
     await supabase.from('activity_points').insert({
       user_id: user.id,
       action_type: 'logro',
@@ -62,13 +80,10 @@ export function AchievementCard({ logro }: { logro: Logro }) {
       metadata: { achievement_id: logro.id }
     })
 
-    // 4. UI
-    setTimeout(() => {
-      setReclamado(true)
-      setAnimando(false)
-    }, 1000)
+    // 4. Refresca el estado real desde Supabase
+    await fetchReclamado()
+    setAnimando(false)
   }
-
 
   const esBloqueado = !logro.completado && !reclamado
   const esCompletado = logro.completado && !reclamado
