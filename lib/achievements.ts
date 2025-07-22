@@ -24,7 +24,7 @@
     // añade más aquí según tus logros
 
     interface Achievement {
-    id: number
+    id: string
     title: string
     condition_type: ConditionType
     condition_value: number | string
@@ -55,9 +55,9 @@
     }
 
     // Comprueba si el usuario ya tiene ese logro
-    async function hasAchievement(userId: string, achievementId: number) {
+    async function hasAchievement(userId: string, achievementId: string) {
     const { data, error } = await supabase
-        .from('achievements_catalog')
+        .from('user_achievements')
         .select('id')
         .eq('user_id', userId)
         .eq('achievement_id', achievementId)
@@ -66,11 +66,17 @@
     return !!data
     }
 
-    // Otorga el logro
-    async function grantAchievement(userId: string, achievementId: number) {
+    // Otorga el logro al usuario
+    async function grantAchievement(userId: string, achievementId: string) {
     const { error } = await supabase
-        .from('achievements_catalog')
-        .insert({ user_id: userId, achievement_id: achievementId })
+        .from('user_achievements')
+        .insert({
+        user_id: userId,
+        achievement_id: achievementId,
+        unlocked_at: new Date().toISOString(),
+        completado: true,
+        reclamado: false // o true si el usuario lo reclama automáticamente
+        })
 
     if (error) {
         console.error(`Error al guardar el logro ${achievementId} para ${userId}`, error)
