@@ -37,7 +37,6 @@
     const { data: catalog, error } = await supabase
         .from('achievements_catalog')
         .select('*')
-        .eq('condition_type', eventType) // 🔽 Solo los del tipo actual
 
     if (error || !catalog) {
         console.error('Error al cargar el catálogo de logros', error)
