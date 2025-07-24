@@ -37,6 +37,7 @@
     const { data: catalog, error } = await supabase
         .from('achievements_catalog')
         .select('*')
+        .eq('condition_type', eventType) // 🔽 Solo los del tipo actual
 
     if (error || !catalog) {
         console.error('Error al cargar el catálogo de logros', error)
@@ -68,20 +69,36 @@
 
     // Otorga el logro al usuario
     async function grantAchievement(userId: string, achievementId: string) {
-    const { error } = await supabase
+    const { data: logroData, error: errorFetch } = await supabase
+        .from('achievements_catalog')
+        .select('title, description')
+        .eq('id', achievementId)
+        .maybeSingle()
+
+    if (errorFetch || !logroData) {
+        console.error(`Error obteniendo datos del logro ${achievementId}`, errorFetch)
+        return
+    }
+
+    const { error: errorInsert } = await supabase
         .from('user_achievements')
         .insert({
         user_id: userId,
         achievement_id: achievementId,
         unlocked_at: new Date().toISOString(),
         completado: true,
-        reclamado: false // o true si el usuario lo reclama automáticamente
+        reclamado: false
         })
 
-    if (error) {
-        console.error(`Error al guardar el logro ${achievementId} para ${userId}`, error)
+    if (errorInsert) {
+        console.error(`Error al guardar el logro ${achievementId} para ${userId}`, errorInsert)
+        return
     }
+
+    // Aviso visual
+    showAchievementPopup(logroData.title, logroData.description)
     }
+
 
     // Evaluador general
     async function evaluateCondition(userId: string, logro: Achievement, extraData?: any): Promise<boolean> {
@@ -147,9 +164,31 @@
     async function getExerciseCount(userId: string, category?: string): Promise<number> {
     return 0
     }
+
+    // Obtiene el número de pausas activas del usuario en la semana actual
+
     async function getTodaysPauseCount(userId: string): Promise<number> {
-    return 0
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const endOfDay = new Date()
+    endOfDay.setHours(23, 59, 59, 999)
+
+    const { count, error } = await supabase
+        .from('active_pauses')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+
+    if (error) {
+        console.error('Error al contar pausas de hoy', error)
+        return 0
     }
+
+    return count ?? 0
+    }
+
     async function getFullDaysWithAllPauses(userId: string): Promise<number> {
     return 0
     }
@@ -171,6 +210,9 @@
     async function improvedComparedToLastWeek(userId: string): Promise<boolean> {
     return false
     }
+
+    // Verifica si el usuario ha marcado un ejercicio como favorito
+
     async function hasMarkedFavorite(userId: string): Promise<boolean> {
     const { count, error } = await supabase
         .from('exercise_favorites')
@@ -184,9 +226,44 @@
 
     return (count ?? 0) >= 1
     }
+
     async function hasPausedXWorkingDaysInARow(userId: string, days: number): Promise<boolean> {
     return false
     }
     async function didCompleteFullCircuit(userId: string): Promise<boolean> {
     return false
     }
+
+
+
+
+
+
+
+
+function showAchievementPopup(title: string, description?: string) {
+  if (typeof window === 'undefined') return
+
+  const div = document.createElement('div')
+  div.style.position = 'fixed'
+  div.style.bottom = '20px'
+  div.style.right = '20px'
+  div.style.background = '#111'
+  div.style.color = 'white'
+  div.style.padding = '16px'
+  div.style.borderRadius = '12px'
+  div.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)'
+  div.style.zIndex = '9999'
+  div.style.fontFamily = 'sans-serif'
+  div.style.fontSize = '14px'
+  div.style.maxWidth = '280px'
+  div.innerHTML = `<strong>🎉 ¡Logro desbloqueado!</strong><br>${title}${description ? `<br><span style="opacity:0.8">${description}</span>` : ''}`
+
+  document.body.appendChild(div)
+
+  setTimeout(() => {
+    div.style.opacity = '0'
+    div.style.transition = 'opacity 0.8s ease-out'
+    setTimeout(() => div.remove(), 1000)
+  }, 3000)
+}
