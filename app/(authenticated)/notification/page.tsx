@@ -10,6 +10,7 @@ import { WistiaModalNotification } from "@/components/wistia-modal/wistia-modal-
 import {Skeleton} from "@/components/ui/skeleton";
 import {CountdownTimer} from "@/components/ui/countdown-timer";
 import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
+import { checkAchievements } from '@/lib/achievements';
 
 interface Asset {
     url: string
@@ -185,6 +186,9 @@ export default function NotificationPage() {
             if (user?.id) {
                 await supabase.from('active_pauses').insert({ user_id: user.id })
             }
+            
+            await checkAchievements(user.id, 'pausas_en_dia')
+
             setCurrentStep("satisfaction")
         }
         setIsStarting(false) // Reset starting state
