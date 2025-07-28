@@ -8,6 +8,7 @@ import { PuntoVolador } from '@/components/milestones/PuntoVolador'
 import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
 import { PuntoVoladorPortal } from '@/components/animations/PuntoVoladorPortal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { checkAchievements } from '@/lib/achievements'
 
 
 export type Reto = {
@@ -64,6 +65,9 @@ export function RetoCard({ reto }: { reto: Reto }) {
 
     if (expError) {
       console.error('Error al añadir exp del reto:', expError)
+    } else {
+      console.log('Experiencia añadida correctamente')
+      await checkAchievements(user.id, 'ranking_final')
     }
 
     // 3. (opcional) registrar acción
