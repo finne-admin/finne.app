@@ -178,21 +178,67 @@ export default function NotificationPage() {
     }
 
     const handleVideoEnd = async () => {
-        console.log("Vídeo finalizado, paso actual:", currentStep)
-        if (currentStep === "video1") {
-            setCurrentStep("countdown")
-        } else if (currentStep === "video2") {
-            // Registrar pausa activa tras completar los dos vídeos
-            if (user?.id) {
-                await supabase.from('active_pauses').insert({ user_id: user.id })
-            }
-            
-            await checkAchievements(user.id, 'pausas_en_dia')
+    console.log("Vídeo finalizado, paso actual:", currentStep)
 
-            setCurrentStep("satisfaction")
-        }
-        setIsStarting(false) // Reset starting state
+    if (currentStep === "video1") {
+        setCurrentStep("countdown")
+        return
     }
+
+    if (currentStep === "video2" && user?.id) {
+        // Obtener hashed_ids de los dos vídeos
+        const hashedIds = selectedExerciseData.map((ex) => ex.hashed_id)
+
+        const { data: videoRows, error: videoError } = await supabase
+        .from('videos')
+        .select('id, hashed_id')
+        .in('hashed_id', hashedIds)
+
+        if (videoError || !videoRows || videoRows.length !== 2) {
+        console.error('Error obteniendo IDs de vídeos:', videoError)
+        return
+        }
+
+        // Ordenar los IDs por el orden original seleccionado
+        const [video1, video2] = hashedIds.map(hash => 
+        videoRows.find(v => v.hashed_id === hash)
+        )
+
+        if (!video1 || !video2) {
+        console.error('No se encontraron ambos vídeos')
+        return
+        }
+
+        // Insertar la pausa activa con ambos vídeos
+        const { error: insertError } = await supabase
+        .from('active_pauses')
+        .insert({
+            user_id: user.id,
+            video1_id: video1.id,
+            video2_id: video2.id,
+        })
+
+        if (insertError) {
+        console.error('Error al insertar active_pause:', insertError)
+        return
+        }
+
+        // Logros
+        await checkAchievements(user.id, 'pausas_en_dia')
+        await checkAchievements(user.id, 'pausas_semana')
+        await checkAchievements(user.id, 'mejora_semanal')
+        await checkAchievements(user.id, 'dias_consecutivos_con_pausa')
+        await checkAchievements(user.id, 'recupera_racha')
+        await checkAchievements(user.id, 'max_dias_sin_pausa')
+        await checkAchievements(user.id, 'dias_completos')
+        await checkAchievements(user.id, 'dias_laborales_con_pausa')
+
+        setCurrentStep("satisfaction")
+    }
+
+    setIsStarting(false)
+    }
+
 
     const handleEmojiSelect = async (emoji: string) => {
         const levels = ["😟", "😐", "🙂", "😀", "🤩"]

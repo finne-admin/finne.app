@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { checkAchievements } from '@/lib/achievements'
 
 export type Logro = {
   id: string
@@ -70,6 +71,9 @@ export function AchievementCard({ logro }: { logro: Logro }) {
 
     if (expError) {
       console.error('Error al añadir exp:', expError)
+    } else {
+      console.log('Experiencia añadida correctamente')
+      await checkAchievements(user.id, 'ranking_final')
     }
 
     // 3. Añadir a activity_points
