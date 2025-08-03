@@ -156,6 +156,9 @@
 
 
     // 🔽 Funciones dummy por ahora, puedes implementarlas una a una:
+
+    // Obtiene el número de pausas activas del usuario de lunes a viernes en la semana actual -------------------------------------------------------------------
+
     async function getWeeklyPauseCount(userId: string): Promise<number> {
     const now = new Date()
 
@@ -186,6 +189,8 @@
     return count ?? 0
     }
 
+    // Obtiene la racha de pausas activas del usuario en los últimos 30 días -------------------------------------------------------------------------------------
+
     async function getStreak(userId: string): Promise<number> {
     const desde = DateTime.now().minus({ days: 30 }).toISO()
 
@@ -210,11 +215,48 @@
 
     return getActiveStreak(fechas)
     }
-    async function getExerciseCount(userId: string, category?: string): Promise<number> {
-    return 0
+
+    // Obtiene el número de ejercicios vistos por categoría -------------------------------------------------------------------------------------------------------
+
+    async function getExerciseCount(userId: string, conditionType?: string): Promise<number> {
+    if (!conditionType) return 0
+
+    const categoryMap: Record<string, string> = {
+        ejercicios_brazos: 'miembro superior',
+        ejercicios_piernas: 'miembro inferior',
+        ejercicios_core: 'core',
+        ejercicios_movilidad: 'movilidad'
     }
 
-    // Obtiene el número de pausas activas del usuario en la semana actual
+    const categoriaBuscada = categoryMap[conditionType]
+    if (!categoriaBuscada) return 0
+
+    // Paso 1: obtener IDs de vídeo de pausas activas del usuario
+    const { data: pausas, error: errorPausas } = await supabase
+        .from('active_pauses')
+        .select('video_id')
+        .eq('user_id', userId)
+        .not('video_id', 'is', null)
+
+    if (errorPausas || !pausas || pausas.length === 0) return 0
+
+    const idsVistos = Array.from(new Set(pausas.map(p => p.video_id)))
+
+    // Paso 2: obtener vídeos que incluyen esa categoría
+    const { data: videos, error: errorVideos } = await supabase
+        .from('videos')
+        .select('wistia_id, categorias')
+        .in('wistia_id', idsVistos)
+
+    if (errorVideos || !videos) return 0
+
+    // Paso 3: contar cuántos vídeos tienen esa categoría
+    const count = videos.filter(v => (v.categorias || []).includes(categoriaBuscada)).length
+
+    return count
+    }
+
+    // Obtiene el número de pausas activas del usuario en la semana actual -----------------------------------------------------------------------------------------
 
     async function getTodaysPauseCount(userId: string): Promise<number> {
     const startOfDay = new Date()
@@ -237,6 +279,8 @@
 
     return count ?? 0
     }
+
+    // Obtiene el número de días completos con pausas activas en los últimos 60 días --------------------------------------------------------------------------------
 
     async function getFullDaysWithAllPauses(userId: string): Promise<number> {
     const desde = DateTime.now().minus({ days: 60 }).startOf('day')
@@ -272,6 +316,7 @@
     return diasCompletos
     }
 
+    // Verifica si el usuario no ha tenido huecos largos sin pausas en los últimos 60 días --------------------------------------------------------------------------
 
     async function hasNoLongBreaks(userId: string, maxDays: number): Promise<boolean> {
     const desde = DateTime.now().minus({ days: 60 }).startOf('day') // 2 meses de historial
@@ -318,6 +363,8 @@
 
     return true
     }
+
+    // Verifica si el usuario ha recuperado una racha de pausas activas de al menos X días en los últimos 60 días ---------------------------------------------------
 
     async function recoveredStreak(userId: string, minDays: number): Promise<boolean> {
     const desde = DateTime.now().minus({ days: 60 }).toISO() // 2 meses de margen
@@ -378,14 +425,19 @@
     return date.weekday === 5
     }
 
+    // Verifica si el usuario ha pausado en un horario inesperado (por ejemplo, fuera de horas laborales) ----------------------------------------------------------
+
     async function didPauseAtUnexpectedTime(userId: string, extraData: any): Promise<boolean> {
     return false
     }
+
+    // Verifica si el usuario ha participado en una encuesta -------------------------------------------------------------------------------------------------------
+
     async function hasParticipatedInSurvey(userId: string): Promise<boolean> {
     return false
     }
 
-    // Verifica si el usuario está en el ranking y en la posición correcta
+    // Verifica si el usuario está en el ranking y en la posición correcta ------------------------------------------------------------------------------------------
 
     async function checkRankingPosition(userId: string, maxPosition: number): Promise<boolean> {
     const { data: allUsers, error } = await supabase
@@ -405,6 +457,8 @@
 
     return posicion > 0 && posicion <= maxPosition
     }
+
+    // Verifica si el usuario ha mejorado su actividad comparado con la semana pasada ------------------------------------------------------------------------------
 
     async function improvedComparedToLastWeek(userId: string): Promise<boolean> {
     const now = new Date()
@@ -451,8 +505,7 @@
     return (thisWeekCount ?? 0) > (lastWeekCount ?? 0)
     }
 
-
-    // Verifica si el usuario ha marcado un ejercicio como favorito
+    // Verifica si el usuario ha marcado un ejercicio como favorito -----------------------------------------------------------------------------------------------
 
     async function hasMarkedFavorite(userId: string): Promise<boolean> {
     const { count, error } = await supabase
@@ -467,6 +520,8 @@
 
     return (count ?? 0) >= 1
     }
+
+    // Verifica si el usuario ha pausado en X días laborales consecutivos en los últimos 60 días -------------------------------------------------------------------
 
     async function hasPausedXWorkingDaysInARow(userId: string, days: number): Promise<boolean> {
     const desde = DateTime.now().minus({ days: 60 }).startOf('day')
@@ -520,9 +575,45 @@
     return maxStreak >= days
     }
 
+    // Verifica si el usuario ha completado un circuito de ejercicios (por ejemplo, 5 pausas activas seguidas) --------------------------------------------------------
+
     async function didCompleteFullCircuit(userId: string): Promise<boolean> {
-    return false
+    const { data, error } = await supabase
+        .from('active_pauses')
+        .select('video_id')
+        .eq('user_id', userId)
+        .gte('created_at', DateTime.now().minus({ days: 7 }).toISO()) // últimos 7 días
+
+    if (error || !data) {
+        console.error('Error obteniendo pausas activas para circuito completo:', error)
+        return false
     }
+
+    const videoIds = Array.from(new Set(data.map(p => p.video_id)))
+    if (videoIds.length === 0) return false
+
+    const { data: videos, error: videoError } = await supabase
+        .from('videos')
+        .select('categorias')
+        .in('wistia_id', videoIds)
+
+    if (videoError || !videos) {
+        console.error('Error cargando vídeos para circuito completo:', videoError)
+        return false
+    }
+
+    const categoriasRealizadas = new Set<string>()
+    for (const video of videos) {
+        for (const cat of video.categorias || []) {
+        categoriasRealizadas.add(cat)
+        }
+    }
+
+    const categoriasRequeridas = ['miembro superior', 'miembro inferior', 'core', 'movilidad']
+
+    return categoriasRequeridas.every(cat => categoriasRealizadas.has(cat))
+    }
+
 
 
 
