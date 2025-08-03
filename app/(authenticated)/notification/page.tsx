@@ -232,6 +232,11 @@ export default function NotificationPage() {
         await checkAchievements(user.id, 'max_dias_sin_pausa')
         await checkAchievements(user.id, 'dias_completos')
         await checkAchievements(user.id, 'dias_laborales_con_pausa')
+        await checkAchievements(user.id, 'ejercicios_brazos')
+        await checkAchievements(user.id, 'ejercicios_piernas')
+        await checkAchievements(user.id, 'ejercicios_core')
+        await checkAchievements(user.id, 'ejercicios_movilidad')
+        await checkAchievements(user.id, 'circuito_completo')
 
         setCurrentStep("satisfaction")
     }
