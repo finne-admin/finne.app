@@ -187,12 +187,12 @@ export default function NotificationPage() {
 
     if (currentStep === "video2" && user?.id) {
         // Obtener hashed_ids de los dos vídeos
-        const hashedIds = selectedExerciseData.map((ex) => ex.hashed_id)
+        const wistiaIds = selectedExerciseData.map((ex) => ex.hashed_id)
 
         const { data: videoRows, error: videoError } = await supabase
         .from('videos')
-        .select('id, hashed_id')
-        .in('hashed_id', hashedIds)
+        .select('id, wistia_id')
+        .in('wistia_id', wistiaIds)
 
         if (videoError || !videoRows || videoRows.length !== 2) {
         console.error('Error obteniendo IDs de vídeos:', videoError)
@@ -200,14 +200,15 @@ export default function NotificationPage() {
         }
 
         // Ordenar los IDs por el orden original seleccionado
-        const [video1, video2] = hashedIds.map(hash => 
-        videoRows.find(v => v.hashed_id === hash)
+        const [video1, video2] = wistiaIds.map(id =>
+        videoRows.find(v => v.wistia_id === id)
         )
 
         if (!video1 || !video2) {
         console.error('No se encontraron ambos vídeos')
         return
         }
+
 
         // Insertar la pausa activa con ambos vídeos
         const { error: insertError } = await supabase
