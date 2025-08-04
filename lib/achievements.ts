@@ -234,13 +234,14 @@
     // Paso 1: obtener IDs de vídeo de pausas activas del usuario
     const { data: pausas, error: errorPausas } = await supabase
         .from('active_pauses')
-        .select('video_id')
+        .select('video1_id, video2_id')
         .eq('user_id', userId)
-        .not('video_id', 'is', null)
 
     if (errorPausas || !pausas || pausas.length === 0) return 0
 
-    const idsVistos = Array.from(new Set(pausas.map(p => p.video_id)))
+    const idsVistos = Array.from(new Set(
+        pausas.flatMap(p => [p.video1_id, p.video2_id]).filter(Boolean)
+    ))
 
     // Paso 2: obtener vídeos que incluyen esa categoría
     const { data: videos, error: errorVideos } = await supabase
@@ -580,7 +581,7 @@
     async function didCompleteFullCircuit(userId: string): Promise<boolean> {
     const { data, error } = await supabase
         .from('active_pauses')
-        .select('video_id')
+        .select('video1_id, video2_id')
         .eq('user_id', userId)
         .gte('created_at', DateTime.now().minus({ days: 7 }).toISO()) // últimos 7 días
 
@@ -589,7 +590,10 @@
         return false
     }
 
-    const videoIds = Array.from(new Set(data.map(p => p.video_id)))
+    const videoIds = Array.from(new Set(
+        data.flatMap(p => [p.video1_id, p.video2_id]).filter(Boolean)
+    ))
+
     if (videoIds.length === 0) return false
 
     const { data: videos, error: videoError } = await supabase
