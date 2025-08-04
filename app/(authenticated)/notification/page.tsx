@@ -177,73 +177,73 @@ export default function NotificationPage() {
         setCurrentStep("video1")
     }
 
-    const handleVideoEnd = async () => {
+    const handleVideoEnd = () => {
     console.log("Vídeo finalizado, paso actual:", currentStep)
-
+    
     if (currentStep === "video1") {
         setCurrentStep("countdown")
-        return
-    }
-
-    if (currentStep === "video2" && user?.id) {
-        // Obtener hashed_ids de los dos vídeos
-        const wistiaIds = selectedExerciseData.map((ex) => ex.hashed_id)
-
-        const { data: videoRows, error: videoError } = await supabase
-        .from('videos')
-        .select('id, wistia_id')
-        .in('wistia_id', wistiaIds)
-
-        if (videoError || !videoRows || videoRows.length !== 2) {
-        console.error('Error obteniendo IDs de vídeos:', videoError)
-        return
-        }
-
-        // Ordenar los IDs por el orden original seleccionado
-        const [video1, video2] = wistiaIds.map(id =>
-        videoRows.find(v => v.wistia_id === id)
-        )
-
-        if (!video1 || !video2) {
-        console.error('No se encontraron ambos vídeos')
-        return
-        }
-
-
-        // Insertar la pausa activa con ambos vídeos
-        const { error: insertError } = await supabase
-        .from('active_pauses')
-        .insert({
-            user_id: user.id,
-            video1_id: video1.id,
-            video2_id: video2.id,
-        })
-
-        if (insertError) {
-        console.error('Error al insertar active_pause:', insertError)
-        return
-        }
-
-        // Logros
-        await checkAchievements(user.id, 'pausas_en_dia')
-        await checkAchievements(user.id, 'pausas_semana')
-        await checkAchievements(user.id, 'mejora_semanal')
-        await checkAchievements(user.id, 'dias_consecutivos_con_pausa')
-        await checkAchievements(user.id, 'recupera_racha')
-        await checkAchievements(user.id, 'max_dias_sin_pausa')
-        await checkAchievements(user.id, 'dias_completos')
-        await checkAchievements(user.id, 'dias_laborales_con_pausa')
-        await checkAchievements(user.id, 'ejercicios_brazos')
-        await checkAchievements(user.id, 'ejercicios_piernas')
-        await checkAchievements(user.id, 'ejercicios_core')
-        await checkAchievements(user.id, 'ejercicios_movilidad')
-        await checkAchievements(user.id, 'circuito_completo')
-
+    } else if (currentStep === "video2") {
+        // ¡Ojo aquí! Paso a satisfacción primero
         setCurrentStep("satisfaction")
+
+        // Luego lanzo lógica asíncrona que no bloquea el flujo
+        handlePostVideoLogic()
     }
 
     setIsStarting(false)
     }
+
+    const handlePostVideoLogic = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) return
+
+    const wistiaIds = selectedExerciseData.map((ex) => ex.hashed_id)
+    const { data: videoRows, error: videoError } = await supabase
+        .from('videos')
+        .select('id, wistia_id')
+        .in('wistia_id', wistiaIds)
+
+    if (videoError || !videoRows || videoRows.length !== 2) {
+        console.error('Error obteniendo IDs de vídeos:', videoError)
+        return
+    }
+
+    const [video1, video2] = wistiaIds.map(id =>
+        videoRows.find(v => v.wistia_id === id)
+    )
+
+    if (!video1 || !video2) {
+        console.error('No se encontraron ambos vídeos')
+        return
+    }
+
+    const { error: insertError } = await supabase
+        .from('active_pauses')
+        .insert({
+        user_id: user.id,
+        video1_id: video1.id,
+        video2_id: video2.id,
+        })
+
+    if (insertError) {
+        console.error('Error al insertar active_pause:', insertError)
+    }
+
+    await checkAchievements(user.id, 'pausas_en_dia')
+    await checkAchievements(user.id, 'pausas_semana')
+    await checkAchievements(user.id, 'mejora_semanal')
+    await checkAchievements(user.id, 'dias_consecutivos_con_pausa')
+    await checkAchievements(user.id, 'recupera_racha')
+    await checkAchievements(user.id, 'max_dias_sin_pausa')
+    await checkAchievements(user.id, 'dias_completos')
+    await checkAchievements(user.id, 'dias_laborales_con_pausa')
+    await checkAchievements(user.id, 'ejercicios_brazos')
+    await checkAchievements(user.id, 'ejercicios_piernas')
+    await checkAchievements(user.id, 'ejercicios_core')
+    await checkAchievements(user.id, 'ejercicios_movilidad')
+    await checkAchievements(user.id, 'circuito_completo')
+    }
+
 
 
     const handleEmojiSelect = async (emoji: string) => {
