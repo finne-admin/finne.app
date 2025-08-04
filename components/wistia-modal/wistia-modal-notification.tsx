@@ -62,33 +62,47 @@ export function WistiaModalNotification({
 
     // Video initialization
     useEffect(() => {
-        if (!isVideoReady || isLoading) return
+        if (!isVideoReady || isLoading || !hashedId) return
 
-        window._wq.push({
-            id: hashedId,
-            options: {
-                autoPlay: true,
-                playbar: true,
-                volumeControl: true,
-                fullscreenButton: true,
-            },
-            onReady: (video: any) => {
-                videoRef.current = video
-                video.play()
-                video.bind("end", () => {
-                    onVideoEnd?.()
-                    video.unbind("end")
-                })
-            },
-        })
+        let destroyed = false
+
+        const initPlayer = () => {
+            if (destroyed) return
+
+            window._wq.push({
+                id: hashedId,
+                options: {
+                    autoPlay: true,
+                    playbar: true,
+                    volumeControl: true,
+                    fullscreenButton: true,
+                },
+                onReady: (video: any) => {
+                    if (destroyed || !video) return
+
+                    videoRef.current = video
+                    video.play()
+
+                    video.bind("end", () => {
+                        onVideoEnd?.()
+                        video.unbind("end") // Limpieza
+                    })
+                },
+            })
+        }
+
+        initPlayer()
 
         return () => {
+            destroyed = true
             if (videoRef.current) {
                 videoRef.current.unbind?.("end")
                 videoRef.current.remove?.()
+                videoRef.current = null
             }
         }
     }, [hashedId, onVideoEnd, isVideoReady, isLoading])
+
 
     // Event handlers
     useEffect(() => {
