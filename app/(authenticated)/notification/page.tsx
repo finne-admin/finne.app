@@ -178,20 +178,20 @@ export default function NotificationPage() {
     }
 
     const handleVideoEnd = () => {
-    console.log("Vídeo finalizado, paso actual:", currentStep)
-    
+    console.log("Vídeo finalizado, paso actual:", currentStep);
+
     if (currentStep === "video1") {
-        setCurrentStep("countdown")
+        setCurrentStep("countdown");
     } else if (currentStep === "video2") {
-        // ¡Ojo aquí! Paso a satisfacción primero
-        setCurrentStep("satisfaction")
-
-        // Luego lanzo lógica asíncrona que no bloquea el flujo
-        handlePostVideoLogic()
+        // Cambiamos de paso inmediatamente
+        setCurrentStep("satisfaction");
+        // Lógica asíncrona sin bloquear la UI
+        void handlePostVideoLogic();
     }
 
-    setIsStarting(false)
-    }
+    setIsStarting(false);
+    };
+
 
     const handlePostVideoLogic = async () => {
     const { data: { user } } = await supabase.auth.getUser()

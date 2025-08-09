@@ -62,46 +62,55 @@ export function WistiaModalNotification({
 
     // Video initialization
     useEffect(() => {
-        if (!isVideoReady || isLoading || !hashedId) return
+    if (!isVideoReady || isLoading || !hashedId) return;
 
-        let destroyed = false
+    let destroyed = false;
+    let player: any = null;
 
-        const initPlayer = () => {
-            if (destroyed) return
+    const initPlayer = () => {
+        if (destroyed) return;
 
-            window._wq.push({
-                id: hashedId,
-                options: {
-                    autoPlay: true,
-                    playbar: true,
-                    volumeControl: true,
-                    fullscreenButton: true,
-                },
-                onReady: (video: any) => {
-                    if (destroyed || !video) return
+        (window as any)._wq = (window as any)._wq || [];
+        (window as any)._wq.push({
+        id: hashedId,
+        options: {
+            autoPlay: true,
+            playbar: true,
+            volumeControl: true,
+            fullscreenButton: true,
+        },
+        onReady: (video: any) => {
+            if (destroyed || !video) return;
 
-                    videoRef.current = video
-                    video.play()
+            player = video;
+            videoRef.current = video;
 
-                    video.bind("end", () => {
-                        onVideoEnd?.()
-                        video.unbind("end") // Limpieza
-                    })
-                },
-            })
+            try { video.play?.(); } catch {}
+
+            // 🔐 Opción A: usar 'afterend' para evitar la carrera interna de Wistia
+            video.bind("afterend", () => {
+            onVideoEnd?.();
+            video.unbind("afterend"); // limpieza
+            });
+        },
+        });
+    };
+
+    initPlayer();
+
+    return () => {
+        destroyed = true;
+        try {
+        player?.unbind?.("afterend");
+        player?.unbind?.("end");     // por si acaso estaba bindeado
+        player?.remove?.();
+        } finally {
+        videoRef.current = null;
+        player = null;
         }
+    };
+    }, [hashedId, onVideoEnd, isVideoReady, isLoading]);
 
-        initPlayer()
-
-        return () => {
-            destroyed = true
-            if (videoRef.current) {
-                videoRef.current.unbind?.("end")
-                videoRef.current.remove?.()
-                videoRef.current = null
-            }
-        }
-    }, [hashedId, onVideoEnd, isVideoReady, isLoading])
 
 
     // Event handlers
