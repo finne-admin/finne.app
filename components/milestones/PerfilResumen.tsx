@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image' // ← nuevo
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +19,7 @@ type PerfilData = {
   progreso: number
   titulo: string
   racha: number
+  avatarUrl?: string        // ← nuevo
 }
 
 export function PerfilResumen() {
@@ -33,7 +35,7 @@ export function PerfilResumen() {
       // Datos básicos
       const { data, error } = await supabase
         .from('users')
-        .select('exp, first_name, last_name')
+        .select('exp, first_name, last_name, avatar_url') // ← nuevo
         .eq('id', user.id)
         .single()
 
@@ -79,7 +81,8 @@ export function PerfilResumen() {
         logros: logrosDesbloqueados || 0,
         progreso,
         titulo,
-        racha
+        racha,
+        avatarUrl: data.avatar_url || undefined, // ← nuevo
       })
     }
 
@@ -102,17 +105,33 @@ export function PerfilResumen() {
       className="bg-white rounded-xl shadow-md border border-gray-200 p-6 max-w-xl mx-auto"
     >
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Hola, {perfil.name}
-          </h2>
-          <p className="text-gray-700 dark:text-gray-300">
-            Nivel {perfil.nivel} · {perfil.puntos} PA
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {perfil.titulo}
-          </p>
+        {/* IZQUIERDA: avatar + textos */}
+        <div className="flex items-center gap-4">
+          <Image
+            src={perfil.avatarUrl || '/default-avatar.png'}
+            alt="Avatar"
+            width={56}
+            height={56}
+            className="rounded-full border border-gray-200 shrink-0"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              target.src = '/default-avatar.png'
+            }}
+          />
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Hola, {perfil.name}
+            </h2>
+            <p className="text-gray-700 dark:text-gray-300">
+              Nivel {perfil.nivel} · {perfil.puntos} PA
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {perfil.titulo}
+            </p>
+          </div>
         </div>
+
+        {/* DERECHA: métricas */}
         <div className="text-right space-y-1">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Logros</p>
