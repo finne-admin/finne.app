@@ -108,7 +108,6 @@
 }
 
 
-/* Texto con degradado animado, sin fondo */
 @layer utilities {
   .text-gradient {
     -webkit-background-clip: text;
@@ -116,15 +115,36 @@
     color: transparent;
   }
 
-  /* Animación suave e infinita del degradado (va y vuelve) */
-  .animate-gradient {
-    background-size: 200% 200%;
-    animation: gradient-flow 8s ease-in-out infinite;
+  /* Degradado animado (más rápido) */
+  .animate-gradient-fast {
+    background-size: 220% 220%;
+    animation: gradient-flow 4s ease-in-out infinite;
   }
 
   @keyframes gradient-flow {
     0%   { background-position: 0% 50%; }
     50%  { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
+  }
+
+  /* Capa de textura: ruido sutil en SVG data-URI (muy ligero) */
+  .bg-texture-noise {
+    /* Dos fondos: 1) degradado (lo pones en el componente)  2) ruido */
+    background-image:
+      var(--tw-gradient-image),
+      url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'>\
+  <filter id='n'>\
+    <feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/>\
+    <feColorMatrix type='saturate' values='0'/>\
+    <feComponentTransfer>\
+      <feFuncA type='table' tableValues='0 0 0 0.03'/>\
+    </feComponentTransfer>\
+  </filter>\
+  <rect width='100%' height='100%' filter='url(%23n)'/>\
+</svg>");
+    background-repeat: no-repeat, repeat;
+    background-size: 220% 220%, 180px 180px; /* ruido pequeño y repetido */
+    background-blend-mode: overlay; /* mezcla el ruido con el degradado */
   }
 }
