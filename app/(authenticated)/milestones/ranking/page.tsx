@@ -6,13 +6,11 @@ export default function RankingPage() {
       <h2
         className="
           text-2xl md:text-3xl font-extrabold tracking-wide mb-8 text-center
-          text-gradient animate-gradient-fast motion-reduce:animate-none
-          bg-texture-noise
+          text-gradient animate-gradient-fast hover:[animation-duration:3s] motion-reduce:animate-none
+          bg-texture-noise breath select-none cursor-default
         "
         style={{
-          // Degradado temático (puedes afinar tonos)
-          // Se inyecta como primera capa en --tw-gradient-image
-          // para que la clase bg-texture-noise lo combine con la textura.
+          // capa 1 (degradado) – la textura la añade bg-texture-noise
           ['--tw-gradient-image' as any]:
             'linear-gradient(90deg, #059669, #10b981, #047857)',
         }}
