@@ -95,21 +95,20 @@
     color: transparent;
   }
 
-  /* ——— Degradado + textura tipo "melting" ——— */
+  /* ——— Degradado + textura tipo "melting" (manchas verdes) ——— */
   .bg-melting-emerald {
-    /* 4 capas: 3 radiales (manchas) + la banda principal en degradado */
     background-image:
       radial-gradient(140px 170px at 12% 32%, rgba(16,185,129,0.28), rgba(16,185,129,0) 60%),
       radial-gradient(180px 150px at 82% 22%, rgba(5,150,105,0.28), rgba(5,150,105,0) 62%),
       radial-gradient(160px 160px at 42% 78%, rgba(4,120,87,0.24), rgba(4,120,87,0) 60%),
-      var(--tw-gradient-image); /* tu linear-gradient inyectado desde el componente */
+      var(--tw-gradient-image);
     background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
     background-size: 320% 320%, 320% 320%, 320% 320%, 320% 320%;
     background-blend-mode: screen, overlay, soft-light, normal;
     filter: saturate(1.05) contrast(1.02);
   }
 
-  /* versión con grano extra */
+  /* Versión con grano visible encima */
   .bg-melting-emerald-noise {
     background-image:
       radial-gradient(140px 170px at 12% 32%, rgba(16,185,129,0.28), rgba(16,185,129,0) 60%),
@@ -134,7 +133,7 @@
     background-blend-mode: screen, overlay, soft-light, normal, soft-light;
   }
 
-  /* animación "melting": movemos las 3 radiales y la banda principal sin cortes */
+  /* Animación de las "manchas" + la banda principal (sin cortes) */
   .animate-melting {
     animation: melt-move 6s ease-in-out infinite;
   }
@@ -146,7 +145,12 @@
     100% { background-position: 10% 28%, 85% 20%, 40% 80%,   0% 50%, 0 0; }
   }
 
-  /* respiración en hover (solo micro-scale, sin saltos) */
+  /* Deformación orgánica real usando el filtro SVG global */
+  .melt-warp {
+    filter: url(#melt-warp);
+  }
+
+  /* “Respirar” en hover (sin mover el degradado para evitar saltos) */
   .breath {
     transition: transform 0.5s ease;
     will-change: transform;
@@ -159,5 +163,6 @@
     .breath, .breath:hover, .breath:active { transition: none; transform: none; }
   }
 }
+
 
 

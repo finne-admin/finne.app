@@ -6,7 +6,7 @@ export default function RankingPage() {
     <h2
       className="
         text-2xl md:text-3xl font-extrabold tracking-wide mb-8 text-center
-        text-gradient bg-melting-emerald-noise animate-melting breath
+        text-gradient bg-melting-emerald-noise animate-melting melt-warp breath
         select-none cursor-default
       "
       style={{
@@ -16,8 +16,6 @@ export default function RankingPage() {
     >
       Temporada Post Verano — 1 septiembre — 30 noviembre
     </h2>
-
-
       <RankingUsuarios />
     </div>
   )
