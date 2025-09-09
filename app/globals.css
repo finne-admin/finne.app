@@ -94,6 +94,7 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    -webkit-text-fill-color: transparent; /* compat Safari/WebKit */
   }
 
   /* Fondo con manchas "líquidas" + degradado base + grano en verdes */
