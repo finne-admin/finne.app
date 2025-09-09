@@ -127,6 +127,28 @@
     100% { background-position: 0% 50%; }
   }
 
+    /* Respiración sutil al pasar el ratón */
+  .breath {
+    transition: background-position 1.2s ease, transform 0.6s ease;
+    will-change: background-position, transform;
+  }
+  .breath:hover {
+    background-position: 120% 50% !important; /* leve desplazamiento lateral */
+    transform: scale(1.01);                    /* micro scale */
+  }
+  .breath:active {
+    transform: scale(0.995);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .breath,
+    .breath:hover,
+    .breath:active {
+      transition: none;
+      transform: none;
+    }
+  }
+
   /* Capa de textura: ruido sutil en SVG data-URI (muy ligero) */
   .bg-texture-noise {
     /* Dos fondos: 1) degradado (lo pones en el componente)  2) ruido */
