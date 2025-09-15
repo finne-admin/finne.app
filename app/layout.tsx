@@ -21,29 +21,25 @@ const geistMono = localFont({
 })
 
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+// app/layout.tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClientComponentClient()
-
   return (
-    <html lang="en">
+    <html lang="es" className="h-full">
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ffffff" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full min-h-dvh w-full bg-gray-50 overflow-x-hidden`}>
         <SessionContextProvider supabaseClient={supabase}>
-          <PerfilResumenRefProvider> {/* 👈 Ahora está envuelto aquí */}
+          <PerfilResumenRefProvider>
             <Toaster />
             <div id="puntos-globales" className="pointer-events-none fixed inset-0 z-[9999]" />
-            {children}
+            <main className="h-full min-h-dvh w-full">{children}</main>
           </PerfilResumenRefProvider>
         </SessionContextProvider>
       </body>
     </html>
   )
 }
+

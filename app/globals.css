@@ -89,6 +89,16 @@
 
 
 @layer utilities {
+
+  .container-cq { container-type: inline-size; }
+
+  /* Título y subtítulo fluidos respecto al contenedor */
+  .title-cq { font-size: clamp(26px, 5cqw, 36px); line-height: 1.2; }
+  .sub-cq   { font-size: clamp(14px, 2.5cqw, 18px); }
+
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
   /* Clip del fondo al texto */
   .text-gradient {
     -webkit-background-clip: text;
@@ -137,8 +147,8 @@
   }
 
   /* Variantes de velocidad (opcional) */
-  .animate-ink-melt-slow { animation-duration: 6s; }
-  .animate-ink-melt-fast { animation-duration: 2s; }
+  .animate-ink-melt-slow { animation-duration: 7,5s; }
+  .animate-ink-melt-fast { animation-duration: 3s; }
 
   @media (prefers-reduced-motion: reduce) {
     .animate-ink-melt, .animate-ink-melt-slow, .animate-ink-melt-fast {
@@ -146,7 +156,6 @@
     }
   }
 }
-
 
 
 
