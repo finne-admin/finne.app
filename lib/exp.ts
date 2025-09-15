@@ -29,3 +29,28 @@ export function getTitleFromLevel(level: number): string {
   if (level >= 3) return "Movilizador consciente";
   return "Principiante en bienestar";
 }
+
+// Estado de nivel a partir del XP total acumulado
+export function getLevelStateFromXP(xpTotal: number, base = 100, factor = 1.2) {
+  let level = 1;
+  let costThisLevel = Math.floor(base * level * factor); // XP para pasar del nivel actual al siguiente
+  let xpRemaining = xpTotal;
+
+  // Avanza niveles mientras tengas XP suficiente
+  while (xpRemaining >= costThisLevel) {
+    xpRemaining -= costThisLevel;
+    level++;
+    costThisLevel = Math.floor(base * level * factor);
+  }
+
+  const xpIntoLevel = xpRemaining;              // XP ya invertido en el nivel actual
+  const xpToNext = costThisLevel;               // XP necesario para subir al siguiente nivel desde el actual
+  const progress = Math.round((xpIntoLevel / xpToNext) * 100);
+
+  return {
+    level,
+    xpIntoLevel,
+    xpToNext,
+    progress: Math.max(0, Math.min(100, progress)), // clamp 0–100
+  };
+}
