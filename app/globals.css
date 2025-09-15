@@ -137,8 +137,8 @@
   }
 
   /* Variantes de velocidad (opcional) */
-  .animate-ink-melt-slow { animation-duration: 9s; }
-  .animate-ink-melt-fast { animation-duration: 4.5s; }
+  .animate-ink-melt-slow { animation-duration: 6s; }
+  .animate-ink-melt-fast { animation-duration: 2s; }
 
   @media (prefers-reduced-motion: reduce) {
     .animate-ink-melt, .animate-ink-melt-slow, .animate-ink-melt-fast {
