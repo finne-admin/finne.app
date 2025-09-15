@@ -1,33 +1,35 @@
+// app/milestones/page.tsx
 import { PerfilResumen } from '@/components/milestones/PerfilResumen'
 import { ActividadSemanal } from '@/components/milestones/ActividadSemanal'
 import { LogrosDesbloqueados } from '@/components/milestones/LogrosDesbloqueados'
-import { RetosSemanales } from '@/components/milestones/RetosSemanales' // 👈 nuevo
+import { RetosSemanales } from '@/components/milestones/RetosSemanales'
 
 export default function MilestonesPage() {
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="w-full space-y-6">
       <RetosSemanales />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <div className="text-center mb-8 select-none">
         <h2
-          className="
-            text-2xl md:text-xl font-extrabold tracking-wide mb-8 text-center
-            text-gradient bg-ink-melt animate-ink-melt animate-ink-melt-fast select-none
-          "
-          style={{
-            ['--tw-gradient-image' as any]:
-              'linear-gradient(90deg, #059669, #10b981, #047857)',
-          }}
+          className="title-cq font-extrabold tracking-wide text-gradient bg-ink-melt animate-ink-melt animate-ink-melt-fast"
+          style={{ ['--tw-gradient-image' as any]: 'linear-gradient(90deg,#059669,#10b981,#047857)' }}
         >
-          Temporada Post Verano — 1 septiembre — 30 noviembre
+          Temporada de Otoño
         </h2>
-        <div className="space-y-6">
+        <p className="sub-cq mt-2 text-gray-600">1 de septiembre — 30 de noviembre</p>
+      </div>
+
+      {/* grid a ancho completo */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 lg:col-span-5 space-y-6">
           <PerfilResumen />
           <ActividadSemanal />
         </div>
-        <div className="h-full self-stretch">
+        <div className="col-span-12 lg:col-span-7 h-full self-stretch">
           <LogrosDesbloqueados />
         </div>
       </div>
     </div>
   )
 }
+
