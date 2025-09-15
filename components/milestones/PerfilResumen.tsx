@@ -6,7 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
-import { getLevelFromXP, getXPForNextLevel, getTitleFromLevel } from '@/lib/exp'
+import { getLevelStateFromXP, getXPForNextLevel, getTitleFromLevel } from '@/lib/exp'
 import { DateTime } from 'luxon'
 import { getActiveStreak } from '@/components/utils/getActiveStreak'
 
@@ -35,17 +35,14 @@ export function PerfilResumen() {
       // Datos básicos
       const { data, error } = await supabase
         .from('users')
-        .select('exp, first_name, last_name, avatar_url') // ← nuevo
+        .select('exp, first_name, last_name, avatar_url') 
         .eq('id', user.id)
         .single()
 
       if (error || !data) return
 
       const exp = data.exp || 0
-      const level = getLevelFromXP(exp)
-      const xpForThisLevel = getXPForNextLevel(level - 1)
-      const xpForNextLevel = getXPForNextLevel(level)
-      const progreso = Math.round(((exp - xpForThisLevel) / (xpForNextLevel - xpForThisLevel)) * 100)
+      const { level, progress } = getLevelStateFromXP(exp);
       const titulo = getTitleFromLevel(level)
       const nombre =
         (data.first_name && data.last_name)
@@ -79,7 +76,7 @@ export function PerfilResumen() {
         nivel: level,
         puntos: exp,
         logros: logrosDesbloqueados || 0,
-        progreso,
+        progreso: progress,
         titulo,
         racha,
         avatarUrl: data.avatar_url || undefined, // ← nuevo
