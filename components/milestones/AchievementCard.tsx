@@ -19,13 +19,12 @@ export type Logro = {
 export function AchievementCard({ logro }: { logro: Logro }) {
   const [reclamado, setReclamado] = useState(logro.reclamado)
   const [animando, setAnimando] = useState(false)
-
   const supabase = createClientComponentClient()
 
+  // Lee el estado real por si viene desfasado
   const fetchReclamado = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-
     const { data, error } = await supabase
       .from('user_achievements')
       .select('reclamado')
@@ -33,60 +32,49 @@ export function AchievementCard({ logro }: { logro: Logro }) {
       .eq('achievement_id', logro.id)
       .maybeSingle()
 
-    if (!error && data) {
-      setReclamado(data.reclamado)
-    }
+    if (!error && data) setReclamado(!!data.reclamado)
   }
 
   useEffect(() => {
     fetchReclamado()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleClick = async () => {
-    if (!logro.completado || reclamado) return
+    if (!logro.completado || reclamado || animando) return
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    // UI optimista: feedback instantáneo
+    setReclamado(true)
     setAnimando(true)
 
-    // 1. Marca como reclamado
-    const { error: updateError } = await supabase
-      .from('user_achievements')
-      .update({ reclamado: true })
-      .eq('user_id', user.id)
-      .eq('achievement_id', logro.id)
+    try {
+      // 1 solo roundtrip (transacción en la RPC)
+      const { error } = await supabase.rpc('claim_achievement', {
+        _user: user.id,
+        _ach: logro.id,
+        _points: logro.puntos,
+      })
 
-    if (updateError) {
-      console.error('Error al marcar logro como reclamado:', updateError)
-      setAnimando(false)
-      return
+      if (error) {
+        // rollback mínimo en caso de fallo
+        console.error('claim_achievement error:', error)
+        setReclamado(false)
+      } else {
+        // Revisa logros derivados sin bloquear la UI
+        checkAchievements(user.id, 'ranking_final').catch(console.error)
+        // (opcional) re-sync silencioso para asegurar consistencia
+        fetchReclamado().catch(() => {})
+      }
+    } catch (e) {
+      console.error(e)
+      setReclamado(false)
+    } finally {
+      // La animación dura ~0.9s independientemente de la red
+      setTimeout(() => setAnimando(false), 900)
     }
-
-    // 2. Suma puntos al usuario
-    const { error: expError } = await supabase.rpc('increment_user_exp', {
-      user_id_input: user.id,
-      amount: logro.puntos
-    })
-
-    if (expError) {
-      console.error('Error al añadir exp:', expError)
-    } else {
-      console.log('Experiencia añadida correctamente')
-      await checkAchievements(user.id, 'ranking_final')
-    }
-
-    // 3. Añadir a activity_points
-    await supabase.from('activity_points').insert({
-      user_id: user.id,
-      action_type: 'logro',
-      points: logro.puntos,
-      metadata: { achievement_id: logro.id }
-    })
-
-    // 4. Refresca el estado real desde Supabase
-    await fetchReclamado()
-    setAnimando(false)
   }
 
   const esBloqueado = !logro.completado && !reclamado
@@ -103,15 +91,18 @@ export function AchievementCard({ logro }: { logro: Logro }) {
           : { scale: 1, boxShadow: 'none' }
       }
       transition={{ duration: 0.8, ease: 'easeInOut' }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
-        'flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all cursor-pointer max-w-md w-full',
+        'flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all cursor-pointer max-w-md w-full select-none',
         esBloqueado && 'bg-muted text-muted-foreground cursor-default',
         esCompletado &&
           'bg-yellow-100 border-yellow-400 hover:border-yellow-500 ring-1 ring-yellow-300',
-        esReclamado && 'bg-green-50 border-green-400 text-green-900'
+        esReclamado && 'bg-green-50 border-green-400 text-green-900',
+        animando && 'pointer-events-none' // evita doble click durante animación
       )}
     >
       <div className="text-3xl">{logro.icono}</div>
+
       <div className="flex-1">
         <h3 className="font-semibold">
           {logro.titulo}{' '}
@@ -128,6 +119,7 @@ export function AchievementCard({ logro }: { logro: Logro }) {
         </h3>
         <p className="text-sm text-muted-foreground">{logro.descripcion}</p>
       </div>
+
       {esReclamado && (
         <div className="text-sm text-green-600 font-semibold">+{logro.puntos} PA</div>
       )}
