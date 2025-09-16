@@ -65,6 +65,13 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
   const riseElapsed = useRef(0)
   const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
 
+  // Tamaño del texto
+  const PIG_BASE_PX = 220        // debe coincidir con la anchura CSS del cerdito
+  const TEXT_RATIO = 0.09        // 12% del ancho del cerdo → tamaño del texto
+  const TEXT_OFFSET_RATIO = 0.055 // empuje hacia abajo ≈ 5.5% del ancho
+
+  
+
   // -------- Datos ----------
   useEffect(() => {
     const fetchTotal = async () => {
@@ -83,6 +90,11 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
 
   const progress = Math.max(0, Math.min(1, (totalExp ?? 0) / goal))
   const scale = 0.85 + 0.6 * progress
+
+  // Tamaño del texto
+  const textPx = PIG_BASE_PX * scale * TEXT_RATIO
+  const textOffset = PIG_BASE_PX * scale * TEXT_OFFSET_RATIO
+
 
   // Posición inicial
   useEffect(() => {
@@ -269,7 +281,15 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
             priority
           />
           <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
-            <span className="relative translate-y-3 text-white font-bold text-[clamp(14px,3.6vw,28px)]">
+            <span
+              className="text-white font-bold"
+              style={{
+                fontSize: `${textPx}px`,
+                transform: `translateY(${textOffset}px)`,
+                lineHeight: 1,
+                letterSpacing: '0.02em',
+              }}
+            >
               {totalExp === null ? '—/—' : `${totalExp}/${goal}`}
             </span>
           </div>
