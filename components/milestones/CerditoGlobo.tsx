@@ -9,9 +9,18 @@ type Props = {
   goal?: number
   className?: string
   height?: number
+  ceilingPx?: number   // altura a evitar desde arriba (px)
+  showInlineCount?: boolean   // <— NUEVO
 }
 
-export default function CerditoGlobo({ goal = 2400, className, height = 800 }: Props) {
+export default function CerditoGlobo({
+  goal = 2400,
+  className,
+  height = 800,
+  ceilingPx = 0,
+  showInlineCount = false,     // <— por defecto ya va fuera
+
+}: Props) {
   const [totalExp, setTotalExp] = useState<number | null>(null)
   const [ropePath, setRopePath] = useState<string>('')
 
@@ -30,27 +39,28 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
   const ROPE_RATIO = 0.9
   const STRING_LENGTH = height * ROPE_RATIO
 
-  // Inercia + fuerzas más suaves
-  const MASS = 2.0                // ↑ = más lento todo
-  const BUOYANCY = 0.012          // antes 0.02
-  const MOUSE_FORCE = 35          // antes 50
+  // Inercia + fuerzas
+  const MASS = 3.1
+  const BUOYANCY = 0.018
+  const MOUSE_FORCE = 45
   const MOUSE_RADIUS = 90
-  const BREEZE = 0.03            // antes 0.016
-  const MAX_SPEED = 0.35          // antes 0.6
+  const BREEZE = 0.03
+  const MAX_SPEED = 0.35
 
-  const ATTACH_X = -14
+  // Punto de enganche respecto al centro del globo (antes de escalar)
+  const ATTACH_X = -2
   const ATTACH_Y = 34
 
   // guiado / centrado
-  const HOMING_K = 0.006          // guiado solo durante la subida (más suave)
+  const HOMING_K = 0.006          // guiado solo durante la subida
   const CENTERING_K = 0.0012      // durante subida
   const BASE_CENTERING_K = 0.0006 // centrado muy suave siempre
 
   // resorte radial + holgura
   const LENGTH_SPRING_K = 0.0025
-  const SLACK = 18
+  const SLACK = 16
 
-  // amortiguación (ligera, para no frenar demasiado)
+  // amortiguación
   const DAMPING_X = 0.994
   const DAMPING_Y = 0.995
 
@@ -65,12 +75,10 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
   const riseElapsed = useRef(0)
   const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
 
-  // Tamaño del texto
-  const PIG_BASE_PX = 220        // debe coincidir con la anchura CSS del cerdito
-  const TEXT_RATIO = 0.09        // 12% del ancho del cerdo → tamaño del texto
-  const TEXT_OFFSET_RATIO = 0.055 // empuje hacia abajo ≈ 5.5% del ancho
-
-  
+  // Texto proporcional al globo
+  const PIG_BASE_PX = 220
+  const TEXT_RATIO = 0.08
+  const TEXT_OFFSET_RATIO = 0.07
 
   // -------- Datos ----------
   useEffect(() => {
@@ -91,10 +99,8 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
   const progress = Math.max(0, Math.min(1, (totalExp ?? 0) / goal))
   const scale = 0.85 + 0.6 * progress
 
-  // Tamaño del texto
   const textPx = PIG_BASE_PX * scale * TEXT_RATIO
   const textOffset = PIG_BASE_PX * scale * TEXT_OFFSET_RATIO
-
 
   // Posición inicial
   useEffect(() => {
@@ -134,12 +140,17 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
       vel.current.y += (fy / MASS) * dt
     }
 
-    // Longitud efectiva (subida inicial)
+    // Longitud base con subida inicial
     riseElapsed.current = Math.min(RISE_DURATION_MS, riseElapsed.current + dt)
     const k = easeOut(riseElapsed.current / RISE_DURATION_MS) // 0..1
     const guide = 1 - k                                      // guiado se desvanece
     const lengthFactor = START_LENGTH_FACTOR + (1 - START_LENGTH_FACTOR) * k
     const EFFECTIVE_LENGTH = STRING_LENGTH * lengthFactor
+
+    // Limitar por el "techo" (contador)
+    const TOP_SAFE = Math.max(0, ceilingPx) + 6              // margen extra
+    const maxLengthByCeiling = Math.max(40, ay - TOP_SAFE)   // lo que cabe entre ancla y techo
+    const L = Math.min(EFFECTIVE_LENGTH, maxLengthByCeiling) // longitud REAL a usar
 
     // Fuerzas base
     applyForce(0, -BUOYANCY * (1 + progress))
@@ -156,7 +167,7 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
       }
     }
 
-    // Brisa (más lenta y suave)
+    // Brisa
     const breeze = (Math.sin(t / 16000) + (Math.random() - 0.5) * 0.1) * BREEZE
     applyForce(breeze, 0)
 
@@ -174,9 +185,9 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
     const dy = attachY - ay
     const dist = Math.hypot(dx, dy)
 
-    // 1) Guiado SOLO durante la subida (se desvanece)
+    // 1) Guiado SOLO durante la subida (se desvanece) → usa L
     const targetAttachX = ax
-    const targetAttachY = ay - EFFECTIVE_LENGTH
+    const targetAttachY = ay - L
     applyForce(HOMING_K * guide * (targetAttachX - attachX), HOMING_K * guide * (targetAttachY - attachY))
 
     // 2) Centrado lateral: suave siempre + algo más mientras sube
@@ -188,25 +199,25 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
     const rightSafe = w - 24
     const distLeft = Math.max(0, attachX - leftSafe)
     const distRight = Math.max(0, rightSafe - attachX)
-    const proxLeft = 1 - Math.min(1, distLeft / wallMargin)     // 1 pegado, 0 lejos
+    const proxLeft = 1 - Math.min(1, distLeft / wallMargin)  // 1 pegado, 0 lejos
     const proxRight = 1 - Math.min(1, distRight / wallMargin)
     const guardForce = WALL_K * (Math.pow(proxRight, WALL_EXP) - Math.pow(proxLeft, WALL_EXP))
     applyForce(guardForce, 0)
 
-    // 4) Resorte radial si está floja
-    if (dist < EFFECTIVE_LENGTH - SLACK) {
+    // 4) Resorte radial si está floja → usa L
+    if (dist < L - SLACK) {
       const ux = dx / (dist || 1)
       const uy = dy / (dist || 1)
-      const stretch = (EFFECTIVE_LENGTH - SLACK) - dist
+      const stretch = (L - SLACK) - dist
       applyForce(LENGTH_SPRING_K * stretch * ux, LENGTH_SPRING_K * stretch * uy)
     }
 
-    // 5) Restricción si se pasa (proyectar + quitar vel radial)
-    if (dist > EFFECTIVE_LENGTH) {
+    // 5) Restricción si se pasa (proyectar + quitar vel radial) → usa L
+    if (dist > L) {
       const ux = dx / dist
       const uy = dy / dist
-      const px = ax + ux * EFFECTIVE_LENGTH
-      const py = ay + uy * EFFECTIVE_LENGTH
+      const px = ax + ux * L
+      const py = ay + uy * L
       nx = px - ox
       ny = py - oy
       const vdot = vel.current.x * ux + vel.current.y * uy
@@ -255,10 +266,12 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
       style={{ height }}
       aria-live="polite"
     >
+      {/* cuerda */}
       <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
         <path d={ropePath} stroke="#9ca3af" strokeWidth={3} strokeDasharray="2 6" fill="none" />
       </svg>
 
+      {/* globo */}
       <motion.div
         className="absolute will-change-transform"
         style={{
@@ -273,29 +286,27 @@ export default function CerditoGlobo({ goal = 2400, className, height = 800 }: P
       >
         <div className="relative" style={{ transform: `scale(${scale})` }}>
           <Image
-            src="/ahorro.png"
+            src="/gift.png"           // usa tu imagen (o /ahorro.png)
             alt="Cerdito-globo del departamento"
             width={800}
             height={800}
             className="w-[220px] h-auto select-none"
             priority
           />
-          <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
-            <span
-              className="text-white font-bold"
-              style={{
-                fontSize: `${textPx}px`,
-                transform: `translateY(${textOffset}px)`,
-                lineHeight: 1,
-                letterSpacing: '0.02em',
-              }}
-            >
-              {totalExp === null ? '—/—' : `${totalExp}/${goal}`}
-            </span>
-          </div>
+          {showInlineCount && (
+            <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
+              <span
+                className="text-white font-bold"
+                style={{ fontSize: `${textPx}px`, transform: `translateY(${textOffset}px)`, lineHeight: 1, letterSpacing: '0.02em' }}
+              >
+                {totalExp === null ? '—/—' : `${totalExp}/${goal}`}
+              </span>
+            </div>
+          )}
         </div>
       </motion.div>
 
+      {/* ancla en el suelo */}
       <div className="absolute left-1/2 -translate-x-1/2 bottom-0 w-2 h-2 rounded-full bg-gray-500" />
     </div>
   )
