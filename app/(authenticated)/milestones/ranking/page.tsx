@@ -1,5 +1,5 @@
 import { RankingUsuarios } from "@/components/milestones/RankingUsuarios"
-import CerditoGlobo from "@/components/milestones/CerditoGlobo"
+import HuchaPanel from '@/components/milestones/HuchaPanel'
 
 export default function RankingPage() {
   return (
@@ -17,7 +17,11 @@ export default function RankingPage() {
               top: 'calc(100vh - var(--pig) - 20px)',
             }}
           >
-            <CerditoGlobo goal={2400} className="w-[var(--pig)]" height={520} />
+                <HuchaPanel
+                  goal={2400}
+                  deadline={new Date('2025-11-30T23:59:59')} // cámbialo a tu fecha objetivo
+                  pigHeight={520}
+                />
           </div>
         </aside>
       </div>
