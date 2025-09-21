@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image' // ← nuevo
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Progress } from '@/components/ui/progress'
+import { Progress } from '@/components/ui/progressProfile'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
 import { getLevelStateFromXP, getXPForNextLevel, getTitleFromLevel } from '@/lib/exp'

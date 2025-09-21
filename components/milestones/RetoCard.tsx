@@ -1,3 +1,4 @@
+// components/milestones/RetoCard.tsx
 'use client'
 
 import { useState, useRef } from 'react'
@@ -9,7 +10,6 @@ import { usePerfilResumenRef } from '@/context/usePerfilResumenRef'
 import { PuntoVoladorPortal } from '@/components/animations/PuntoVoladorPortal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { checkAchievements } from '@/lib/achievements'
-
 
 export type Reto = {
   id: string
@@ -31,7 +31,7 @@ export function RetoCard({ reto }: { reto: Reto }) {
 
   const progresoPorcentaje = Math.min(
     100,
-    Math.round((reto.progresoActual / reto.progresoTotal) * 100)
+    Math.round((reto.progresoActual / Math.max(1, reto.progresoTotal)) * 100)
   )
 
   const puedeReclamar = reto.completado && !reclamado
@@ -43,42 +43,22 @@ export function RetoCard({ reto }: { reto: Reto }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // 1. Marcar como reclamado
-    const { error: updateError } = await supabase
-      .from('user_weekly_challenges')
-      .update({
-        reclamado: true,
-      })
-      .eq('user_id', user.id)
-      .eq('challenge_id', reto.id)
+    // --- Reclamo atómico vía RPC (marca reclamado + da EXP + registra activity_points) ---
+    const { error: rpcErr } = await supabase.rpc('claim_weekly_challenge', {
+      p_user: user.id,
+      p_challenge_id: reto.id,
+    })
 
-    if (updateError) {
-      console.error('Error al marcar reto como reclamado:', updateError)
+    if (rpcErr) {
+      console.error('claim_weekly_challenge error:', rpcErr)
       return
     }
 
-    // 2. Sumar experiencia con función SQL
-    const { error: expError } = await supabase.rpc('increment_user_exp', {
-      user_id_input: user.id,
-      amount: reto.puntos
-    })
+    // Si quieres conectar con tu motor de logros normales:
+    // (puedes dejar 'ranking_final' como tenías o cambiar a 'weekly_claimed' si lo implementas)
+    checkAchievements(user.id, 'weekly_claimed').catch(() => {})
 
-    if (expError) {
-      console.error('Error al añadir exp del reto:', expError)
-    } else {
-      console.log('Experiencia añadida correctamente')
-      await checkAchievements(user.id, 'ranking_final')
-    }
-
-    // 3. (opcional) registrar acción
-    await supabase.from('activity_points').insert({
-      user_id: user.id,
-      action_type: 'reto',
-      points: reto.puntos,
-      metadata: { challenge_id: reto.id }
-    })
-
-    // 4. Animación de puntos
+    // --- Animación de puntos ---
     setReclamado(true)
     setShowAnim(true)
 
@@ -95,7 +75,7 @@ export function RetoCard({ reto }: { reto: Reto }) {
       y: toRect.top + toRect.height / 2,
     }
 
-    const nuevosPuntos = Array.from({ length: 10 }, (_, i) => ({
+    const nuevosPuntos = Array.from({ length: 10 }, () => ({
       x: from.x + Math.random() * 30 - 15,
       y: from.y + Math.random() * 20 - 10,
       toX: to.x + Math.random() * 20 - 10,
@@ -116,54 +96,58 @@ export function RetoCard({ reto }: { reto: Reto }) {
       onClick={handleReclamar}
       initial={false}
       animate={
-        reclamado
-          ? {
-              scale: [1, 1.05, 1],
-              boxShadow: [
-                '0 0 0px rgba(0,0,0,0)',
-                '0 0 12px rgba(16,185,129,0.7)',
-                '0 0 0px rgba(0,0,0,0)',
-              ],
-            }
-          : {}
+      reclamado
+        ? {
+          scale: [1, 1.05, 1],
+          boxShadow: [
+          '0 0 0px rgba(0,0,0,0)',
+          '0 0 12px rgba(16,185,129,0.7)',
+          '0 0 0px rgba(0,0,0,0)',
+          ],
+        }
+        : {}
       }
       transition={{ duration: 0.6, ease: 'easeInOut' }}
       className={cn(
-        'relative p-4 rounded-xl border shadow-sm transition-all cursor-pointer max-w-xs w-full h-[160px] flex flex-col justify-between',
-        puedeReclamar && 'bg-green-50 border-green-400',
-        reclamado && 'bg-white border-gray-200',
-        !reto.completado && 'bg-muted/20 text-muted-foreground cursor-default'
+      'relative p-4 rounded-xl border shadow-sm transition-all cursor-pointer max-w-xs w-full h-[160px] flex flex-col justify-between',
+      puedeReclamar && 'bg-yellow-100 border-yellow-400 hover:border-yellow-500 ring-1 ring-yellow-300',
+      reclamado && 'bg-green-50 border-green-400 text-green-900',
+      !reto.completado && 'bg-white text-muted-foreground cursor-default'
       )}
     >
       {/* PUNTOS ANIMADOS */}
-    <AnimatePresence>
-    {puntosVoladores.map((punto, index) => (
+      <AnimatePresence>
+      {puntosVoladores.map((punto, index) => (
         <PuntoVoladorPortal key={index}>
         <PuntoVolador
-            from={{ x: punto.x, y: punto.y }}
-            to={{ x: punto.toX, y: punto.toY }}
+          from={{ x: punto.x, y: punto.y }}
+          to={{ x: punto.toX, y: punto.toY }}
         />
         </PuntoVoladorPortal>
-    ))}
-    </AnimatePresence>
+      ))}
+      </AnimatePresence>
 
       <div>
-        <h3 className="text-sm font-semibold mb-1 leading-tight">{reto.titulo}</h3>
-        <p className="text-xs text-gray-600">{reto.descripcion}</p>
+      <h3 className="text-sm font-semibold mb-1 leading-tight">{reto.titulo}</h3>
+      <p className="text-xs text-gray-600">{reto.descripcion}</p>
       </div>
 
       <div className="mt-2">
-        <Progress value={progresoPorcentaje} className="h-2" />
-        <div className="flex justify-between items-center mt-1 text-xs">
-          <span>
-            {reto.progresoActual} / {reto.progresoTotal}
-          </span>
-          <span className="font-semibold text-emerald-600">+{reto.puntos} PA</span>
-        </div>
-        <div className="text-[11px] h-4 mt-1 text-green-700 font-medium">
-          {reclamado ? 'Recompensa reclamada' : ''}
-        </div>
+      <Progress value={progresoPorcentaje} className="h-2" />
+      <div className="flex justify-between items-center mt-1 text-xs">
+        <span>
+        {reto.progresoActual} / {reto.progresoTotal}
+        </span>
+        <span className="font-semibold text-emerald-600">+{reto.puntos} PA</span>
+      </div>
+      <div className="text-[11px] h-4 mt-1 text-green-700 font-medium">
+        {puedeReclamar ? 'Haz clic para reclamar' :
+        reclamado ? 'Reclamado' : ''}
+      </div>
       </div>
     </motion.div>
   )
 }
+
+
+// #4F9A8F
