@@ -42,7 +42,7 @@ export default function CerditoGlobo({
   // Inercia + fuerzas
   const MASS = 3.1
   const BUOYANCY = 0.018
-  const MOUSE_FORCE = 45
+  const MOUSE_FORCE = 80
   const MOUSE_RADIUS = 90
   const BREEZE = 0.03
   const MAX_SPEED = 0.35
@@ -286,7 +286,7 @@ export default function CerditoGlobo({
       >
         <div className="relative" style={{ transform: `scale(${scale})` }}>
           <Image
-            src="/gift.png"           // usa tu imagen (o /ahorro.png)
+            src="/gift.png"          
             alt="Cerdito-globo del departamento"
             width={800}
             height={800}

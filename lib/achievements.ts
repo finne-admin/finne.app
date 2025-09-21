@@ -114,6 +114,7 @@
         case 'ejercicios_piernas':
         case 'ejercicios_core':
         case 'ejercicios_movilidad':
+            
         return await getExerciseCount(userId, logro.condition_type) >= Number(logro.condition_value)
 
         case 'pausas_en_dia':

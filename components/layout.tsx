@@ -4,12 +4,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import React, { useState, useEffect, memo, useMemo } from 'react'
 import {
-  Bell,
+  BellDot,
   Settings,
   HelpCircle,
   PlayCircle,
   Menu,
-  BellDot,
   Library,
   BarChart2,
   Award,
@@ -25,6 +24,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useTutorialState } from '@/components/tutorial/useTutorial'
 import { Tutorial } from '@/components/tutorial/Tutorial'
+import BadgeDot from '@/components/ui/BadgeDot'
+
+// usamos el contexto global
+import { useUnclaimedProgress } from '@/components/providers/UnclaimedProgressProvider'
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
 
@@ -96,11 +99,9 @@ const LogoutButton = memo(function LogoutButton() {
   const handleLogout = async () => {
     setIsLoading(true)
     try {
-      // 1. Obtener el usuario actual
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) throw userError || new Error("Usuario no encontrado")
 
-      // 2. Eliminar sus tokens FCM
       const { error: deleteError } = await supabase
         .from("fcm_tokens")
         .delete()
@@ -110,7 +111,6 @@ const LogoutButton = memo(function LogoutButton() {
         console.warn("No se pudo eliminar el token FCM:", deleteError.message)
       }
 
-      // 3. Cerrar sesión
       const { error } = await supabase.auth.signOut()
       if (error) throw error
 
@@ -120,7 +120,6 @@ const LogoutButton = memo(function LogoutButton() {
       setIsLoading(false)
     }
   }
-
 
   return (
     <Button
@@ -144,8 +143,11 @@ const LogoutButton = memo(function LogoutButton() {
   )
 })
 
+/* ==================== MobileNav ==================== */
+
 const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[] }) {
   const pathname = usePathname()
+  const { hasWeekly, hasAchievements } = useUnclaimedProgress()
 
   return (
     <div className="flex flex-col h-full">
@@ -166,20 +168,29 @@ const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[]
 
       <div className="flex-1 px-6 py-4">
         <nav className="space-y-2">
-          {menuItems.map((item, index) => (
-            <Link
-              key={`${item.href}-${index}`}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-                "text-white/90 hover:bg-white/10 hover:text-white",
-                pathname === item.href && "bg-white/20 text-white"
-              )}
-            >
-              <item.icon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          ))}
+          {menuItems.map((item, index) => {
+            const isLogros = item.href === '/milestones'
+            return (
+              <Link
+                key={`${item.href}-${index}`}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                  "text-white/90 hover:bg-white/10 hover:text-white",
+                  pathname === item.href && "bg-white/20 text-white"
+                )}
+              >
+                {isLogros ? (
+                  <BadgeDot show={hasAchievements || hasWeekly} variant="inline">
+                    <item.icon className="h-5 w-5" aria-hidden="true" />
+                  </BadgeDot>
+                ) : (
+                  <item.icon className="h-5 w-5" aria-hidden="true" />
+                )}
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            )
+          })}
         </nav>
       </div>
 
@@ -190,8 +201,11 @@ const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[]
   )
 })
 
-const Sidebar = memo(function Sidebar({ menuItems }: { menuItems: MenuItem[] }) {
+/* ==================== Sidebar ==================== */
+
+function Sidebar({ menuItems }: { menuItems: MenuItem[] }) {
   const pathname = usePathname()
+  const { hasWeekly, hasAchievements } = useUnclaimedProgress()
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -205,20 +219,29 @@ const Sidebar = memo(function Sidebar({ menuItems }: { menuItems: MenuItem[] }) 
           priority
         />
         <nav className="space-y-2">
-          {menuItems.map((item, index) => (
-            <Link
-              key={`${item.href}-${index}`}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                "text-white/90 hover:bg-white/10 hover:text-white",
-                pathname === item.href && "bg-white/20 text-white"
-              )}
-            >
-              <item.icon className="h-5 w-5" aria-hidden="true" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {menuItems.map((item, index) => {
+            const isLogros = item.href === '/milestones'
+            return (
+              <Link
+                key={`${item.href}-${index}`}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+                  "text-white/90 hover:bg-white/10 hover:text-white",
+                  pathname === item.href && "bg-white/20 text-white"
+                )}
+              >
+                {isLogros ? (
+                  <BadgeDot show={hasAchievements || hasWeekly} variant="inline">
+                    <item.icon className="h-5 w-5" aria-hidden="true" />
+                  </BadgeDot>
+                ) : (
+                  <item.icon className="h-5 w-5" aria-hidden="true" />
+                )}
+                <span>{item.label}</span>
+              </Link>
+            )
+          })}
         </nav>
       </div>
       <div className="mt-auto p-6">
@@ -226,7 +249,9 @@ const Sidebar = memo(function Sidebar({ menuItems }: { menuItems: MenuItem[] }) 
       </div>
     </div>
   )
-})
+}
+
+/* ==================== Layout ==================== */
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { menuItems } = useAdminCheck()
@@ -250,10 +275,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         setAvatarUrl(data.avatar_url)
       }
     }
-
     fetchAvatar()
   }, [])
-  
+
   const headerContent = useMemo(() => (
     <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
       <div className="flex-1 flex items-center max-w-xl ml-12 lg:ml-0"></div>

@@ -11,6 +11,7 @@ import {Skeleton} from "@/components/ui/skeleton";
 import {CountdownTimer} from "@/components/ui/countdown-timer";
 import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
 import { checkAchievements } from '@/lib/achievements';
+import { checkWeeklyChallenges } from '@/lib/checkWeeklyChallenges';
 
 interface Asset {
     url: string
@@ -228,6 +229,12 @@ export default function NotificationPage() {
     if (insertError) {
         console.error('Error al insertar active_pause:', insertError)
     }
+
+    await checkWeeklyChallenges(user.id, 'active_pause_inserted', {
+    created_at: new Date().toISOString(),
+    video1_id: video1.id,
+    video2_id: video2.id,
+    });
 
     await checkAchievements(user.id, 'pausas_en_dia')
     await checkAchievements(user.id, 'pausas_semana')
