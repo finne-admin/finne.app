@@ -26,7 +26,7 @@ import { useTutorialState } from '@/components/tutorial/useTutorial'
 import { Tutorial } from '@/components/tutorial/Tutorial'
 import BadgeDot from '@/components/ui/BadgeDot'
 
-// usamos el contexto global
+// Contexto global de badges
 import { useUnclaimedProgress } from '@/components/providers/UnclaimedProgressProvider'
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
@@ -100,20 +100,19 @@ const LogoutButton = memo(function LogoutButton() {
     setIsLoading(true)
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) throw userError || new Error("Usuario no encontrado")
+      if (userError || !user) throw userError || new Error('Usuario no encontrado')
 
       const { error: deleteError } = await supabase
-        .from("fcm_tokens")
+        .from('fcm_tokens')
         .delete()
-        .eq("user_id", user.id)
+        .eq('user_id', user.id)
 
       if (deleteError) {
-        console.warn("No se pudo eliminar el token FCM:", deleteError.message)
+        console.warn('No se pudo eliminar el token FCM:', deleteError.message)
       }
 
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-
       router.push('/login')
     } catch (error) {
       console.error('Error logging out:', error)
@@ -148,18 +147,13 @@ const LogoutButton = memo(function LogoutButton() {
 const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[] }) {
   const pathname = usePathname()
   const { hasWeekly, hasAchievements } = useUnclaimedProgress()
+  const show = hasWeekly || hasAchievements
 
   return (
     <div className="flex flex-col h-full">
       <SheetHeader className="p-6 text-white border-b border-white/10">
         <SheetTitle className="flex items-center justify-between">
-          <Image
-            src="/logonegativoRecurso.png"
-            alt="Finne Logo"
-            width={100}
-            height={40}
-            priority
-          />
+          <Image src="/logonegativoRecurso.png" alt="Finne Logo" width={100} height={40} priority />
           <SheetClose className="rounded-full p-2 hover:bg-white/10">
             <X className="h-5 w-5 text-white" />
           </SheetClose>
@@ -175,19 +169,16 @@ const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[]
                 key={`${item.href}-${index}`}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-                  "text-white/90 hover:bg-white/10 hover:text-white",
-                  pathname === item.href && "bg-white/20 text-white"
+                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                  'text-white/90 hover:bg-white/10 hover:text-white',
+                  pathname === item.href && 'bg-white/20 text-white'
                 )}
               >
-                {isLogros ? (
-                  <BadgeDot show={hasAchievements || hasWeekly} variant="inline">
-                    <item.icon className="h-5 w-5" aria-hidden="true" />
-                  </BadgeDot>
-                ) : (
-                  <item.icon className="h-5 w-5" aria-hidden="true" />
-                )}
-                <span className="font-medium">{item.label}</span>
+                <item.icon className="h-5 w-5" aria-hidden="true" />
+                <span className="relative inline-flex items-center gap-2">
+                  {item.label}
+                  {isLogros && show && <BadgeDot show className="static ml-1" />}
+                </span>
               </Link>
             )
           })}
@@ -206,6 +197,11 @@ const MobileNav = memo(function MobileNav({ menuItems }: { menuItems: MenuItem[]
 function Sidebar({ menuItems }: { menuItems: MenuItem[] }) {
   const pathname = usePathname()
   const { hasWeekly, hasAchievements } = useUnclaimedProgress()
+
+  // Log para confirmar que re-renderiza con flags nuevos
+  console.log('[Sidebar render]', { hasWeekly, hasAchievements })
+
+  const show = hasWeekly || hasAchievements
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -226,19 +222,16 @@ function Sidebar({ menuItems }: { menuItems: MenuItem[] }) {
                 key={`${item.href}-${index}`}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                  "text-white/90 hover:bg-white/10 hover:text-white",
-                  pathname === item.href && "bg-white/20 text-white"
+                  'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
+                  'text-white/90 hover:bg-white/10 hover:text-white',
+                  pathname === item.href && 'bg-white/20 text-white'
                 )}
               >
-                {isLogros ? (
-                  <BadgeDot show={hasAchievements || hasWeekly} variant="inline">
-                    <item.icon className="h-5 w-5" aria-hidden="true" />
-                  </BadgeDot>
-                ) : (
-                  <item.icon className="h-5 w-5" aria-hidden="true" />
-                )}
-                <span>{item.label}</span>
+                <item.icon className="h-5 w-5" aria-hidden="true" />
+                <span className="relative inline-flex items-center gap-2">
+                  {item.label}
+                  {isLogros && show && <BadgeDot show className="static ml-1" />}
+                </span>
               </Link>
             )
           })}
@@ -257,6 +250,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { menuItems } = useAdminCheck()
   const { isOpen, startTutorial, stopTutorial } = useTutorialState()
 
+  // ⚠️ Consumimos el contexto aquí para construir la key del Sidebar
+  const { hasWeekly, hasAchievements } = useUnclaimedProgress()
+  const sidebarKey = `sb-${hasWeekly ? 1 : 0}-${hasAchievements ? 1 : 0}`
+  console.log('[layout] sidebar key', sidebarKey)
+
   const supabase = createClientComponentClient()
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
@@ -264,16 +262,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const fetchAvatar = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
       const { data, error } = await supabase
         .from('users')
         .select('avatar_url')
         .eq('id', user.id)
         .single()
-
-      if (!error && data?.avatar_url) {
-        setAvatarUrl(data.avatar_url)
-      }
+      if (!error && data?.avatar_url) setAvatarUrl(data.avatar_url)
     }
     fetchAvatar()
   }, [])
@@ -286,9 +280,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           variant="ghost"
           size="icon"
           className="hover:bg-gray-200"
-          onClick={() => {
-            startTutorial()
-          }}
+          onClick={() => startTutorial()}
           title="Iniciar Tutorial"
         >
           <PlayCircle className="h-6 w-6 text-green-600" />
@@ -308,7 +300,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               className="rounded-full border border-gray-300 hover:scale-105 transition"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
-                target.src = "/default-avatar.png"
+                target.src = '/default-avatar.png'
               }}
             />
           ) : (
@@ -356,7 +348,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       <div className="hidden lg:flex w-64 bg-[#8BC5B5] text-white">
-        <Sidebar menuItems={menuItems} />
+        {/* 🔑 Forzamos re-montaje del Sidebar cuando cambian los flags */}
+        <Sidebar key={sidebarKey} menuItems={menuItems} />
       </div>
 
       <div className="flex flex-col h-screen flex-1">

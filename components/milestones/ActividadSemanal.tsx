@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { startOfWeek, addDays, format, endOfWeek, isSameDay } from 'date-fns'
+import { DateTime } from 'luxon'
 
 const diasSemana = ['L', 'M', 'X', 'J', 'V']
 
@@ -15,31 +15,39 @@ export function ActividadSemanal() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const hoy = new Date()
-      const lunes = startOfWeek(hoy, { weekStartsOn: 1 }) // lunes
-      const viernes = addDays(lunes, 4)
+      const ZONE = 'Europe/Madrid'
+
+      // Hoy en Madrid
+      const nowM = DateTime.now().setZone(ZONE).startOf('day')
+      // Lunes 00:00 en Madrid
+      const mondayM = nowM.minus({ days: ((nowM.weekday + 6) % 7) }).startOf('day') // weekday: 1=Lunes…7=Domingo
+      // Próximo lunes 00:00 en Madrid (límite superior exclusivo)
+      const nextMondayM = mondayM.plus({ days: 7 })
+
+      // Pasar límites a UTC para la query
+      const mondayUTC = mondayM.toUTC().toISO()
+      const nextMondayUTC = nextMondayM.toUTC().toISO()
 
       const { data: pausas, error } = await supabase
         .from('active_pauses')
         .select('created_at')
         .eq('user_id', user.id)
-        .gte('created_at', lunes.toISOString())
-        .lte('created_at', endOfWeek(viernes, { weekStartsOn: 1 }).toISOString())
+        .gte('created_at', mondayUTC)
+        .lt('created_at', nextMondayUTC) // exclusivo
 
       if (error) {
         console.error('Error cargando pausas activas:', error)
         return
       }
 
-      const actividadPorDia = [false, false, false, false, false] // L-V
+      const actividadPorDia = [false, false, false, false, false];
 
-      pausas?.forEach((pausa) => {
-        const fecha = new Date(pausa.created_at)
-        for (let i = 0; i < 5; i++) {
-          const dia = addDays(lunes, i)
-          if (isSameDay(dia, fecha)) {
-            actividadPorDia[i] = true
-          }
+      (pausas ?? []).forEach((p) => {
+        // convertir cada timestamp (UTC) a Madrid y quedarnos con el día
+        const dM = DateTime.fromISO(p.created_at, { zone: 'utc' }).setZone(ZONE)
+        if (dM.weekday >= 1 && dM.weekday <= 5) {
+          const index = dM.weekday - 1 // L=1 → 0 … V=5 → 4
+          actividadPorDia[index] = true
         }
       })
 
@@ -49,13 +57,15 @@ export function ActividadSemanal() {
     fetchActividad()
   }, [])
 
+  const activos = actividad.filter(Boolean).length
+
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 max-w-xl mx-auto">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad semanal</h3>
 
       <div className="grid grid-cols-5 gap-3 text-center text-sm font-medium">
-        {diasSemana.map((dia, index) => {
-          const activo = actividad[index]
+        {diasSemana.map((dia, i) => {
+          const activo = actividad[i]
           return (
             <div
               key={dia}
@@ -70,7 +80,7 @@ export function ActividadSemanal() {
       </div>
 
       <p className="text-sm text-gray-600 mt-4 text-center">
-        {actividad.filter(Boolean).length} / 5 días activos esta semana
+        {activos} / 5 días activos esta semana
       </p>
     </div>
   )

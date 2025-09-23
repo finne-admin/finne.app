@@ -7,7 +7,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
 import { Toaster } from "sonner"
 import { PerfilResumenRefProvider } from '@/context/usePerfilResumenRef'
-import { UnclaimedProgressProvider } from '@/components/providers/UnclaimedProgressProvider' // ← NUEVO
+import { UnclaimedProgressProvider } from '@/components/providers/UnclaimedProgressProvider'
+import AchievementsNotifier from '@/components/notifications/AchievementsNotifier' // ← nuevo import
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,12 +30,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ffffff" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full min-h-dvh w-full bg-gray-50 overflow-x-hidden`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full min-h-dvh w-full bg-gray-50 overflow-x-hidden`}
+      >
         <SessionContextProvider supabaseClient={supabase}>
           <PerfilResumenRefProvider>
-            <UnclaimedProgressProvider> {/* ← AQUÍ */}
-              <Toaster />
-              <div id="puntos-globales" className="pointer-events-none fixed inset-0 z-[9999]" />
+            <UnclaimedProgressProvider>
+              <Toaster richColors />
+              <AchievementsNotifier /> {/* ← aquí se montan los popups */}
+              <div
+                id="puntos-globales"
+                className="pointer-events-none fixed inset-0 z-[9999]"
+              />
               <main className="h-full min-h-dvh w-full">{children}</main>
             </UnclaimedProgressProvider>
           </PerfilResumenRefProvider>

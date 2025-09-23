@@ -1,36 +1,61 @@
 import { DateTime } from 'luxon'
 
-export function getActiveStreak(dates: string[]): number {
-  const uniqueDates = Array.from(new Set(dates))
-  const parsedDates = uniqueDates
-    .map((d) => DateTime.fromISO(d).startOf('day'))
-    .filter((d) => d.weekday <= 5) // solo L-V
-    .sort((a, b) => b.toMillis() - a.toMillis()) // recientes primero
+/** Devuelve el anterior día laborable (L–V) en la zona dada */
+function previousWorkday(dt: DateTime): DateTime {
+  let cur = dt.minus({ days: 1 })
+  while (cur.weekday > 5) cur = cur.minus({ days: 1 })
+  return cur
+}
 
-  let streak = 0
-  let current = DateTime.local().startOf('day')
-
-  // Si hoy es laborable y aún NO está en la lista de fechas → ignorar hoy
-  const todayIsWeekday = current.weekday <= 5
-  const hasPausedToday = parsedDates.some((d) => d.equals(current))
-  const ignoreToday = todayIsWeekday && !hasPausedToday
-
-  if (ignoreToday) {
-    // Empezamos a contar desde ayer laborable
-    do {
-      current = current.minus({ days: 1 })
-    } while (current.weekday > 5)
+/**
+ * dates puede contener:
+ *  - 'YYYY-MM-DD' ya en zona destino, o
+ *  - ISO UTC (created_at). Ambos valen.
+ */
+export function getActiveStreak(
+  dates: string[],
+  zone: string = 'Europe/Madrid',
+  withLogs = false
+): number {
+  const toIsoDateInZone = (s: string) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s // ya viene como fecha civil
+    return DateTime.fromISO(s, { zone: 'utc' }).setZone(zone).toISODate()!
   }
 
-  for (const date of parsedDates) {
-    if (date.equals(current)) {
-      streak++
-      do {
-        current = current.minus({ days: 1 })
-      } while (current.weekday > 5)
-    } else {
-      break
-    }
+  // Normaliza a set de YYYY-MM-DD (zona destino)
+  const set = new Set(
+    Array.from(new Set(dates))
+      .map(toIsoDateInZone)
+      .filter(Boolean) as string[]
+  )
+
+  let cur = DateTime.now().setZone(zone).startOf('day')
+  const todayStr = cur.toISODate()!
+  const todayIsWeekday = cur.weekday <= 5
+  const hasToday = set.has(todayStr)
+
+  if (todayIsWeekday && !hasToday) cur = previousWorkday(cur)
+
+  let streak = 0
+  const touched: string[] = []
+
+  while (cur.weekday <= 5 && set.has(cur.toISODate()!)) {
+    touched.push(cur.toISODate()!)
+    streak++
+    cur = previousWorkday(cur)
+  }
+
+  if (withLogs) {
+    // 👇 esto te dirá exactamente qué días está contando
+    // y qué días hay realmente registrados
+    // (puedes quitar los logs cuando confirmes)
+    // eslint-disable-next-line no-console
+    console.log('[streak] zone=', zone, {
+      todayStr,
+      inputDates: Array.from(set).sort(),
+      counted: touched,
+      result: streak,
+    })
   }
 
   return streak
