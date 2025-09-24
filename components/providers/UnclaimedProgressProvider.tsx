@@ -1,6 +1,6 @@
 // components/providers/UnclaimedProgressProvider.tsx
 'use client'
-import React, { createContext, useContext } from 'react'
+import React, { createContext, useContext, useMemo } from 'react'
 import { useUnclaimedProgressSplit } from '@/components/hooks/useUnclaimedProgressSplit'
 
 type Ctx = {
@@ -13,7 +13,19 @@ type Ctx = {
 const UnclaimedCtx = createContext<Ctx | null>(null)
 
 export function UnclaimedProgressProvider({ children }: { children: React.ReactNode }) {
-  const value = useUnclaimedProgressSplit() // <-- UNA sola suscripción aquí
+  const {
+    hasWeekly,
+    hasAchievements,
+    weeklyCount,
+    achievementsCount,
+  } = useUnclaimedProgressSplit()
+
+  // 👇 referencia NUEVA cuando cambie cualquiera de estos valores
+  const value = useMemo(
+    () => ({ hasWeekly, hasAchievements, weeklyCount, achievementsCount }),
+    [hasWeekly, hasAchievements, weeklyCount, achievementsCount]
+  )
+
   return <UnclaimedCtx.Provider value={value}>{children}</UnclaimedCtx.Provider>
 }
 

@@ -99,3 +99,11 @@ body {
 .scrollbar-thin::-webkit-scrollbar-thumb {
   border-radius: 4px;
 }
+
+.badge-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #ef4444; /* rojo */
+}
