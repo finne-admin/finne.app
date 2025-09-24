@@ -1,36 +1,46 @@
 // next.config.mjs
-
 import nextPwa from 'next-pwa'
 
 /** @type {import('next').NextConfig} */
 const withPWA = nextPwa({
-    dest: 'public',
-    register: true,
-    skipWaiting: true,
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development', // no SW en dev
+  register: true,
+  skipWaiting: true,
 })
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    reactStrictMode: true,
-    experimental: {
-        appDir: true
+  reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'embed-ssl.wistia.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'embed.wistia.com',
+      },
+    {
+      protocol: 'http',   // 👈 añade este
+      hostname: 'embed.wistia.com',
     },
-    images: {
-        domains: [
-            'embed-ssl.wistia.com',
-            'embed.wistia.com',
-            'cgpqlasmzpabwrubvhyl.supabase.co' // añadido dominio de Supabase
-        ],
-    },
-    async redirects() {
-        return [
-            {
-                source: "/",
-                destination: "/notification",
-                permanent: true,
-            },
-        ]
-    }
+      {
+        protocol: 'https',
+        hostname: 'cgpqlasmzpabwrubvhyl.supabase.co',
+      },
+    ],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/notification",
+        permanent: true,
+      },
+    ]
+  },
 }
 
 // Wrap your config with next-pwa

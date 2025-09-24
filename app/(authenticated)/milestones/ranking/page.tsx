@@ -18,7 +18,7 @@ export default function RankingPage() {
             }}
           >
                 <HuchaPanel
-                  goal={2400}
+                  goal={5000}
                   deadline={new Date('2025-11-30T23:59:59')} // cámbialo a tu fecha objetivo
                   pigHeight={520}
                 />
