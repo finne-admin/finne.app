@@ -12,6 +12,8 @@ import {CountdownTimer} from "@/components/ui/countdown-timer";
 import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
 import { checkAchievements } from '@/lib/achievements';
 import { checkWeeklyChallenges } from '@/lib/checkWeeklyChallenges';
+import StreakPopup from '@/components/animations/StreakPopup'
+
 
 interface Asset {
     url: string
@@ -51,6 +53,16 @@ export default function NotificationPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string|null>(null)
     const [user, setUser] = useState<any>(null)
+
+      // 👇 NUEVO: estado para la celebración de racha
+    const [showStreakCelebration, setShowStreakCelebration] = useState(false)
+    const [streakHit, setStreakHit] = useState<number | null>(null)
+
+    const closeStreakCelebration = () => {
+    setShowStreakCelebration(false)
+    setStreakHit(null)
+    setShowConfetti(false) // si quieres parar el confetti al cerrar
+    }
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -228,7 +240,27 @@ export default function NotificationPage() {
 
     if (insertError) {
         console.error('Error al insertar active_pause:', insertError)
+        return;
     }
+
+    // 👇👇 AQUÍ: comprobar si toca animación de racha
+    // ✔️ Comprobar si toca animación de racha
+    try {
+    const { data: celebrateRes, error: rpcError } = await supabase
+        .rpc('celebrate_streak', { p_org: null }) // pasa org si la usas
+
+    if (rpcError) {
+        console.warn('celebrate_streak RPC error:', rpcError)
+    } else if (celebrateRes?.[0]?.celebrate) {
+        const streak = celebrateRes[0].streak as number
+        setStreakHit(streak)
+        setShowStreakCelebration(true)
+        setShowConfetti(true) // opcional
+    }
+    } catch (e) {
+    console.warn('celebrate_streak call failed:', e)
+    }
+    // 👆👆 FIN comprobación
 
     await checkWeeklyChallenges(user.id, 'active_pause_inserted', {
     created_at: new Date().toISOString(),
@@ -283,6 +315,14 @@ export default function NotificationPage() {
     return (
         <div className="min-h-screen bg-gray-50">
             {showConfetti && <Confetti recycle={false} numberOfPieces={200} />}
+
+            <StreakPopup
+            open={showStreakCelebration}
+            streak={streakHit ?? 0}
+            onClose={closeStreakCelebration}
+            autoCloseMs={2200}
+            subtitle="¡Sigue así, estás on fire!"
+            />
 
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="space-y-6">
