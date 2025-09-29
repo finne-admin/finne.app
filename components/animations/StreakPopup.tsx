@@ -9,24 +9,19 @@ type Props = {
   onClose: () => void
   /** ms hasta autocierre (0 = no auto) */
   autoCloseMs?: number
-  /** si quieres disparar confetti externo */
+  /** confetti externo opcional */
   onShowConfetti?: () => void
   /** texto secundario bajo el número */
   subtitle?: string
 }
 
-/**
- * Popup “stamp” para celebrar rachas.
- * - Pop de escala + halo + destellos + glow.
- * - Cierra con click fuera, botón X o ESC.
- */
 export default function StreakPopup({
   open,
   streak,
   onClose,
-  autoCloseMs = 2200,
+  autoCloseMs = 5000,
   onShowConfetti,
-  subtitle = '¡Racha conseguida!',
+  subtitle = '¡Sigue así, estás on fire!',
 }: Props) {
   // Auto-cerrar
   useEffect(() => {
@@ -64,9 +59,9 @@ export default function StreakPopup({
           <motion.div
             onClick={stop}
             className="relative z-[9999] w-[min(520px,90vw)] rounded-3xl bg-white shadow-2xl p-6 sm:p-8 overflow-hidden"
-            initial={{ scale: 0.85, opacity: 0, y: 10 }}
+            initial={{ scale: 0.9, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 5 }}
+            exit={{ scale: 0.96, opacity: 0, y: 4 }}
             transition={{ type: 'spring', stiffness: 240, damping: 18 }}
           >
             {/* Botón cerrar */}
@@ -78,57 +73,54 @@ export default function StreakPopup({
               <X className="h-5 w-5 text-gray-600" />
             </button>
 
-            {/* Glow de fondo */}
+            {/* Glows suaves */}
             <div className="pointer-events-none absolute -top-40 -left-24 w-96 h-96 rounded-full bg-amber-300/25 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-40 -right-24 w-96 h-96 rounded-full bg-emerald-300/25 blur-3xl" />
 
-            {/* Anillo expansivo */}
+            {/* Anillo expansivo muy sutil */}
             <motion.div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/50"
-              style={{ width: 40, height: 40 }}
-              initial={{ scale: 0.3, opacity: 0.9 }}
-              animate={{ scale: 6, opacity: 0 }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/40"
+              style={{ width: 48, height: 48 }}
+              initial={{ scale: 0.35, opacity: 0.9 }}
+              animate={{ scale: 6.5, opacity: 0 }}
               transition={{ duration: 0.9, ease: 'easeOut' }}
             />
 
-            {/* Partículas simples (4 rayos) */}
-            {Array.from({ length: 8 }).map((_, i) => (
-              <motion.span
-                key={i}
-                className="pointer-events-none absolute left-1/2 top-1/2 h-1 w-12 origin-left rounded-full bg-amber-400/70"
-                style={{ transform: `rotate(${(360 / 8) * i}deg)` }}
-                initial={{ scaleX: 0, opacity: 0 }}
-                animate={{ scaleX: 1, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ delay: 0.08 + i * 0.03, duration: 0.35, ease: 'easeOut' }}
-              />
-            ))}
-
-            {/* Sello */}
+            {/* Sello (más grande) */}
             <motion.div
-              className="relative mx-auto mt-2 mb-2 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-emerald-400 shadow-lg"
+              className="relative mx-auto mt-3 mb-3 flex h-36 w-36 sm:h-40 sm:w-40 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-emerald-400 shadow-lg"
               initial={{ scale: 0.2, rotate: -15, opacity: 0 }}
-              animate={{ scale: [0.2, 1.15, 1], rotate: [ -15, 2, 0], opacity: 1 }}
+              animate={{ scale: [0.2, 1.12, 1], rotate: [-15, 2, 0], opacity: 1 }}
               transition={{ times: [0, 0.6, 1], duration: 0.7, ease: 'backOut' }}
             >
+              {/* Aro blanco más grueso */}
               <motion.div
-                className="absolute inset-0 rounded-full ring-4 ring-white/60"
-                initial={{ scale: 1.6, opacity: 0 }}
+                className="absolute inset-0 rounded-full ring-8 ring-white/70"
+                initial={{ scale: 1.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, ease: 'easeOut', delay: 0.05 }}
+                transition={{ duration: 0.45, ease: 'easeOut', delay: 0.05 }}
               />
-              <span className="text-white drop-shadow text-3xl font-extrabold select-none">🔥</span>
+              {/* Brillo radial interior */}
+              <div className="pointer-events-none absolute inset-0 rounded-full"
+                   style={{
+                     background: 'radial-gradient(closest-side, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%)'
+                   }}
+              />
+              {/* Icono fuego más grande */}
+              <span className="text-white drop-shadow text-5xl sm:text-6xl font-extrabold select-none">
+                🔥
+              </span>
             </motion.div>
 
-            {/* Número grande */}
+            {/* Número y textos */}
             <motion.div
               key={streak}
               className="text-center"
-              initial={{ scale: 0.95, opacity: 0, y: 4 }}
+              initial={{ scale: 0.96, opacity: 0, y: 4 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 250, damping: 16, delay: 0.05 }}
             >
-              <div className="text-5xl sm:text-6xl font-extrabold tracking-tight text-emerald-600">
+              <div className="text-6xl sm:text-7xl font-extrabold tracking-tight text-emerald-600">
                 {streak}
               </div>
               <div className="mt-1 text-base sm:text-lg font-semibold text-gray-800">

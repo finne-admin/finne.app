@@ -23,18 +23,34 @@ type PerfilData = {
   avatarUrl?: string
 }
 
-const HITOS_RACHA = [2, 7, 14, 30, 50, 100, 200, 365]
-
 export function PerfilResumen() {
+  const supabase = createClientComponentClient()
   const [perfil, setPerfil] = useState<PerfilData | null>(null)
-  const [streakStampOpen, setStreakStampOpen] = useState(false)
+
+  // Popup de racha desde backend (RPC)
+  const [showStreakCelebration, setShowStreakCelebration] = useState(false)
   const [streakJustHit, setStreakJustHit] = useState<number | null>(null)
-  const prevStreakRef = useRef<number | null>(null)
+  const rpcGuardRef = useRef(false) // evita dobles llamadas simultáneas
 
   const ref = usePerfilResumenRef()
 
+  const checkStreakCelebration = async () => {
+    if (rpcGuardRef.current) return
+    rpcGuardRef.current = true
+    try {
+      const { data, error } = await supabase.rpc('celebrate_streak', { p_org: null })
+      if (!error && data?.[0]?.celebrate) {
+        setStreakJustHit(data[0].streak as number)
+        setShowStreakCelebration(true)
+        // launchConfettiReady?.() // opcional
+      }
+    } finally {
+      rpcGuardRef.current = false
+    }
+  }
+
   useEffect(() => {
-    const supabase = createClientComponentClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -65,7 +81,7 @@ export function PerfilResumen() {
 
       const ZONE = 'Europe/Madrid'
 
-      // Últimos 30 días de pausas (para racha)
+      // Últimos 30 días de pausas (solo para mostrar racha en UI; la lógica real la hace el backend)
       const desde = DateTime.now().minus({ days: 30 }).toISO()
       const { data: pausas } = await supabase
         .from('active_pauses')
@@ -80,16 +96,7 @@ export function PerfilResumen() {
             .toISODate()
         ).filter(Boolean) as string[]) || []
 
-      const racha = getActiveStreak(pausasArray, ZONE, true) // ← true para ver logs
-
-      // Detectar subida de racha y si es hito → mostrar popup
-      const prev = prevStreakRef.current
-      if (prev !== null && racha > prev && HITOS_RACHA.includes(racha)) {
-        setStreakJustHit(racha)
-        setStreakStampOpen(true)
-        // launchConfettiReady().catch(() => {}) // opcional: confetti suave
-      }
-      prevStreakRef.current = racha
+      const racha = getActiveStreak(pausasArray, ZONE, false)
 
       setPerfil({
         name: nombre,
@@ -101,13 +108,14 @@ export function PerfilResumen() {
         racha,
         avatarUrl: data.avatar_url || undefined,
       })
+
+      // 👇 comprobar si toca animación al entrar en Perfil
+      await checkStreakCelebration()
     }
 
     fetchData()
 
-    // 🔁 Re-suscribir a inserts de active_pauses para refrescar racha al vuelo
-    // (si ya lo haces en otro sitio, puedes omitir este canal)
-    let channel: ReturnType<typeof supabase.channel> | null = null
+    // 🔁 Realtime: cuando el usuario registre una pausa, refrescamos y comprobamos de nuevo
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -116,9 +124,9 @@ export function PerfilResumen() {
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'active_pauses', filter: `user_id=eq.${user.id}` },
-          () => {
-            // Cuando el usuario registra una pausa (hoy), re-calculamos racha
-            fetchData()
+          async () => {
+            await fetchData()
+            await checkStreakCelebration()
           }
         )
         .subscribe()
@@ -127,7 +135,7 @@ export function PerfilResumen() {
     return () => {
       if (channel) supabase.removeChannel(channel)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!perfil) {
     return (
@@ -191,11 +199,11 @@ export function PerfilResumen() {
         </p>
       </div>
 
-      {/* Popup de racha (stamp) */}
+      {/* Popup de racha (backend-driven) */}
       <StreakPopup
-        open={streakStampOpen}
-        streak={streakJustHit || perfil.racha}
-        onClose={() => setStreakStampOpen(false)}
+        open={showStreakCelebration}
+        streak={streakJustHit ?? 0}
+        onClose={() => setShowStreakCelebration(false)}
         autoCloseMs={2200}
         // onShowConfetti={() => launchConfettiReady()} // opcional
         subtitle="¡Sigue así, estás on fire!"
