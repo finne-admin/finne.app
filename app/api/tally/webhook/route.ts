@@ -11,7 +11,7 @@ const supabase = createClient(
 )
 
 // Opcional: restringe qué formularios acepta el webhook (coma-separada)
-const ALLOWED_FORMS = (process.env.TALLY_ALLOWED_FORMS || 'mV9BKy,3qYMX9,3qY7j7')
+const ALLOWED_FORMS = (process.env.TALLY_ALLOWED_FORMS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean)
