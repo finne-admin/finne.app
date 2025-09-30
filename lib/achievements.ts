@@ -218,45 +218,48 @@
     }
 
     // Obtiene el número de ejercicios vistos por categoría -------------------------------------------------------------------------------------------------------
-
     async function getExerciseCount(userId: string, conditionType?: string): Promise<number> {
     if (!conditionType) return 0
 
-    const categoryMap: Record<string, string> = {
+    const map: Record<string, string> = {
         ejercicios_brazos: 'miembro superior',
         ejercicios_piernas: 'miembro inferior',
         ejercicios_core: 'core',
-        ejercicios_movilidad: 'movilidad'
+        ejercicios_movilidad: 'movilidad',
     }
+    const target = map[conditionType]
+    if (!target) return 0
 
-    const categoriaBuscada = categoryMap[conditionType]
-    if (!categoriaBuscada) return 0
-
-    // Paso 1: obtener IDs de vídeo de pausas activas del usuario
-    const { data: pausas, error: errorPausas } = await supabase
+    // 1) Trae TODAS las pausas del usuario (cada pausa son 2 vídeos)
+    const { data: pausas, error: e1 } = await supabase
         .from('active_pauses')
         .select('video1_id, video2_id')
         .eq('user_id', userId)
+    if (e1 || !pausas?.length) return 0
 
-    if (errorPausas || !pausas || pausas.length === 0) return 0
+    // 2) Lista de ocurrencias (sin Set)
+    const ocurrencias = pausas.flatMap(p => [p.video1_id, p.video2_id].filter(Boolean)) as string[]
+    if (!ocurrencias.length) return 0
 
-    const idsVistos = Array.from(new Set(
-        pausas.flatMap(p => [p.video1_id, p.video2_id]).filter(Boolean)
-    ))
-
-    // Paso 2: obtener vídeos que incluyen esa categoría
-    const { data: videos, error: errorVideos } = await supabase
+    // 3) Carga catálogo de vídeos para esas IDs (unique para no sobrecargar la query)
+    const uniqueIds = Array.from(new Set(ocurrencias))
+    const { data: vids, error: e2 } = await supabase
         .from('videos')
-        .select('wistia_id, categorias')
-        .in('wistia_id', idsVistos)
+        .select('id, categorias')
+        .in('id', uniqueIds)
+    if (e2 || !vids) return 0
 
-    if (errorVideos || !videos) return 0
+    const catById = new Map(vids.map(v => [v.id, (v.categorias ?? []) as string[]]))
 
-    // Paso 3: contar cuántos vídeos tienen esa categoría
-    const count = videos.filter(v => (v.categorias || []).includes(categoriaBuscada)).length
-
+    // 4) Cuenta ocurrencias cuya categoría incluye el target
+    let count = 0
+    for (const id of ocurrencias) {
+        const cats = catById.get(id) ?? []
+        if (cats.includes(target)) count++
+    }
     return count
     }
+
 
     // Obtiene el número de pausas activas del usuario en la semana actual -----------------------------------------------------------------------------------------
 
@@ -600,7 +603,7 @@
     const { data: videos, error: videoError } = await supabase
         .from('videos')
         .select('categorias')
-        .in('wistia_id', videoIds)
+        .in('id', videoIds)
 
     if (videoError || !videos) {
         console.error('Error cargando vídeos para circuito completo:', videoError)
