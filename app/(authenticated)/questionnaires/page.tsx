@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { openTallyPopup, tenantFromHost } from '@/lib/tally' // 👈 helper
+import { openTallyPopup, tenantFromHost } from '@/lib/tally'
 
 type AnswerMap = Record<string, boolean>
 type DBForm = { id: string; title: string; active: boolean }
@@ -30,19 +30,21 @@ declare global {
 export default function CuestionariosPage() {
   const supabase = useMemo(() => createClientComponentClient(), [])
   const [tallyReady, setTallyReady] = useState(false)
+
   const [userId, setUserId] = useState<string | null>(null)
-  const [email, setEmail] = useState<string | null>(null)             // 👈 nuevo
+  const [email, setEmail] = useState<string | null>(null)
+  const [userLoaded, setUserLoaded] = useState(false) // 👈 nuevo
+
   const [answered, setAnswered] = useState<AnswerMap>({})
   const [forms, setForms] = useState<DBForm[]>([])
   const currentOpenId = useRef<string | null>(null)
 
-  // Tenant del host actual (piloto/stn/anestudio)
   const tenant = useMemo(
     () => (typeof window !== 'undefined' ? tenantFromHost(window.location.hostname) : 'piloto'),
     []
   )
 
-  // 1) Cargar script de Tally y escuchar cierre
+  // 1) Cargar script Tally + escuchar cierre
   useEffect(() => {
     const src = 'https://tally.so/widgets/embed.js'
     const onLoad = () => setTallyReady(true)
@@ -76,27 +78,26 @@ export default function CuestionariosPage() {
     }
   }, [])
 
-  // 2) Usuario + respuestas (answered) por tenant
+  // 2) Usuario + respuestas por tenant
   useEffect(() => {
     let mounted = true
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!mounted) return
+      setUserId(user?.id ?? null)
+      setEmail(user?.email ?? null)
+      setUserLoaded(true) // ✅ ya sabemos si hay user
+
       if (!user) {
-        setUserId(null)
-        setEmail(null)
         setAnswered({})
         return
       }
-      setUserId(user.id)
-      setEmail(user.email ?? null)
 
-      // Traer respuestas del usuario (solo true) para este tenant
       const { data, error } = await supabase
         .from('questionnaire_responses')
         .select('questionnaire_id, answered')
         .eq('user_id', user.id)
-        .eq('tenant', tenant)          // 👈 importante
+        .eq('tenant', tenant)
         .eq('answered', true)
 
       if (!mounted) return
@@ -111,7 +112,7 @@ export default function CuestionariosPage() {
     return () => { mounted = false }
   }, [supabase, tenant])
 
-  // 3) Cuestionarios desde BD (incluye 'active')
+  // 3) Cuestionarios (con 'active')
   useEffect(() => {
     let mounted = true
     const fetchForms = async () => {
@@ -129,7 +130,6 @@ export default function CuestionariosPage() {
     }
     fetchForms()
 
-    // Realtime: si activas/desactivas en BD, refresca
     const ch = supabase
       .channel('questionnaires_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'questionnaires' }, fetchForms)
@@ -141,20 +141,20 @@ export default function CuestionariosPage() {
     }
   }, [supabase])
 
-  // 4) Guardar respuesta al enviar (por tenant)
+  // 4) Guardar respuesta (por tenant)
   const upsertAnswered = async (formId: string, submissionId?: string) => {
     if (!userId) return
     const { error } = await supabase
       .from('questionnaire_responses')
       .upsert(
         {
-          tenant,                                // 👈 ahora guardamos el tenant
+          tenant,
           questionnaire_id: formId,
           user_id: userId,
           answered: true,
           tally_submission_id: submissionId
         },
-        { onConflict: 'tenant,questionnaire_id,user_id' } // 👈 coincide con la UNIQUE
+        { onConflict: 'tenant,questionnaire_id,user_id' }
       )
     if (error) {
       console.error('Error upserting questionnaire_responses', error)
@@ -163,23 +163,29 @@ export default function CuestionariosPage() {
     }
   }
 
-  // 5) Abrir (solo si activo) usando el helper
+  // 5) Abrir popup
   const openForm = async (formId: string) => {
     if (!window.Tally) return
     if (currentOpenId.current && currentOpenId.current !== formId) {
       try { window.Tally.closePopup(currentOpenId.current) } catch {}
     }
 
-    // asegúrate de tener user/email actualizados
+    // refresca sesión por si cambió
     const { data: { user } } = await supabase.auth.getUser()
-    setUserId(user?.id ?? null)
-    setEmail(user?.email ?? null)
+    const uid = user?.id ?? userId
+    const mail = user?.email ?? email
+
+    if (!uid) {
+      // aquí puedes lanzar un toast/modal
+      console.warn('Necesitas iniciar sesión para abrir el cuestionario.')
+      return
+    }
 
     currentOpenId.current = formId
     openTallyPopup({
       formId,
-      userId: user?.id ?? null,
-      email: user?.email ?? null,
+      userId: uid,
+      email: mail ?? null,
       onSubmit: (payloadId) => upsertAnswered(formId, payloadId)
     })
   }
@@ -193,7 +199,7 @@ export default function CuestionariosPage() {
         </p>
       </header>
 
-      {!userId && (
+      {!userId && userLoaded && (
         <p className="text-sm text-orange-600 mb-4">
           Inicia sesión para registrar qué cuestionarios has contestado.
         </p>
@@ -205,9 +211,9 @@ export default function CuestionariosPage() {
           {forms.map((form) => {
             const isAnswered = !!answered[form.id]
             const isActive = !!form.active
-            const disabled = !tallyReady || !isActive || !userId
+            // 🔐 solo deshabilita cuando YA sabemos que no hay user
+            const disabled = !tallyReady || !isActive || (userLoaded && !userId)
 
-            // Estilos por estado
             const cardClasses = isAnswered
               ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-50'
               : isActive
@@ -223,9 +229,10 @@ export default function CuestionariosPage() {
             return (
               <button
                 key={form.id}
-                onClick={() => { 
-                    if (!userId)
-                    if (isActive) openForm(form.id) 
+                onClick={() => {
+                  if (!userLoaded) return
+                  if (!userId) return
+                  if (isActive) openForm(form.id)
                 }}
                 disabled={disabled}
                 aria-disabled={disabled}
