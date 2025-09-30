@@ -28,7 +28,8 @@ export default function BadgeDot({
           title={title}
           className={clsx(
             // en línea, sin absolute
-            'ml-2 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold',
+            'ml-3',
+            'ml-2.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold',
             'flex items-center justify-center ring-2 ring-white',
             className
           )}
@@ -47,7 +48,7 @@ export default function BadgeDot({
         aria-label={title}
         title={title}
         className={clsx(
-          'absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500',
+          'absolute -top-2 -right-3 h-4 w-4 rounded-full bg-red-500',
           'text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white',
           className
         )}
