@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { BellDot, Library, BarChart2, Settings, Award, LayoutGrid } from 'lucide-react'
+import { BellDot, Library, BarChart2, Settings, Award, LayoutGrid, NotebookPen } from 'lucide-react'
 
 export type MenuItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
@@ -14,7 +14,8 @@ const regularMenuItems: MenuItem[] = [
   { icon: Library, label: 'Biblioteca de Ejercicios', href: '/library' },
   { icon: BarChart2, label: 'Estadísticas', href: '/statistics' },
   { icon: Settings, label: 'Ajustes de Cuenta', href: '/settings' },
-  { icon: Award, label: 'Logros', href: '/milestones' }
+  { icon: Award, label: 'Logros', href: '/milestones' },
+  { icon: NotebookPen, label: 'Cuestionarios', href: '/questionnaires' },
 ]
 
 const adminMenuItem: MenuItem = { icon: LayoutGrid, label: 'Panel de Administrador', href: '/admin' }

@@ -127,7 +127,7 @@ return (
         {/* Contador a la izquierda */}
         <div className="justify-self-start flex items-center">
           <div className="flex-shrink-0 scale-50 mr-2">
-        <CountdownCircles target={new Date('2025-09-28T23:59:59')} />
+        <CountdownCircles target={new Date('2025-10-05T23:59:59')} />
           </div>
           {/* Aquí puedes añadir texto o icono alineado a la izquierda si lo necesitas */}
         </div>
