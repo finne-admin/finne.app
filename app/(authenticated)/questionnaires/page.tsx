@@ -205,7 +205,7 @@ export default function CuestionariosPage() {
           {forms.map((form) => {
             const isAnswered = !!answered[form.id]
             const isActive = !!form.active
-            const disabled = !tallyReady || !isActive
+            const disabled = !tallyReady || !isActive || !userId
 
             // Estilos por estado
             const cardClasses = isAnswered
@@ -223,7 +223,10 @@ export default function CuestionariosPage() {
             return (
               <button
                 key={form.id}
-                onClick={() => { if (isActive) openForm(form.id) }}
+                onClick={() => { 
+                    if (!userId)
+                    if (isActive) openForm(form.id) 
+                }}
                 disabled={disabled}
                 aria-disabled={disabled}
                 className={[

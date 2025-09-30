@@ -89,6 +89,9 @@ export async function POST(req: NextRequest) {
       answers[key] = pluckAnswer(f.answer)
     }
 
+    // dentro del POST, después de parsear `d`:
+    console.log('[tally] hiddenFields=', d?.hiddenFields)  // debería mostrar { userId: "...", tenant: "...", appEmail: "..." }
+
     // 1) Guardar envío completo (idempotente por tally_submission_id)
     const { error: e1 } = await supabase
       .from('questionnaire_submissions')
