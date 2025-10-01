@@ -1,6 +1,5 @@
 // lib/weekly/checkWeeklyChallenges.ts
 'use client';
-
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 const supabase = createClientComponentClient();
@@ -12,53 +11,63 @@ type WeeklyConditionType =
   | 'ejercicios_core'
   | 'ejercicios_movilidad';
 
-type WeeklyEvent =
-  | 'active_pause_inserted'     // cuando registras una pausa
-  | 'video_completed';          // si emites un evento por vídeo visto, opcional
+type WeeklyEvent = 'active_pause_inserted' | 'video_completed';
 
 interface WeeklyChallengeCatalog {
-  id: string;               // text
+  id: string;
   title: string;
   description?: string;
-  points: number;           // recompensa
+  points: number;
   condition_type: WeeklyConditionType;
-  goal: number;             // objetivo semanal
+  goal: number;
 }
 
 type EventPayload = {
-  created_at?: string;      // ISO; si no, new Date()
+  created_at?: string;
   video1_id?: string | null;
   video2_id?: string | null;
 };
+
+const SUPPORTED: WeeklyConditionType[] = [
+  'pausas_semana',
+  'ejercicios_brazos',
+  'ejercicios_piernas',
+  'ejercicios_core',
+  'ejercicios_movilidad',
+];
 
 export async function checkWeeklyChallenges(
   userId: string,
   event: WeeklyEvent,
   payload: EventPayload = {}
 ) {
-    // 1) Cargar catálogo semanal
-    const { data: catalog, error } = await supabase
+  const { data: catalog } = await supabase
     .from('weekly_challenges_catalog')
     .select('id,title,description,points,condition_type,goal');
 
-    if (error || !catalog) return;
+  // filtra a sólo los tipos soportados y con goal válido
+  const filtered = (catalog ?? [])
+    .filter(
+      c =>
+        SUPPORTED.includes(c.condition_type as WeeklyConditionType) &&
+        typeof c.goal === 'number' &&
+        c.goal > 0
+    )
+    .map(c => c as WeeklyChallengeCatalog);
 
-    // 2) Resolver incrementos según el evento
-    const increments = await resolveIncrements(event, payload, catalog);
+  if (!filtered.length) return;
 
-    // 3) Aplicar incrementos con RPC (uno por challenge)
-    for (const { challengeId, inc } of increments) {
+  const increments = await resolveIncrements(event, payload, filtered);
+
+  for (const { challengeId, inc } of increments) {
     const { error } = await supabase.rpc('inc_weekly_progress', {
-    p_user: userId,
-    p_challenge_id: challengeId,
-    p_inc: inc,
-    p_at: payload.created_at ?? new Date().toISOString(),
+      p_user: userId,
+      p_challenge_id: challengeId,
+      p_inc: inc,
+      p_at: payload.created_at ?? new Date().toISOString(),
     });
-    if (error) {
-    console.error('inc_weekly_progress error:', challengeId, error);
-    }
-    }
-
+    if (error) console.error('inc_weekly_progress error:', challengeId, error);
+  }
 }
 
 async function resolveIncrements(
@@ -72,10 +81,8 @@ async function resolveIncrements(
     catalog.filter(c => c.condition_type === t).map(c => c.id);
 
   if (event === 'active_pause_inserted') {
-    // +1 a todos los retos de "pausas_semana"
     for (const id of byType('pausas_semana')) out.push({ challengeId: id, inc: 1 });
 
-    // Si quieres sumar por categorías a partir de los vídeos
     const videoIds = [payload.video1_id, payload.video2_id].filter(Boolean) as string[];
     if (videoIds.length) {
       const { data: vids } = await supabase
@@ -97,9 +104,7 @@ async function resolveIncrements(
     }
   }
 
-  // (extiende aquí si emites más eventos)
-
-  // compacta por challengeId
+  // compacta por id
   const compact = new Map<string, number>();
   for (const it of out) compact.set(it.challengeId, (compact.get(it.challengeId) ?? 0) + it.inc);
   return Array.from(compact, ([challengeId, inc]) => ({ challengeId, inc }));
