@@ -10,7 +10,7 @@ export default function RankingPage() {
   const [goal, setGoal] = useState<number | null>(null)
 
   // ⏱️ Ajusta aquí tu fecha objetivo (fin de los 3 meses).
-  const deadline = new Date('2025-11-30T23:59:59')
+  const deadline = new Date('2025-12-30T23:59:59')
 
   useEffect(() => {
     ;(async () => {
