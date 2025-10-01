@@ -130,11 +130,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             title="Celebrar racha (ALT/SHIFT/⌘ para forzar)"
             aria-label="Celebrar racha"
           >
-            {checkingStreak ? (
+            {/* {checkingStreak ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <Flame className="h-6 w-6 text-amber-600" />
-            )}
+            )} */}
           </Button>
 
           {/* Botón: tutorial */}
