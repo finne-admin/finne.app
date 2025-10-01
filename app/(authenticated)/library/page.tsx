@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { ExerciseCard } from '@/components/ui/exercise-card'
 import { WistiaModal } from "@/components/wistia-modal/wistia-modal"
 import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
+import { checkAchievements } from '@/lib/achievements';
 
 const supabase = createClientComponentClient()
 
@@ -125,6 +126,8 @@ export default function ExerciseLibrary() {
                         user_id: user.id,
                         video_hashed_id: hashedId
                     })
+
+                await checkAchievements(user.id, 'favorito_marcado')
             }
         } catch (err) {
             setError('Error al actualizar favorito')

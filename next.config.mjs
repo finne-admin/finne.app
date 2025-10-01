@@ -1,40 +1,46 @@
 // next.config.mjs
-
 import nextPwa from 'next-pwa'
 
 /** @type {import('next').NextConfig} */
 const withPWA = nextPwa({
-    // Where to generate the service worker
-    dest: 'public',
-
-    // Automatically register SW on client
-    register: true,
-
-    // Prompt new service worker to take over immediately
-    skipWaiting: true,
-
-    // (Optional) runtimeCaching or additional Workbox config here
-    // runtimeCaching: [...]
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development', // no SW en dev
+  register: true,
+  skipWaiting: true,
 })
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    reactStrictMode: true,
-    experimental: {
-        appDir: true
+  reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'embed-ssl.wistia.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'embed.wistia.com',
+      },
+    {
+      protocol: 'http',   // 👈 añade este
+      hostname: 'embed.wistia.com',
     },
-    images: {
-        domains: ['embed-ssl.wistia.com', 'embed.wistia.com'],
-    },
-    async redirects() {
-        return [
-            {
-                source: "/",
-                destination: "/notification",
-                permanent: true, // Use true for 308 status code (permanent redirect), false for 307 (temporary)
-            },
-        ]
-    }
+      {
+        protocol: 'https',
+        hostname: 'cgpqlasmzpabwrubvhyl.supabase.co',
+      },
+    ],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/notification",
+        permanent: true,
+      },
+    ]
+  },
 }
 
 // Wrap your config with next-pwa

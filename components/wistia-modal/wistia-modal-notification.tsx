@@ -62,33 +62,56 @@ export function WistiaModalNotification({
 
     // Video initialization
     useEffect(() => {
-        if (!isVideoReady || isLoading) return
+    if (!isVideoReady || isLoading || !hashedId) return;
 
-        window._wq.push({
-            id: hashedId,
-            options: {
-                autoPlay: true,
-                playbar: true,
-                volumeControl: true,
-                fullscreenButton: true,
-            },
-            onReady: (video: any) => {
-                videoRef.current = video
-                video.play()
-                video.bind("end", () => {
-                    onVideoEnd?.()
-                    video.unbind("end")
-                })
-            },
-        })
+    let destroyed = false;
+    let player: any = null;
 
-        return () => {
-            if (videoRef.current) {
-                videoRef.current.unbind?.("end")
-                videoRef.current.remove?.()
-            }
+    const initPlayer = () => {
+        if (destroyed) return;
+
+        (window as any)._wq = (window as any)._wq || [];
+        (window as any)._wq.push({
+        id: hashedId,
+        options: {
+            autoPlay: true,
+            playbar: true,
+            volumeControl: true,
+            fullscreenButton: true,
+        },
+        onReady: (video: any) => {
+            if (destroyed || !video) return;
+
+            player = video;
+            videoRef.current = video;
+
+            try { video.play?.(); } catch {}
+
+            // 🔐 Opción A: usar 'afterend' para evitar la carrera interna de Wistia
+            video.bind("afterend", () => {
+            onVideoEnd?.();
+            video.unbind("afterend"); // limpieza
+            });
+        },
+        });
+    };
+
+    initPlayer();
+
+    return () => {
+        destroyed = true;
+        try {
+        player?.unbind?.("afterend");
+        player?.unbind?.("end");     // por si acaso estaba bindeado
+        player?.remove?.();
+        } finally {
+        videoRef.current = null;
+        player = null;
         }
-    }, [hashedId, onVideoEnd, isVideoReady, isLoading])
+    };
+    }, [hashedId, onVideoEnd, isVideoReady, isLoading]);
+
+
 
     // Event handlers
     useEffect(() => {
