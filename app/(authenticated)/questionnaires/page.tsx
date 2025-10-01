@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { openTallyPopup, tenantFromHost } from '@/lib/tally'
+import { Sparkles } from 'lucide-react'
 
 type AnswerMap = Record<string, boolean>
 type DBForm = { id: string; title: string; active: boolean }
@@ -27,13 +28,46 @@ declare global {
   }
 }
 
+/* =========================
+   Chip de XP reutilizable
+   ========================= */
+function XpChip({
+  points,
+  variant = 'default', // 'default' | 'muted'
+}: {
+  points: number
+  variant?: 'default' | 'muted'
+}) {
+  const base =
+    'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,.6)]'
+  const tone =
+    variant === 'muted'
+      ? 'border border-gray-300 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300'
+      : 'border border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200'
+  return (
+    <span className={`${base} ${tone}`}>
+      <Sparkles className="h-4 w-4" />
+      <span>+{points} AP</span>
+    </span>
+  )
+}
+
+/** 💡 Puntos por cuestionario: puedes personalizar por ID aquí.
+ *  Si no está en el mapa, usará DEFAULT_POINTS. */
+const DEFAULT_POINTS = 50
+const QUESTIONNAIRE_POINTS: Record<string, number> = {
+  // 'mV9BKy': 60, // <- ejemplo: cuestionario X da 60 XP
+}
+const getQuestionnairePoints = (formId: string) =>
+  QUESTIONNAIRE_POINTS[formId] ?? DEFAULT_POINTS
+
 export default function CuestionariosPage() {
   const supabase = useMemo(() => createClientComponentClient(), [])
   const [tallyReady, setTallyReady] = useState(false)
 
   const [userId, setUserId] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
-  const [userLoaded, setUserLoaded] = useState(false) // 👈 nuevo
+  const [userLoaded, setUserLoaded] = useState(false)
 
   const [answered, setAnswered] = useState<AnswerMap>({})
   const [forms, setForms] = useState<DBForm[]>([])
@@ -86,7 +120,7 @@ export default function CuestionariosPage() {
       if (!mounted) return
       setUserId(user?.id ?? null)
       setEmail(user?.email ?? null)
-      setUserLoaded(true) // ✅ ya sabemos si hay user
+      setUserLoaded(true)
 
       if (!user) {
         setAnswered({})
@@ -141,9 +175,31 @@ export default function CuestionariosPage() {
     }
   }, [supabase])
 
-  // 4) Guardar respuesta (por tenant)
+  /** 4) Guardar respuesta (por tenant) + otorgar XP si es primera vez */
+  const awardExperienceForQuestionnaire = async (uid: string, formId: string, submissionId?: string) => {
+    const points = getQuestionnairePoints(formId)
+    try {
+      // Reutilizamos la RPC de pausas para sumar XP genérica con meta
+      const { error } = await supabase.rpc('add_pause_exp', {
+        _user: uid,
+        _points: points,
+        _meta: {
+          source: 'questionnaire',
+          questionnaire_id: formId,
+          tally_submission_id: submissionId ?? null,
+          tenant
+        }
+      })
+      if (error) throw error
+    } catch (e) {
+      console.error('Error otorgando XP por cuestionario:', e)
+    }
+  }
+
   const upsertAnswered = async (formId: string, submissionId?: string) => {
     if (!userId) return
+
+    const already = !!answered[formId] // para evitar doble XP
     const { error } = await supabase
       .from('questionnaire_responses')
       .upsert(
@@ -158,8 +214,15 @@ export default function CuestionariosPage() {
       )
     if (error) {
       console.error('Error upserting questionnaire_responses', error)
-    } else {
-      setAnswered(prev => ({ ...prev, [formId]: true }))
+      return
+    }
+
+    // marcar en UI
+    setAnswered(prev => ({ ...prev, [formId]: true }))
+
+    // si es la primera vez → sumar XP
+    if (!already) {
+      await awardExperienceForQuestionnaire(userId, formId, submissionId)
     }
   }
 
@@ -176,7 +239,6 @@ export default function CuestionariosPage() {
     const mail = user?.email ?? email
 
     if (!uid) {
-      // aquí puedes lanzar un toast/modal
       console.warn('Necesitas iniciar sesión para abrir el cuestionario.')
       return
     }
@@ -207,12 +269,14 @@ export default function CuestionariosPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Abrir en popup</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+        {/* grid con más aire */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-5">
           {forms.map((form) => {
             const isAnswered = !!answered[form.id]
             const isActive = !!form.active
-            // 🔐 solo deshabilita cuando YA sabemos que no hay user
-            const disabled = !tallyReady || !isActive || (userLoaded && !userId)
+            // deshabilita cuando no hay Tally, está inactivo, no hay user (confirmado) o ya respondido
+            const disabled = !tallyReady || !isActive || (userLoaded && !userId) || isAnswered
 
             const cardClasses = isAnswered
               ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-50'
@@ -220,11 +284,13 @@ export default function CuestionariosPage() {
                 ? 'border-amber-200 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-50'
                 : 'border-gray-200 bg-gray-100 text-gray-500 dark:bg-gray-900/40 dark:text-gray-300'
 
-            const statusLabel = isAnswered ? 'Respondido' : isActive ? 'Pendiente' : 'Desactivado'
+            const statusLabel = isAnswered ? 'Completado' : isActive ? 'Pendiente' : 'Desactivado'
             const statusBorder =
               isAnswered ? 'border-emerald-300'
               : isActive ? 'border-amber-300'
               : 'border-gray-300'
+
+            const points = getQuestionnairePoints(form.id)
 
             return (
               <button
@@ -232,28 +298,53 @@ export default function CuestionariosPage() {
                 onClick={() => {
                   if (!userLoaded) return
                   if (!userId) return
-                  if (isActive) openForm(form.id)
+                  if (isActive && !isAnswered) openForm(form.id)
                 }}
                 disabled={disabled}
                 aria-disabled={disabled}
                 className={[
-                  'rounded-2xl border px-4 py-3 text-left shadow-sm transition',
-                  'hover:shadow',
-                  disabled ? 'opacity-60 cursor-not-allowed' : '',
+                  'group rounded-2xl border shadow-sm transition hover:shadow-md',
+                  'px-5 py-4 sm:px-6 sm:py-5',
+                  'min-h-[120px]', // altura mínima para que respire
+                  disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
                   cardClasses,
                 ].join(' ')}
-                title={isActive ? `Abrir ${form.title}` : `${form.title} (desactivado)`}
+                title={
+                  isAnswered
+                    ? `${form.title} (completado)`
+                    : isActive ? `Abrir ${form.title}` : `${form.title} (desactivado)`
+                }
               >
-                <div className="flex items-center justify-between">
-                  <div className="font-medium">{form.title}</div>
-                  <span className={`text-xs rounded-full px-2 py-0.5 border ${statusBorder}`}>
-                    {statusLabel}
-                  </span>
+                {/* cabecera: título a la izquierda, chips a la derecha */}
+                <div className="flex items-start justify-between gap-4">
+                  {/* Título sin truncar; que envuelva líneas */}
+                  <div className="flex-1">
+                    <div className="font-semibold text-[15px] sm:text-base leading-snug text-foreground break-words">
+                      {form.title}
+                    </div>
+                  </div>
+
+                  {/* Columna de chips (no empuja el título) */}
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <XpChip points={points} variant={!isActive ? 'muted' : 'default'} />
+                    <span
+                      className={[
+                        "text-xs rounded-full px-2 py-0.5 border bg-white/60 backdrop-blur-sm",
+                        statusBorder
+                      ].join(" ")}
+                    >
+                      {statusLabel}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-xs opacity-80 mt-1">
-                  {isActive
-                    ? (tallyReady ? 'Pulsa para abrir el cuestionario' : 'Cargando…')
-                    : 'No disponible'}
+
+                {/* línea informativa inferior */}
+                <div className="mt-2 text-xs opacity-80">
+                  {isAnswered
+                    ? 'AP otorgada'
+                    : isActive
+                      ? (tallyReady ? 'Pulsa para abrir el cuestionario' : 'Cargando…')
+                      : 'No disponible'}
                 </div>
               </button>
             )

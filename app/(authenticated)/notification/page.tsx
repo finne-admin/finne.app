@@ -14,7 +14,10 @@ import { checkAchievements } from '@/lib/achievements';
 import { checkWeeklyChallenges } from '@/lib/checkWeeklyChallenges';
 import StreakPopup from '@/components/animations/StreakPopup'
 import CategoryCountsPopover from '@/components/utils/CategoryCountsPopover'
-import { getVideoExp } from '@/lib/experience' // 👈 NUEVO
+import { getVideoExp } from '@/lib/experience'
+
+// 👉 NUEVO: hook + barra con etiquetas de PA
+import { useDailyQuota, DailyQuotaBar } from "@/components/utils/DailyQuotaBar"
 
 interface Asset {
   url: string
@@ -73,6 +76,18 @@ export default function NotificationPage() {
     }
     fetchUser()
   }, [])
+
+  // 👉 NUEVO: límite con recompensa + puntos por pausa
+  const DAILY_LIMIT = 3
+  const POINTS_PER_PAUSE = 20 // 2 vídeos x 10 PA
+
+  const {
+    usedToday,
+    remainingToday,
+    loadingQuota,
+    quotaError,
+    refetchQuota
+  } = useDailyQuota(DAILY_LIMIT, 'active_pauses')
 
   const maxSelections = 2
   const selectedExerciseData = exercises.filter((ex) => selectedVideos.includes(String(ex.id)))
@@ -156,26 +171,19 @@ export default function NotificationPage() {
           return newCount
         })
       }, 1000)
-
       return () => clearInterval(timer)
     }
   }, [currentStep])
 
   const handleVideoSelect = (strId: string) => {
     setSelectedVideos((prev) => {
-      if (prev.includes(strId)) {
-        return prev.filter((id) => id !== strId)
-      }
-      if (prev.length >= maxSelections) {
-        return prev
-      }
+      if (prev.includes(strId)) return prev.filter((id) => id !== strId)
+      if (prev.length >= maxSelections) return prev
       return [...prev, strId]
     })
   }
 
-  const handleSkipCountdown = () => {
-    setCurrentStep("video2")
-  }
+  const handleSkipCountdown = () => setCurrentStep("video2")
 
   const handleStartExercise = () => {
     setIsStarting(true)
@@ -207,14 +215,7 @@ export default function NotificationPage() {
       return
     }
 
-    const [video1, video2] = wistiaIds.map(id =>
-      videoRows.find(v => v.wistia_id === id)
-    )
-
-    if (!video1 || !video2) {
-      console.error('No se encontraron ambos vídeos')
-      return
-    }
+    const [video1, video2] = wistiaIds.map(id => videoRows.find(v => v.wistia_id === id)!)
 
     const { error: insertError } = await supabase
       .from('active_pauses')
@@ -229,7 +230,7 @@ export default function NotificationPage() {
       return;
     }
 
-    // 👇 NUEVO: sumar EXP por los dos vídeos (base 36 s → 10 PA)
+    // Sumar EXP por los dos vídeos (10 PA c/u -> 20 PA por pausa)
     try {
       const totalExp = selectedExerciseData.reduce((acc, ex) => {
         const sec = Math.round(ex.duration || 0)
@@ -252,16 +253,15 @@ export default function NotificationPage() {
     } catch (e) {
       console.error('Error calculando/sumando EXP de pausa activa:', e)
     }
-    // 👆 FIN suma EXP
+
+    // refrescar cupo tras insertar
+    await refetchQuota()
 
     // Animación de racha
     try {
       const { data: celebrateRes, error: rpcError } = await supabase
         .rpc('celebrate_streak', { p_org: null })
-
-      if (rpcError) {
-        console.warn('celebrate_streak RPC error:', rpcError)
-      } else if (celebrateRes?.[0]?.celebrate) {
+      if (!rpcError && celebrateRes?.[0]?.celebrate) {
         const streak = celebrateRes[0].streak as number
         setStreakHit(streak)
         setShowStreakCelebration(true)
@@ -295,12 +295,8 @@ export default function NotificationPage() {
   const handleEmojiSelect = async (emoji: string) => {
     const levels = ["😟", "😐", "🙂", "😀", "🤩"]
     const level = levels.indexOf(emoji) + 1
-
     await saveSatisfactionData(level)
-
-    setChosenEmoji(emoji)
-    setShowConfetti(true)
-    setCurrentStep("end")
+    setChosenEmoji(emoji); setShowConfetti(true); setCurrentStep("end")
   }
 
   const closeModal = () => {
@@ -313,9 +309,7 @@ export default function NotificationPage() {
 
   const LoadingSkeleton = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[1, 2, 3].map((i) => (
-        <Skeleton key={i} className="aspect-video rounded-xl" />
-      ))}
+      {[1, 2, 3].map((i) => (<Skeleton key={i} className="aspect-video rounded-xl" />))}
     </div>
   )
 
@@ -340,6 +334,16 @@ export default function NotificationPage() {
             <p className="mt-2 text-sm text-gray-600">
               Selecciona exactamente dos ejercicios para comenzar tu sesión
             </p>
+
+            {/* 👉 NUEVO: barra de cupo diario con etiquetas +PA por segmento */}
+            <DailyQuotaBar
+            limit={DAILY_LIMIT}
+            usedToday={usedToday}
+            loading={loadingQuota}
+            error={quotaError}
+            pointsPerPause={POINTS_PER_PAUSE}
+            unitLabel="AP"   // 👈 mismo texto que en tus círculos
+            />
           </div>
 
           {error ? (
@@ -364,8 +368,12 @@ export default function NotificationPage() {
                   assets={ex.assets}
                   isSelected={selectedVideos.includes(String(ex.id))}
                   onSelect={handleVideoSelect}
-                  disabled={selectedVideos.length >= maxSelections && !selectedVideos.includes(String(ex.id))}
-                  badge={`(+${getVideoExp(Math.round(ex.duration || 0))} PA)`} // 👈 NUEVO
+                  disabled={
+                    (selectedVideos.length >= maxSelections && !selectedVideos.includes(String(ex.id))) ||
+                    remainingToday <= 0
+                  }
+                  // ⬇️ Eliminamos el badge de PA por vídeo
+                  // badge={`(+${getVideoExp(Math.round(ex.duration || 0))} PA)`}
                 />
               ))}
             </div>
@@ -389,21 +397,36 @@ export default function NotificationPage() {
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handleStartExercise}
-                  disabled={selectedVideos.length !== maxSelections || isStarting}
+                  disabled={
+                    selectedVideos.length !== maxSelections ||
+                    isStarting ||
+                    remainingToday <= 0
+                  }
                   className={cn(
                     "px-8 py-3 text-lg transition-transform",
-                    selectedVideos.length === maxSelections && "hover:scale-105 active:scale-95",
+                    selectedVideos.length === maxSelections &&
+                      remainingToday > 0 &&
+                      "hover:scale-105 active:scale-95",
                     isStarting && "cursor-wait"
                   )}
                   size="lg"
                 >
-                  {isStarting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Iniciar Ejercicios"}
+                  {isStarting
+                    ? <Loader2 className="w-5 h-5 animate-spin" />
+                    : remainingToday <= 0
+                      ? "Límite diario alcanzado"
+                      : "Iniciar Ejercicios"}
                 </Button>
 
-                {/* Popover de conteo */}
                 <CategoryCountsPopover />
               </div>
             </div>
+          )}
+
+          {!isLoading && !error && remainingToday <= 0 && (
+            <p className="mt-2 text-center text-xs text-gray-500">
+              Has llegado al máximo de {DAILY_LIMIT} pausas con recompensa. ¡Puedes seguir entrenando sin XP!
+            </p>
           )}
         </div>
       </div>

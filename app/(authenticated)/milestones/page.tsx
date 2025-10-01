@@ -16,7 +16,7 @@ export default function MilestonesPage() {
         >
           Temporada de Otoño
         </h2>
-        <p className="sub-cq mt-2 text-gray-600">1 de septiembre — 30 de noviembre</p>
+        <p className="sub-cq mt-2 text-gray-600">1 de octubre — 30 de diciembre</p>
       </div>
 
       {/* grid a ancho completo */}
