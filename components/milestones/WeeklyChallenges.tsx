@@ -3,8 +3,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { RetoCard, Reto } from './RetoCard'
-import CountdownCircles from './CountdownCirclesWeekly'
+import { RetoCard, Reto } from './WeeklyAchievementCard'
+import CountdownCircles from './WeeklyCountdownCircles'
 
 type WeeklyConditionType =
   | 'pausas_semana'

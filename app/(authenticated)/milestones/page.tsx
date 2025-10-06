@@ -1,8 +1,8 @@
 // app/milestones/page.tsx
-import { PerfilResumen } from '@/components/milestones/PerfilResumen'
-import { ActividadSemanal } from '@/components/milestones/ActividadSemanal'
-import { LogrosDesbloqueados } from '@/components/milestones/LogrosDesbloqueados'
-import { RetosSemanales } from '@/components/milestones/RetosSemanales'
+import { PerfilResumen } from '@/components/milestones/ProfileSummary'
+import { ActividadSemanal } from '@/components/milestones/WeeklyActivity'
+import { LogrosDesbloqueados } from '@/components/milestones/UnlockedAchievements'
+import { RetosSemanales } from '@/components/milestones/WeeklyChallenges'
 
 export default function MilestonesPage() {
   return (

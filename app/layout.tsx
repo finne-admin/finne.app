@@ -6,7 +6,7 @@ import React from "react"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
 import { Toaster } from "sonner"
-import { PerfilResumenRefProvider } from '@/context/usePerfilResumenRef'
+import { PerfilResumenRefProvider } from '@/context/useProfileSummaryRef'
 import { UnclaimedProgressProvider } from '@/components/providers/UnclaimedProgressProvider'
 import AchievementsNotifier from '@/components/notifications/AchievementsNotifier' // ← nuevo import
 

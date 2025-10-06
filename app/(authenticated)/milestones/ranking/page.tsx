@@ -2,8 +2,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RankingUsuarios } from '@/components/milestones/RankingUsuarios'
-import HuchaPanel from '@/components/milestones/HuchaPanel'
+import { RankingUsuarios } from '@/components/milestones/UserRanking'
+import HuchaPanel from '@/components/milestones/DepartmentPanel'
 import { calcThreeMonthGoal } from '@/lib/calcThreeMonthGoal'
 
 export default function RankingPage() {

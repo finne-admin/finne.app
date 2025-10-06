@@ -1,4 +1,4 @@
-import { TodosLosLogros } from '@/components/milestones/TodosLosLogros'
+import { TodosLosLogros } from '@/components/milestones/AllAchievements'
 
 export default function LogrosPage() {
   return (
