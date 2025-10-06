@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import CountdownCircles from './CountdownCircles'
 import GoalBadge from './GoalBadge'
-import CerditoGlobo from './CerditoGlobo'
+import CerditoGlobo from './DepartmentBalloon'
 
 type Props = {
   goal: number

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { AjustesAvatar } from '@/components/settings/AjustesAvatar'
+import { AjustesAvatar } from '@/components/settings/SettingsAvatar'
 import { Loader2, Pencil, Plus, Clock, X, Bell } from 'lucide-react'
 import {
   Table,

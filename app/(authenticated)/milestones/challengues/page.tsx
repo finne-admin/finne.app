@@ -1,4 +1,4 @@
-import { RetosSemanales } from '@/components/milestones/RetosSemanales'
+import { RetosSemanales } from '@/components/milestones/WeeklyChallenges'
 
 export default function RetosPage() {
   return (
