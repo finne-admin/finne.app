@@ -154,7 +154,7 @@ export function RetosSemanales() {
         <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full gap-2">
           <div className="justify-self-start flex items-center">
             <div className="flex-shrink-0 scale-50 mr-2">
-              <CountdownCircles target={new Date('2025-10-05T23:59:59')} />
+              <CountdownCircles target={new Date('2025-10-12T23:59:59')} />
             </div>
           </div>
           <h2 className="sub-cq font-semibold text-gray-900 text-center m-0 justify-self-center">
