@@ -53,3 +53,4 @@ next-env.d.ts
 ./public/worker.js.map.LICENSE.txt.map
 
 
+-e "\n# Ignorar builds y caches\ndist/\nout/\n.cache/\n.next/\nnode_modules/" 
