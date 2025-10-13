@@ -46,6 +46,26 @@ function currentWeekIdMadrid(d = new Date()) {
   return `${y}-${m}-${day}`;
 }
 
+/** Devuelve la fecha del domingo a las 23:59:59 (hora de Madrid) de la semana actual */
+function endOfWeekMadrid(): Date {
+  const now = new Date();
+
+  // Día actual en zona Madrid
+  const tz = 'Europe/Madrid';
+  const localNow = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+  const day = localNow.getDay(); // 0 = domingo
+
+  // Días hasta domingo
+  const diffToSunday = (7 - day) % 7;
+
+  // Fecha del domingo a las 23:59:59 hora local de Madrid
+  const endOfWeek = new Date(localNow);
+  endOfWeek.setDate(localNow.getDate() + diffToSunday);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  return endOfWeek;
+}
+
 /** PRNG simple (xorshift32) */
 function seededShuffle<T>(arr: T[], seedStr: string): T[] {
   let x = 0;
@@ -77,7 +97,20 @@ export function RetosSemanales() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [overflow, setOverflow] = useState(false)
+  const [targetDate, setTargetDate] = useState<Date>(endOfWeekMadrid())
 
+  // ——— Reinicio automático semanal ———
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (new Date() > targetDate) {
+        setTargetDate(endOfWeekMadrid())
+      }
+    }, 60 * 1000) // comprobar cada minuto
+
+    return () => clearInterval(interval)
+  }, [targetDate])
+
+  // ——— Cargar retos ———
   useEffect(() => {
     const fetchRetos = async () => {
       const supabase = createClientComponentClient()
@@ -95,7 +128,7 @@ export function RetosSemanales() {
         SUPPORTED.includes(c.condition_type) && typeof c.goal === 'number' && c.goal > 0
       )
 
-      // 2) Selección determinista de 6 para esta semana
+      // 2) Selección determinista de 5 para esta semana
       const elegidos = seededShuffle(soportados, weekId).slice(0, 5)
       const elegidosIds = elegidos.map(c => c.id)
 
@@ -154,7 +187,7 @@ export function RetosSemanales() {
         <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full gap-2">
           <div className="justify-self-start flex items-center">
             <div className="flex-shrink-0 scale-50 mr-2">
-              <CountdownCircles target={new Date('2025-10-12T23:59:59')} />
+              <CountdownCircles target={targetDate} />
             </div>
           </div>
           <h2 className="sub-cq font-semibold text-gray-900 text-center m-0 justify-self-center">
@@ -168,7 +201,9 @@ export function RetosSemanales() {
         ref={scrollRef}
         className={[
           'w-full overflow-x-auto',
-          overflow ? 'scrollbar-thin hover:scrollbar-thumb-gray-400 scrollbar-track-transparent' : 'scrollbar-none',
+          overflow
+            ? 'scrollbar-thin hover:scrollbar-thumb-gray-400 scrollbar-track-transparent'
+            : 'scrollbar-none',
         ].join(' ')}
       >
         <div
