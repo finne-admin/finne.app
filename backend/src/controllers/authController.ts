@@ -1,16 +1,10 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { findUserByEmail, insertUser, getUserWithPassword } from "../db/queries/userQueries";
 import { getPool } from "../config/dbManager";
-import { createToken } from "../utils/jwt";
-import { createRefreshToken } from "../db/queries/refreshTokenQueries";
+import { createRefreshToken, findRefreshToken, revokeRefreshToken } from "../db/queries/refreshTokenQueries";
 import { v4 as uuidv4 } from "uuid";
-import { findRefreshToken } from "../db/queries/refreshTokenQueries";
-import { revokeRefreshToken } from "../db/queries/refreshTokenQueries";
-
-
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_key";
+import { createToken, verifyToken as verifyJwtToken } from "../utils/jwt";
 
 // ======================================================
 // 📍 POST /api/auth/register
@@ -104,17 +98,21 @@ export const loginUser = async (req: Request, res: Response) => {
       role: user.role,
     });
 
-    // 🔹 Crear Refresh Token persistente
-    const refreshToken = uuidv4();
-    await createRefreshToken(user.id, refreshToken);
+    // 🔹 Crear Refresh Token persistente y guardarlo en cookie HttpOnly
+    try {
+      const refreshToken = uuidv4();
+      await createRefreshToken(user.id, refreshToken);
 
-    // 🔹 Guardar Refresh Token en cookie HttpOnly
-    res.cookie("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
-    });
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+      });
+    } catch (cookieErr) {
+      console.error("❌ Error creando refresh token:", cookieErr);
+      // No bloqueamos el login si falla almacenar el refresh token
+    }
 
     // Devolver token al frontend
     res.json({
@@ -141,26 +139,34 @@ export const verifyToken = async (req: Request, res: Response) => {
   if (!token) return res.status(400).json({ error: "Token requerido." });
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyJwtToken(token);
+    if (!decoded) {
+      return res
+        .status(401)
+        .json({ valid: false, error: "Token inválido o expirado." });
+    }
+
     res.json({ valid: true, user: decoded });
-  } catch {
-    res.status(401).json({ valid: false, error: "Token inválido o expirado." });
+  } catch (error) {
+    console.error("❌ Error al verificar token:", error);
+    res.status(500).json({ error: "Error al verificar el token." });
   }
 };
 
 
 export const refreshAccessToken = async (req: Request, res: Response) => {
   try {
-    const token = req.cookies.refresh_token;
+    const token = req.cookies?.refresh_token;
     if (!token) return res.status(401).json({ error: "Falta refresh token" });
 
     const existing = await findRefreshToken(token);
     if (!existing) return res.status(401).json({ error: "Refresh token inválido" });
 
     // Buscar el usuario de este token
-    const pool = await (await import("../config/dbManager")).getPool();
+    const pool = await getPool();
     const { rows } = await pool.query(`SELECT * FROM users WHERE id = $1`, [existing.user_id]);
     const user = rows[0];
+    if (!user) return res.status(401).json({ error: "Usuario no encontrado para refresh token" });
 
     // Crear nuevo access token
     const accessToken = createToken({
@@ -178,11 +184,11 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
 export const logoutUser = async (req: Request, res: Response) => {
   try {
-    const token = req.cookies.refresh_token;
-    if (token) await revokeRefreshToken(token);
+  const token = req.cookies?.refresh_token;
+  if (token) await revokeRefreshToken(token);
 
-    res.clearCookie("refresh_token");
-    res.json({ success: true, message: "Sesión cerrada correctamente" });
+  res.clearCookie("refresh_token");
+  res.json({ success: true, message: "Sesión cerrada correctamente" });
   } catch (err) {
     console.error("Error en logout:", err);
     res.status(500).json({ error: "Error al cerrar sesión" });
