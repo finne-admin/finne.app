@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,12 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import DatePicker from "react-datepicker"
-import { registerLocale } from "react-datepicker"
+import DatePicker, { registerLocale } from "react-datepicker"
 import { es } from "date-fns/locale/es"
 import "react-datepicker/dist/react-datepicker.css"
 import Image from "next/image"
-import { createClient } from "@/lib/supabase"
 
 registerLocale("es", es)
 
@@ -46,35 +44,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [hasSession, setHasSession] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
-
-  useEffect(() => {
-    const hash = window.location.hash
-    if (!hash) return
-
-    const params = new URLSearchParams(hash.replace("#", "?"))
-    const access_token = params.get("access_token")
-    const refresh_token = params.get("refresh_token")
-
-    if (access_token && refresh_token) {
-      supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
-        if (!error) {
-          window.location.replace(window.location.pathname)
-        }
-      })
-    }
-  }, [])
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setFormData((prev) => ({ ...prev, email: user.email || "" }))
-        setHasSession(true)
-      }
-    })
-  }, [])
 
   const validateForm = (): boolean => {
     const errors: FormErrors = {}
@@ -97,79 +67,27 @@ export default function RegisterPage() {
     if (!validateForm()) return
     setIsLoading(true)
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const res = await fetch(`${apiUrl}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
 
-      if (user) {
-        // Invitación: actualizar datos
-        const { data: existingUser } = await supabase.from("users").select("id").eq("id", user.id).maybeSingle()
-        if (!existingUser) {
-          await supabase.from("users").insert({
-            id: user.id,
-            email: user.email,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            date_of_birth: formData.dateOfBirth?.toISOString(),
-            sex: formData.sex,
-            role: "user"
-          })
-        } else {
-          await supabase.from("users").update({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            date_of_birth: formData.dateOfBirth?.toISOString(),
-            sex: formData.sex
-          }).eq("id", user.id)
-        }
-
-        await supabase.auth.updateUser({
-          password: formData.password,
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            date_of_birth: formData.dateOfBirth?.toISOString(),
-            sex: formData.sex,
-            role: "user"
-          }
-        })
-      } else {
-        // Registro directo: signUp
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              role: "user",
-              first_name: formData.firstName,
-              last_name: formData.lastName,
-              date_of_birth: formData.dateOfBirth?.toISOString(),
-              sex: formData.sex
-            }
-          }
-        })
-
-        if (signUpError) throw signUpError
-
-        await supabase.from("users").insert({
-          id: data.user?.id,
-          email: formData.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          date_of_birth: formData.dateOfBirth?.toISOString(),
-          sex: formData.sex,
-          role: "user"
-        })
-      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error durante el registro")
 
       setSuccess("Registro completado correctamente.")
       setTimeout(() => router.push("/login"), 3000)
-
     } catch (err: any) {
-      setError(err.message || "Error durante el registro")
+      setError(err.message)
     } finally {
       setIsLoading(false)
     }
   }
+
 
   const datePickerCustomStyles = {
     datePickerContainer: "relative",
