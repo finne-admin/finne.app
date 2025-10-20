@@ -11,13 +11,18 @@ export async function GET(req: NextRequest) {
     const headers = await client.getRequestHeaders();
 
     const url = new URL(req.url);
-    const query = url.search; // ?tags=...
+    const query = url.search;
 
-    const res = await fetch(`${BACKEND_URL}/api/wistia${query}`, {
+    // 🔹 Leer token JWT del usuario (guardado en el navegador)
+    const token = req.headers.get("authorization");
+
+    // 🔹 Reenviar la petición al backend con ambos tokens
+    const res = await fetch(`${BACKEND_URL}/api/wistia/videos${query}`, {
       method: "GET",
       headers: {
         ...headers,
         "Content-Type": "application/json",
+        ...(token ? { Authorization: token } : {}), // <--- pasa el JWT si existe
       },
     });
 
