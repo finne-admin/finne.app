@@ -1,11 +1,8 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { findUserByEmail, insertUser, getUserWithPassword } from "../db/queries/userQueries";
 import { getPool } from "../config/dbManager";
-import { createToken } from "../utils/jwt";
-
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_key";
+import { createToken, verifyToken as verifyJwtToken } from "../utils/jwt";
 
 // ======================================================
 // 📍 POST /api/auth/register
@@ -124,9 +121,16 @@ export const verifyToken = async (req: Request, res: Response) => {
   if (!token) return res.status(400).json({ error: "Token requerido." });
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyJwtToken(token);
+    if (!decoded) {
+      return res
+        .status(401)
+        .json({ valid: false, error: "Token inválido o expirado." });
+    }
+
     res.json({ valid: true, user: decoded });
-  } catch {
-    res.status(401).json({ valid: false, error: "Token inválido o expirado." });
+  } catch (error) {
+    console.error("❌ Error al verificar token:", error);
+    res.status(500).json({ error: "Error al verificar el token." });
   }
 };
