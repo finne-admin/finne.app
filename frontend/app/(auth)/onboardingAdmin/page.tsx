@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,12 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import DatePicker from "react-datepicker"
-import { registerLocale } from "react-datepicker"
+import DatePicker, { registerLocale } from "react-datepicker"
 import { es } from "date-fns/locale/es"
 import "react-datepicker/dist/react-datepicker.css"
 import Image from "next/image"
-import { createClient } from "@/lib/supabase"
 
 registerLocale("es", es)
 
@@ -46,35 +44,7 @@ export default function RegisterAdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [hasSession, setHasSession] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
-
-  useEffect(() => {
-    const hash = window.location.hash
-    if (!hash) return
-
-    const params = new URLSearchParams(hash.replace("#", "?"))
-    const access_token = params.get("access_token")
-    const refresh_token = params.get("refresh_token")
-
-    if (access_token && refresh_token) {
-      supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
-        if (!error) {
-          window.location.replace(window.location.pathname)
-        }
-      })
-    }
-  }, [])
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setFormData((prev) => ({ ...prev, email: user.email || "" }))
-        setHasSession(true)
-      }
-    })
-  }, [])
 
   const validateForm = (): boolean => {
     const errors: FormErrors = {}
@@ -97,75 +67,22 @@ export default function RegisterAdminPage() {
     if (!validateForm()) return
     setIsLoading(true)
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const res = await fetch(`${apiUrl}/api/auth/register-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
 
-      if (user) {
-        // Invitación: actualizar datos
-        const { data: existingUser } = await supabase.from("users").select("id").eq("id", user.id).maybeSingle()
-        if (!existingUser) {
-          await supabase.from("users").insert({
-            id: user.id,
-            email: user.email,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            date_of_birth: formData.dateOfBirth?.toISOString(),
-            sex: formData.sex,
-            role: "admin"
-          })
-        } else {
-          await supabase.from("users").update({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            date_of_birth: formData.dateOfBirth?.toISOString(),
-            sex: formData.sex
-          }).eq("id", user.id)
-        }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error durante el registro")
 
-        await supabase.auth.updateUser({
-          password: formData.password,
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            date_of_birth: formData.dateOfBirth?.toISOString(),
-            sex: formData.sex,
-            role: "admin"
-          }
-        })
-      } else {
-        // Registro directo: signUp
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              role: "admin",
-              first_name: formData.firstName,
-              last_name: formData.lastName,
-              date_of_birth: formData.dateOfBirth?.toISOString(),
-              sex: formData.sex
-            }
-          }
-        })
-
-        if (signUpError) throw signUpError
-
-        await supabase.from("users").insert({
-          id: data.user?.id,
-          email: formData.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          date_of_birth: formData.dateOfBirth?.toISOString(),
-          sex: formData.sex,
-          role: "admin"
-        })
-      }
-
-      setSuccess("Registro de administrador completado correctamente.")
+      setSuccess("Cuenta de administrador creada correctamente.")
       setTimeout(() => router.push("/login"), 3000)
-
     } catch (err: any) {
-      setError(err.message || "Error durante el registro")
+      setError(err.message)
     } finally {
       setIsLoading(false)
     }
@@ -177,14 +94,18 @@ export default function RegisterAdminPage() {
         <div className="relative w-32 h-12 mx-auto">
           <Image src="/logoprincipalRecurso 4@4x.png" alt="Logo de Finne" fill className="object-contain" priority />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Crear cuenta de Administrador</h2>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Crear cuenta de Administrador
+        </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <Card className="border-none shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl text-center">Bienvenido a Finne</CardTitle>
-            <CardDescription className="text-center">Rellena tus datos para continuar</CardDescription>
+            <CardDescription className="text-center">
+              Rellena tus datos para continuar
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {success ? (
@@ -199,16 +120,19 @@ export default function RegisterAdminPage() {
                   <Input value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} />
                   {formErrors.firstName && <p className="text-sm text-red-500">{formErrors.firstName}</p>}
                 </div>
+
                 <div className="space-y-2">
                   <Label>Apellido</Label>
                   <Input value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} />
                   {formErrors.lastName && <p className="text-sm text-red-500">{formErrors.lastName}</p>}
                 </div>
+
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input value={formData.email} type="email" onChange={(e) => setFormData({ ...formData, email: e.target.value })} disabled={hasSession} />
+                  <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                   {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
                 </div>
+
                 <div className="space-y-2">
                   <Label>Fecha de nacimiento</Label>
                   <DatePicker
@@ -226,6 +150,7 @@ export default function RegisterAdminPage() {
                   />
                   {formErrors.dateOfBirth && <p className="text-sm text-red-500">{formErrors.dateOfBirth}</p>}
                 </div>
+
                 <div className="space-y-2">
                   <Label>Sexo</Label>
                   <Select value={formData.sex} onValueChange={(value) => setFormData({ ...formData, sex: value })}>
@@ -240,23 +165,31 @@ export default function RegisterAdminPage() {
                   </Select>
                   {formErrors.sex && <p className="text-sm text-red-500">{formErrors.sex}</p>}
                 </div>
+
                 <div className="space-y-2">
                   <Label>Contraseña</Label>
                   <Input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
                   {formErrors.password && <p className="text-sm text-red-500">{formErrors.password}</p>}
                 </div>
+
                 <div className="space-y-2">
                   <Label>Confirmar Contraseña</Label>
                   <Input type="password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} />
                   {formErrors.confirmPassword && <p className="text-sm text-red-500">{formErrors.confirmPassword}</p>}
                 </div>
+
                 {error && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" className="w-full bg-[#8ACC9F] hover:bg-[#7AB4A4] text-white" disabled={isLoading}>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-[#8ACC9F] hover:bg-[#7AB4A4] text-white"
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <div className="flex items-center justify-center">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
