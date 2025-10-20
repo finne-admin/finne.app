@@ -1,6 +1,18 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_key";
+let cachedJwtSecret: string | undefined;
+
+export function getJwtSecret(): string {
+  if (!cachedJwtSecret) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET no está configurado.");
+    }
+    cachedJwtSecret = secret;
+  }
+
+  return cachedJwtSecret;
+}
 
 /**
  * Crea un nuevo token para un usuario.
@@ -12,7 +24,7 @@ export function createToken(user: any) {
       email: user.email,
       role: user.role,
     },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: "15m" } // dura 15 minutos
   );
 }
@@ -22,8 +34,11 @@ export function createToken(user: any) {
  */
 export function verifyToken(token: string) {
   try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch {
+    return jwt.verify(token, getJwtSecret());
+  } catch (error) {
+    if (error instanceof Error && error.message === "JWT_SECRET no está configurado.") {
+      throw error;
+    }
     return null;
   }
 }
