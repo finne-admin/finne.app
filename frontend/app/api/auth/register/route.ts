@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient";
 
-const BACKEND_URL = process.env.BACKEND_URL!;
 const AUDIENCE = process.env.BACKEND_AUDIENCE!;
 
 export async function POST(req: NextRequest) {
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const client = await auth.getIdTokenClient(AUDIENCE);
     const headers = await client.getRequestHeaders();
 
-    const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
+    const res = await apiFetch(`/api/auth/register`, {
       method: "POST",
       headers: {
         ...headers,
