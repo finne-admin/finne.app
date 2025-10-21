@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient";
 
-const BACKEND_URL = process.env.BACKEND_URL!;
 const AUDIENCE = process.env.BACKEND_AUDIENCE!;
 
 export async function GET(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const token = req.headers.get("authorization");
 
     // 🔹 Reenviar la petición al backend con ambos tokens
-    const res = await fetch(`${BACKEND_URL}/api/wistia/videos${query}`, {
+    const res = await apiFetch(`/api/wistia/videos${query}`, {
       method: "GET",
       headers: {
         ...headers,

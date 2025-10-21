@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { AlertCircle, Eye, EyeOff, Mail, Clock, CheckCircle2, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from "next/navigation"
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 // Constants
 const RESEND_TIMEOUT = 50
@@ -192,7 +193,7 @@ export default function SetupPage() {
 
         try {
             const response = await retry(() =>
-                fetch('/api/setup', {
+                apiFetch('/api/setup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)

@@ -4,6 +4,7 @@ import {useEffect, useState} from 'react';
 import {getOrCreateDeviceId} from '@/lib/getDeviceId';
 import {onForegroundMessage, requestPermissionAndGetToken} from '@/lib/firebase';
 import {createClientComponentClient} from '@supabase/auth-helpers-nextjs';
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient";
 
 export default function FirebaseMessagingInitializer() {
   const [isSaved, setIsSaved] = useState(false);
@@ -30,7 +31,7 @@ export default function FirebaseMessagingInitializer() {
         }
 
         const userId = session.user.id;
-        const response = await fetch('/api/save-fcm-token', {
+        const response = await apiFetch('/api/save-fcm-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId, device_id: deviceId, token }),

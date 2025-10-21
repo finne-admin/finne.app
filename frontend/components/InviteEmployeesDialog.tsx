@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Trash2 } from 'lucide-react'
 import { Fragment } from "react"
 import { Dialog, Transition } from "@headlessui/react"
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 interface InviteEmployeesDialogProps {
     isOpen: boolean
@@ -69,7 +70,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
             }
 
             for (const { email, role } of emailList) {
-            const response = await fetch('/api/admin/invite', {
+            const response = await apiFetch('/api/admin/invite', {
                 method: 'POST',
                 headers: {
                 'Content-Type': 'application/json',

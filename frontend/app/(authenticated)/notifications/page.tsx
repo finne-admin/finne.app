@@ -15,6 +15,7 @@ import { checkWeeklyChallenges } from '@/lib/checkWeeklyChallenges';
 import StreakPopup from '@/components/animations/StreakPopup'
 import CategoryCountsPopover from '@/components/utils/CategoryCountsPopover'
 import { getVideoExp } from '@/lib/experience'
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 // 👉 NUEVO: hook + barra con etiquetas de PA
 import { useDailyQuota, DailyQuotaBar } from "@/components/utils/DailyQuotaBar"
@@ -100,7 +101,7 @@ export default function NotificationPage() {
     try {
       const videoHashes = selectedExerciseData.map(ex => ex.hashed_id);
 
-      const tagsResponse = await fetch('/api/tags', {
+      const tagsResponse = await apiFetch('/api/tags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ video_hashes: videoHashes })
@@ -135,7 +136,7 @@ export default function NotificationPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/wistia")
+        const res = await apiGet("/api/wistia")
         if (!res.ok) throw new Error("Error al obtener vídeos")
         const data: WistiaMedia[] = await res.json()
         setAllVideos(data)

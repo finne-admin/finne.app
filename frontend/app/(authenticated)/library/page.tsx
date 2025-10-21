@@ -9,6 +9,7 @@ import { ExerciseCard } from '@/components/ui/exercise-card'
 import { WistiaModal } from "@/components/wistia-modal/wistia-modal"
 import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
 import { checkAchievements } from '@/lib/achievements';
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 const supabase = createClientComponentClient()
 
@@ -146,7 +147,7 @@ export default function ExerciseLibrary() {
                 url += `?${params.toString()}`
             }
 
-            const response = await fetch(url)
+            const response = await apiGet(url)
             const data: WistiaMedia[] = await response.json()
             setExercises(data)
         } catch (err) {
