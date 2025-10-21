@@ -175,6 +175,22 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       role: user.role,
     });
 
+    // Rotar refresh token: revocar el usado y emitir uno nuevo en cookie
+    try {
+      await revokeRefreshToken(token);
+      const newRefresh = uuidv4();
+      await createRefreshToken(user.id, newRefresh);
+      res.cookie("refresh_token", newRefresh, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+      });
+    } catch (rotationErr) {
+      console.error("Error rotando refresh token:", rotationErr);
+      // No bloquear entrega del access token si falla rotación
+    }
+
     res.json({ success: true, accessToken });
   } catch (err) {
     console.error("Error en refresh:", err);
@@ -188,6 +204,7 @@ export const logoutUser = async (req: Request, res: Response) => {
   if (token) await revokeRefreshToken(token);
 
   res.clearCookie("refresh_token");
+  res.clearCookie("refresh_token", { path: "/" });
   res.json({ success: true, message: "Sesión cerrada correctamente" });
   } catch (err) {
     console.error("Error en logout:", err);
