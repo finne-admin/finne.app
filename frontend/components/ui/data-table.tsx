@@ -22,6 +22,7 @@ import { Eye, Pencil, Trash2, Plus, Search } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { InviteEmployeesDialog } from "@/components/InviteEmployeesDialog"
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 // Skeleton Row Component
 const SkeletonRow = () => (
@@ -174,7 +175,7 @@ export function EmployeeTable() {
   // ---------- Delete logic ----------
   const handleDelete = async (empId: string) => {
     try {
-      const res = await fetch("/api/admin/delete-user", {
+      const res = await apiFetch("/api/admin/delete-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: empId }),
@@ -194,7 +195,7 @@ export function EmployeeTable() {
 
     try {
       for (const id of ids) {
-        const res = await fetch("/api/admin/delete-user", {
+        const res = await apiFetch("/api/admin/delete-user", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: id }),
@@ -243,7 +244,7 @@ const handleSaveEdit = async () => {
 
     // 2. Cambiar contraseña si es necesario
     if (editUser.new_password && editUser.new_password.length >= 6) {
-      const res = await fetch("/api/admin/change-password", {
+      const res = await apiFetch("/api/admin/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
