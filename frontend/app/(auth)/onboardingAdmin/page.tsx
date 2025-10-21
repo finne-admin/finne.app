@@ -13,6 +13,7 @@ import DatePicker, { registerLocale } from "react-datepicker"
 import { es } from "date-fns/locale/es"
 import "react-datepicker/dist/react-datepicker.css"
 import Image from "next/image"
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 registerLocale("es", es)
 
@@ -67,10 +68,8 @@ export default function RegisterAdminPage() {
     if (!validateForm()) return
     setIsLoading(true)
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-
     try {
-      const res = await fetch(`${apiUrl}/api/auth/register-admin`, {
+      const res = await apiFetch(`/api/auth/register-admin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

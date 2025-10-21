@@ -1,4 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server'
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 export async function GET(request: NextRequest) {
     try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
         }
 
         // 4. Fetch from Wistia
-        const response = await fetch(wistiaUrl, {
+        const response = await apiFetch(wistiaUrl, {
             headers: {
                 Accept: 'application/json',
                 Authorization: `Bearer ${token}`,

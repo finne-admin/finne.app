@@ -1,5 +1,6 @@
 // app/api/tags/route.ts
 import { NextResponse } from 'next/server'
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
 
 export async function POST(request: Request) {
     const { video_hashes } = await request.json()
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
         // Fetch tags from Wistia in parallel
         const tagsResults = await Promise.allSettled(
             video_hashes.map(async (hash) => {
-                const response = await fetch(
+                const response = await apiFetch(
                     `https://api.wistia.com/v1/medias/${hash}.json`,
                     {
                         headers: {
