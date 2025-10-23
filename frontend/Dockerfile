@@ -23,3 +23,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 8080
 CMD ["npm", "start"]
+
