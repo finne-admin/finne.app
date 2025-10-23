@@ -7,12 +7,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  // Autenticación via backend API (sin Supabase)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -63,17 +62,26 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
       })
 
-      if (error) throw error
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data?.error || 'Credenciales inválidas')
+      }
 
-      // Check user role and redirect accordingly
-      const userRole = data.user?.user_metadata?.role
-      const redirectPath = userRole === 'admin' ? '/admin' : '/notification'
+      if (data?.token) {
+        localStorage.setItem('accessToken', data.token)
+      } else if (data?.accessToken) {
+        localStorage.setItem('accessToken', data.accessToken)
+      }
 
+      const role = data?.user?.role
+      const next = new URLSearchParams(window.location.search).get('next')
+      const redirectPath = next || (role === 'admin' ? '/admin' : '/notifications')
       router.push(redirectPath)
     } catch (error) {
       console.error('Error de inicio de sesión:', error)
