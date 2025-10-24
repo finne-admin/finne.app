@@ -1,5 +1,4 @@
 import { Pool } from 'pg'
-import { Connector, AuthTypes } from '@google-cloud/cloud-sql-connector'
 import 'dotenv/config'
 
 const INSTANCE_CONNECTION_NAME = 'elite-caster-474014-u9:europe-southwest1:finne-db'
@@ -13,6 +12,7 @@ export async function getPool(): Promise<Pool> {
 
   if (process.env.NODE_ENV === 'production') {
     // 🔒 Producción → Cloud SQL Connector + IAM
+    const { Connector, AuthTypes } = await import('@google-cloud/cloud-sql-connector')
     const connector = new Connector()
     const clientOpts = await connector.getOptions({
       instanceConnectionName: INSTANCE_CONNECTION_NAME,

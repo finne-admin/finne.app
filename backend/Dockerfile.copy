@@ -1,0 +1,31 @@
+# Etapa 1: compilación
+FROM node:18 AS builder
+WORKDIR /app
+
+# Copiar dependencias
+COPY package*.json ./
+RUN npm install
+
+# 👇 Instalar TypeScript explícitamente aquí
+RUN npm install typescript -g
+
+# Copiar el resto del código
+COPY . .
+
+# Compilar TypeScript
+RUN tsc
+
+# Etapa 2: ejecución
+FROM node:18-slim
+WORKDIR /app
+
+# Copiar el código compilado
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
+
+# Instalar solo dependencias necesarias para producción
+RUN npm install --omit=dev
+
+EXPOSE 8080
+CMD ["npm", "start"]
+
