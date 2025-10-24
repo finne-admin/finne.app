@@ -23,7 +23,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: elite-caster-474014-u9
-          install_components: 'beta,cloud-build-local'
+          install_components: 'beta'
 
       - name: Build and push Docker image
         run: |
@@ -39,4 +39,8 @@ jobs:
             --project=elite-caster-474014-u9 \
             --region=europe-southwest1 \
             --image=europe-southwest1-docker.pkg.dev/elite-caster-474014-u9/finne-repo/backend:latest \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --port=8080 \
+            --timeout=300 \
+            --set-env-vars=NODE_ENV=development \
+            --set-secrets=JWT_SECRET=JWT_SECRET:1

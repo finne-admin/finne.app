@@ -23,7 +23,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: elite-caster-474014-u9
-          install_components: 'beta,cloud-build-local'
+          install_components: 'beta'
 
       - name: Build and push Docker image
         run: |

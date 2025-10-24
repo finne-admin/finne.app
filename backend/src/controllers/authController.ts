@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { findUserByEmail, insertUser, getUserWithPassword } from "../db/queries/userQueries";
 import { getPool } from "../config/dbManager";
 import { createRefreshToken, findRefreshToken, revokeRefreshToken } from "../db/queries/refreshTokenQueries";
-import { v4 as uuidv4 } from "uuid";
+import { uuidv7 as uuidv4 } from "uuidv7";
 import { createToken, verifyToken as verifyJwtToken } from "../utils/jwt";
 
 // ======================================================

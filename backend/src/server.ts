@@ -2,8 +2,8 @@ import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
 import cookieParser from "cookie-parser"
-import wistiaRoutes from "./routes/wistiaRoutes";
-import tallyRoutes from "./routes/tallyRoutes";
+import wistiaRoutes from "./routes/wistiaRoutes"
+import tallyRoutes from "./routes/tallyRoutes"
 import { getPool } from "./config/dbManager"
 import authRoutes from "./routes/authRoutes"
 
@@ -24,8 +24,8 @@ app.use(
 app.use(express.json())
 app.use(cookieParser())
 app.use("/api/auth", authRoutes)
-app.use("/api/wistia", wistiaRoutes);
-app.use("/api/tally", tallyRoutes);
+app.use("/api/wistia", wistiaRoutes)
+app.use("/api/tally", tallyRoutes)
 
 // Ruta simple de prueba
 app.get("/", (_, res) => {
@@ -33,9 +33,10 @@ app.get("/", (_, res) => {
 })
 
 // 🔹 Iniciar el servidor
-const PORT = process.env.PORT || 4000
-const server = app.listen(PORT, async () => {
-  console.log(`✅ Backend on http://localhost:${PORT}`)
+const PORT = parseInt(process.env.PORT || "8080", 10)
+
+const server = app.listen(PORT, "0.0.0.0", async () => {
+  console.log(`✅ Backend running on 0.0.0.0:${PORT}`)
 
   // Conectar una vez al iniciar el backend
   try {

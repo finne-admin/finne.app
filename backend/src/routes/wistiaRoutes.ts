@@ -1,12 +1,25 @@
 import express from "express";
-import fetch from "node-fetch";
 import multer from "multer";
 import fs from "fs";
-import FormData from "form-data";
 import { requireAuth, requireAdmin } from "../middlewares/verifyToken";
 
+// ✅ Extiende el tipo de Request de Express para incluir "file"
+declare global {
+  namespace Express {
+    interface Request {
+      file?: Express.Multer.File;
+    }
+  }
+}
+
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+// In Cloud Run, only /tmp is writable
+try { fs.mkdirSync("/tmp/uploads", { recursive: true }); } catch {}
+const upload = multer({ dest: "/tmp/uploads/" });
+
+// Use Node 18+ built-in fetch and FormData to avoid ESM import issues
+const fetch = globalThis.fetch as typeof globalThis.fetch;
+const FormData = globalThis.FormData as typeof globalThis.FormData;
 
 const WISTIA_API_TOKEN = process.env.WISTIA_API_TOKEN!;
 const WISTIA_PROJECT_ID = process.env.WISTIA_PROJECT_ID!;
@@ -45,7 +58,9 @@ router.post("/upload", requireAuth, requireAdmin, upload.single("file"), async (
     if (!req.file) return res.status(400).json({ error: "Falta el archivo a subir" });
 
     const formData = new FormData();
-    formData.append("file", fs.createReadStream(req.file.path));
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const blob = new Blob([fileBuffer], { type: (req.file as any).mimetype || "application/octet-stream" });
+    formData.append("file", blob, req.file.originalname);
     formData.append("project_id", WISTIA_PROJECT_ID);
     formData.append("name", req.file.originalname);
 
@@ -60,7 +75,6 @@ router.post("/upload", requireAuth, requireAdmin, upload.single("file"), async (
     const data = await response.json();
     fs.unlinkSync(req.file.path);
 
-    // Type assertion to ensure data is an object with optional error property
     const dataObj = data as { error?: string };
 
     if (!response.ok) throw new Error(dataObj.error || "Error al subir vídeo");

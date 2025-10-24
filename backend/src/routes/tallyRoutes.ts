@@ -1,8 +1,9 @@
 import express from "express";
-import fetch from "node-fetch";
 import { requireAuth, requireAdmin } from "../middlewares/verifyToken";
 
 const router = express.Router();
+// Use Node 18+ built-in fetch to avoid ESM import issues
+const fetch = globalThis.fetch as typeof globalThis.fetch;
 const TALLY_API_KEY = process.env.TALLY_API_KEY!;
 const TALLY_FORM_ID = process.env.TALLY_FORM_ID!;
 
