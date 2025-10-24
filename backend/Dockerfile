@@ -13,3 +13,4 @@ EXPOSE 8080
 
 # Ejecutar TS sin compilar usando ts-node via require hook
 CMD ["npm", "start"]
+
