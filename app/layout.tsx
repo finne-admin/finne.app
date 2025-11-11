@@ -45,7 +45,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               />
               <main className="h-full min-h-dvh w-full">{children}</main>
               {/* Ticker global fijo */}
-              <TickerBar speedSeconds={10} />
+              <TickerBar speedSeconds={10}
+              gapPx={5} />
             </UnclaimedProgressProvider>
           </PerfilResumenRefProvider>
         </SessionContextProvider>
