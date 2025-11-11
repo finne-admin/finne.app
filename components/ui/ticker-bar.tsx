@@ -9,7 +9,7 @@ type TickerBarProps = {
 
 export default function TickerBar({
   message = process.env.NEXT_PUBLIC_TICKER_MESSAGE ||
-    "Aviso: recuerda completar tus retos semanales y revisar las notificaciones.",
+    "La temporada piloto finaliza en menos de un día. El jueves se entregarán los premios. Realiza la reinscripción en la app según las instrucciones del administrador o del correo",
   speedSeconds = 20,
 }: TickerBarProps) {
   return (
