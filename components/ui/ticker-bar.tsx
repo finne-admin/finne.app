@@ -23,10 +23,10 @@ export default function TickerBar({
           className="marquee-track"
           style={{ animationDuration: `${speedSeconds}s` }}
         >
-          <span className="px-6 whitespace-nowrap text-sm font-medium tracking-wide min-w-full">
+          <span className="px-8 whitespace-nowrap text-sm font-medium tracking-wide shrink-0">
             {message}
           </span>
-          <span className="px-6 whitespace-nowrap text-sm font-medium tracking-wide min-w-full" aria-hidden>
+          <span className="px-8 whitespace-nowrap text-sm font-medium tracking-wide shrink-0" aria-hidden>
             {message}
           </span>
         </div>
