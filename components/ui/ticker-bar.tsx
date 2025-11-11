@@ -10,7 +10,7 @@ type TickerBarProps = {
 
 export default function TickerBar({
   message = process.env.NEXT_PUBLIC_TICKER_MESSAGE ||
-    "La temporada piloto finaliza en menos de un día. El jueves se entregarán los premios. Vuelve a registrarte según las instrucciones del administrador o del correo     ",
+    "La temporada piloto finaliza en menos de un día. El jueves se entregarán los premios. Vuelve a registrarte según las instrucciones del administrador o del correo  // ",
   speedSeconds = 20,
   gapPx = 0,
 }: TickerBarProps) {
