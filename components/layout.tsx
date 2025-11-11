@@ -221,9 +221,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex flex-col h-screen flex-1">
         {headerContent}
-        <main className="flex-1 overflow-y-auto bg-gray-50">{children}</main>
+        {/* Añadimos padding-bottom para no tapar el contenido con el ticker fijo */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 pb-12">{children}</main>
         <Tutorial onClose={stopTutorial} run={isOpen} />
       </div>
+
 
       {/* Overlay de celebración con Rive */}
 <AnimatePresence>

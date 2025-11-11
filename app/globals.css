@@ -30,6 +30,28 @@
 }
 
 
+/* ===== Marquee (ticker inferior) ===== */
+@keyframes marquee-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee { overflow: hidden; }
+.marquee-track {
+  display: inline-flex;
+  width: 200%;
+  height: 100%;
+  align-items: center;
+  animation-name: marquee-slide;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none !important; }
+}
+
+
 
 @layer base {
   :root {

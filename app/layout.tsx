@@ -9,6 +9,7 @@ import { Toaster } from "sonner"
 import { PerfilResumenRefProvider } from '@/context/usePerfilResumenRef'
 import { UnclaimedProgressProvider } from '@/components/providers/UnclaimedProgressProvider'
 import AchievementsNotifier from '@/components/notifications/AchievementsNotifier' // ← nuevo import
+import TickerBar from '@/components/ui/ticker-bar'
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -43,6 +44,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="pointer-events-none fixed inset-0 z-[9999]"
               />
               <main className="h-full min-h-dvh w-full">{children}</main>
+              {/* Ticker global fijo */}
+              <TickerBar />
             </UnclaimedProgressProvider>
           </PerfilResumenRefProvider>
         </SessionContextProvider>
