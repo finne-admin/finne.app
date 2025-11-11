@@ -36,10 +36,10 @@
   100% { transform: translateX(-50%); }
 }
 
-.marquee { overflow: hidden; }
+.marquee { overflow: hidden; position: relative; }
 .marquee-track {
-  display: inline-flex;
-  width: 200%;
+  display: flex;           /* track toma el ancho de su contenido */
+  width: max-content;      /* 2x el ancho del mensaje (seamless loop) */
   height: 100%;
   align-items: center;
   animation-name: marquee-slide;
