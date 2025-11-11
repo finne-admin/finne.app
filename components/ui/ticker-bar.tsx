@@ -5,12 +5,14 @@ import React from "react";
 type TickerBarProps = {
   message?: string;
   speedSeconds?: number; // tiempo de un ciclo completo
+  gapPx?: number; // separación opcional entre repeticiones
 };
 
 export default function TickerBar({
   message = process.env.NEXT_PUBLIC_TICKER_MESSAGE ||
     "La temporada piloto finaliza en menos de un día. El jueves se entregarán los premios. Realiza la reinscripción en la app según las instrucciones del administrador o del correo",
   speedSeconds = 20,
+  gapPx = 0,
 }: TickerBarProps) {
   return (
     <div
@@ -21,12 +23,12 @@ export default function TickerBar({
       <div className="h-full marquee">
         <div
           className="marquee-track"
-          style={{ animationDuration: `${speedSeconds}s` }}
+          style={{ animationDuration: `${speedSeconds}s`, gap: `${gapPx}px` }}
         >
-          <span className="px-8 whitespace-nowrap text-sm font-medium tracking-wide shrink-0">
+          <span className="whitespace-nowrap text-sm font-medium tracking-wide shrink-0">
             {message}
           </span>
-          <span className="px-8 whitespace-nowrap text-sm font-medium tracking-wide shrink-0" aria-hidden>
+          <span className="whitespace-nowrap text-sm font-medium tracking-wide shrink-0" aria-hidden>
             {message}
           </span>
         </div>
