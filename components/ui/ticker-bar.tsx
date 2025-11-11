@@ -16,7 +16,7 @@ export default function TickerBar({
 }: TickerBarProps) {
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 h-10 bg-gradient-to-r from-[#8BC5B5] to-[#5B9B8B] text-white border-t border-white/20"
+      className="fixed left-0 right-0 top-1/2 -translate-y-1/2 z-40 h-14 bg-gradient-to-r from-[#8BC5B5]/80 to-[#5B9B8B]/80 backdrop-blur-sm text-white border-y border-white/20 shadow-md"
       role="region"
       aria-label="Avisos en curso"
     >
@@ -25,10 +25,10 @@ export default function TickerBar({
           className="marquee-track"
           style={{ animationDuration: `${speedSeconds}s`, gap: `${gapPx}px` }}
         >
-          <span className="whitespace-nowrap text-sm font-medium tracking-wide shrink-0">
+          <span className="whitespace-nowrap text-base sm:text-lg font-medium tracking-wide shrink-0">
             {message}
           </span>
-          <span className="whitespace-nowrap text-sm font-medium tracking-wide shrink-0" aria-hidden>
+          <span className="whitespace-nowrap text-base sm:text-lg font-medium tracking-wide shrink-0" aria-hidden>
             {message}
           </span>
         </div>
