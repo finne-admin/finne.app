@@ -6,6 +6,7 @@ node_modules/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+.env
 
 # testing
 /coverage
@@ -29,6 +30,8 @@ yarn-error.log*
 
 # local env files
 .env*.local
+
+elite-caster-474014-u9-26d089afd1a8.json
 
 # vercel
 .vercel
@@ -57,5 +60,4 @@ out/
 ./public/worker.js.LICENSE.txt.map
 ./public/worker.js.map.LICENSE.txt
 ./public/worker.js.map.LICENSE.txt.map
-
 
