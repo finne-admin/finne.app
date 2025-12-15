@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import fs from "fs";
-import { requireAuth, requireAdmin } from "../middlewares/verifyToken";
+import { requireAuth, requireOrganizationAdmin } from "../middlewares/verifyToken";
 
 // ✅ Extiende el tipo de Request de Express para incluir "file"
 declare global {
@@ -53,7 +53,7 @@ router.get("/videos", requireAuth, async (req, res) => {
 });
 
 // 📤 Subir vídeos (solo admin)
-router.post("/upload", requireAuth, requireAdmin, upload.single("file"), async (req, res) => {
+router.post("/upload", requireAuth, requireOrganizationAdmin, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Falta el archivo a subir" });
 

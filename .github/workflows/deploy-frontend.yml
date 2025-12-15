@@ -3,8 +3,6 @@ name: Deploy Frontend to Cloud Run
 on:
   push:
     branches: ["main"]
-    paths:
-      - "frontend/**"
 
 jobs:
   deploy:
@@ -25,18 +23,6 @@ jobs:
           project_id: elite-caster-474014-u9
           install_components: 'beta'
 
-      - name: Build and push Docker image
-        run: |
-          gcloud builds submit \
-            --project=elite-caster-474014-u9 \
-            --region=europe-southwest1 \
-            --tag=europe-southwest1-docker.pkg.dev/elite-caster-474014-u9/finne-repo/frontend:latest \
-            ./frontend
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy frontend \
-            --project=elite-caster-474014-u9 \
-            --region=europe-southwest1 \
-            --image=europe-southwest1-docker.pkg.dev/elite-caster-474014-u9/finne-repo/frontend:latest \
-            --allow-unauthenticated
+      - name: Deploy frontend via script (run from /frontend)
+        working-directory: frontend
+        run: pwsh -File ../scripts/deploy-frontend.ps1

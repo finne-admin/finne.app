@@ -2,9 +2,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { apiGet } from '@/lib/apiClient'
 
 // 🎉 util: disparar confetti (import dinámico para evitar SSR issues)
 async function fireConfetti(preset: 'ready' | 'claimed' = 'ready') {
@@ -25,186 +25,167 @@ async function fireConfetti(preset: 'ready' | 'claimed' = 'ready') {
   }
 }
 
-type WeeklyRow = {
-  user_id?: string
-  challenge_id?: string
-  completado?: boolean
-  reclamado?: boolean
+type WeeklyState = {
+  id: string
+  titulo: string
+  puntos: number
+  completado: boolean
+  reclamado: boolean
 }
 
-type AchievementRow = {
-  user_id?: string
-  achievement_id?: string
-  completado?: boolean
-  reclamado?: boolean
+type AchievementState = {
+  id: string
+  titulo: string
+  puntos: number
+  completado: boolean
+  reclamado: boolean
 }
-
-type Meta = { title: string; points?: number | null }
 
 export default function AchievementsNotifier() {
-  const supabase = createClientComponentClient()
   const router = useRouter()
 
-  // evita toasts duplicados por sesión
-  const shown = useRef<Set<string>>(new Set())
-  // cachés de metadatos
-  const weeklyMeta = useRef<Map<string, Meta>>(new Map())
-  const achMeta = useRef<Map<string, Meta>>(new Map())
+  const weeklyPrev = useRef<Map<string, WeeklyState>>(new Map())
+  const achievementsPrev = useRef<Map<string, AchievementState>>(new Map())
+  const notified = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let mounted = true
-    let chWeekly: ReturnType<typeof supabase.channel> | null = null
-    let chAch: ReturnType<typeof supabase.channel> | null = null
+    const POLL_INTERVAL = 15000
 
     const once = (key: string) => {
-      if (shown.current.has(key)) return false
-      shown.current.add(key)
+      if (notified.current.has(key)) return false
+      notified.current.add(key)
       return true
     }
 
-    const getWeeklyMeta = async (id: string): Promise<Meta> => {
-      const cached = weeklyMeta.current.get(id)
-      if (cached) return cached
-      const { data } = await supabase
-        .from('weekly_challenges_catalog')
-        .select('id,title,points')
-        .eq('id', id)
-        .maybeSingle()
-      const meta: Meta = { title: data?.title ?? 'Reto semanal', points: data?.points ?? null }
-      weeklyMeta.current.set(id, meta)
-      return meta
-    }
+    const processWeekly = (list: WeeklyState[]) => {
+      list.forEach((item) => {
+        const previous = weeklyPrev.current.get(item.id)
+        const wasReady = !!previous?.completado && !previous?.reclamado
+        const nowReady = !!item.completado && !item.reclamado
+        const justClaimed = !!item.reclamado && !previous?.reclamado
 
-    const getAchMeta = async (id: string): Promise<Meta> => {
-      const cached = achMeta.current.get(id)
-      if (cached) return cached
-      const { data } = await supabase
-        .from('achievements_catalog')
-        .select('id,title,points')
-        .eq('id', id)
-        .maybeSingle()
-      const meta: Meta = { title: data?.title ?? 'Logro', points: data?.points ?? null }
-      achMeta.current.set(id, meta)
-      return meta
-    }
-
-    const start = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || !mounted) return
-
-      // WEEKLY
-      chWeekly = supabase
-        .channel(`notifier-weekly-${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'user_weekly_challenges', filter: `user_id=eq.${user.id}` },
-          async (payload) => {
-            if (!mounted) return
-            const oldRow = (payload.old ?? {}) as WeeklyRow
-            const newRow = (payload.new ?? {}) as WeeklyRow
-            const cid = newRow.challenge_id || oldRow.challenge_id
-            if (!cid) return
-
-            const wasUnclaimed = !!oldRow.completado && !oldRow.reclamado
-            const nowUnclaimed = !!newRow.completado && !newRow.reclamado
-            const justClaimed = !!newRow.reclamado && !oldRow.reclamado
-
-            // pasó a "listo para reclamar"
-            if (!wasUnclaimed && nowUnclaimed) {
-              const key = `weekly-ready-${cid}`
-              if (!once(key)) return
-              const meta = await getWeeklyMeta(cid)
-              toast.success('¡Reto semanal completado!', {
-                description: `${meta.title}`,
-                duration: 5000,
-                action: {
-                  label: 'Ver',
-                  onClick: () => router.push('/milestones'),
-                },
-              })
-              fireConfetti('ready').catch(() => {})
-            }
-
-            // pasó a "reclamado"
-            if (justClaimed) {
-              const key = `weekly-claimed-${cid}`
-              if (!once(key)) return
-              const meta = await getWeeklyMeta(cid)
-              const pts = meta.points ? ` +${meta.points} PA` : ''
-              toast('¡Recompensa reclamada!', {
-                description: `${meta.title}${pts}`,
-                duration: 5000,
-                action: {
-                  label: 'Ver',
-                  onClick: () => router.push('/milestones'),
-                },
-              })
-              fireConfetti('claimed').catch(() => {})
-            }
+        if (!wasReady && nowReady) {
+          const key = `weekly-ready-${item.id}`
+          if (once(key)) {
+            toast.success("¡Reto semanal completado!", {
+              description: item.titulo,
+              duration: 5000,
+              action: {
+                label: "Ver",
+                onClick: () => router.push("/milestones"),
+              },
+            })
+            fireConfetti("ready").catch(() => {})
           }
-        )
-        .subscribe()
+        }
 
-      // ACHIEVEMENTS
-      chAch = supabase
-        .channel(`notifier-ach-${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'user_achievements', filter: `user_id=eq.${user.id}` },
-          async (payload) => {
-            if (!mounted) return
-            const oldRow = (payload.old ?? {}) as AchievementRow
-            const newRow = (payload.new ?? {}) as AchievementRow
-            const aid = (newRow.achievement_id || (payload.new as any)?.id || oldRow.achievement_id)
-            if (!aid) return
-
-            const wasUnclaimed = !!oldRow.completado && !oldRow.reclamado
-            const nowUnclaimed = !!newRow.completado && !newRow.reclamado
-            const justClaimed = !!newRow.reclamado && !oldRow.reclamado
-
-            if (!wasUnclaimed && nowUnclaimed) {
-              const key = `ach-ready-${aid}`
-              if (!once(key)) return
-              const meta = await getAchMeta(aid)
-              toast.success('¡Logro completado!', {
-                description: `${meta.title}`,
-                duration: 5000,
-                action: {
-                  label: 'Ver',
-                  onClick: () => router.push('/milestones/logros'),
-                },
-              })
-              fireConfetti('ready').catch(() => {})
-            }
-
-            if (justClaimed) {
-              const key = `ach-claimed-${aid}`
-              if (!once(key)) return
-              const meta = await getAchMeta(aid)
-              const pts = meta.points ? ` +${meta.points} PA` : ''
-              toast('¡Recompensa reclamada!', {
-                description: `${meta.title}${pts}`,
-                duration: 5000,
-                action: {
-                  label: 'Ver',
-                  onClick: () => router.push('/milestones/logros'),
-                },
-              })
-              fireConfetti('claimed').catch(() => {})
-            }
+        if (justClaimed) {
+          const key = `weekly-claimed-${item.id}`
+          if (once(key)) {
+            const pts = item.puntos ? ` +${item.puntos} PA` : ""
+            toast("¡Recompensa reclamada!", {
+              description: `${item.titulo}${pts}`,
+              duration: 5000,
+              action: {
+                label: "Ver",
+                onClick: () => router.push("/milestones"),
+              },
+            })
+            fireConfetti("claimed").catch(() => {})
           }
-        )
-        .subscribe()
+        }
+
+        weeklyPrev.current.set(item.id, item)
+      })
     }
 
-    start()
+    const processAchievements = (list: AchievementState[]) => {
+      list.forEach((item) => {
+        const previous = achievementsPrev.current.get(item.id)
+        const wasReady = !!previous?.completado && !previous?.reclamado
+        const nowReady = !!item.completado && !item.reclamado
+        const justClaimed = !!item.reclamado && !previous?.reclamado
+
+        if (!wasReady && nowReady) {
+          const key = `ach-ready-${item.id}`
+          if (once(key)) {
+            toast.success("¡Logro completado!", {
+              description: item.titulo,
+              duration: 5000,
+              action: {
+                label: "Ver",
+                onClick: () => router.push("/milestones/logros"),
+              },
+            })
+            fireConfetti("ready").catch(() => {})
+          }
+        }
+
+        if (justClaimed) {
+          const key = `ach-claimed-${item.id}`
+          if (once(key)) {
+            const pts = item.puntos ? ` +${item.puntos} PA` : ""
+            toast("¡Recompensa reclamada!", {
+              description: `${item.titulo}${pts}`,
+              duration: 5000,
+              action: {
+                label: "Ver",
+                onClick: () => router.push("/milestones/logros"),
+              },
+            })
+            fireConfetti("claimed").catch(() => {})
+          }
+        }
+
+        achievementsPrev.current.set(item.id, item)
+      })
+    }
+
+    const fetchStates = async () => {
+      try {
+        const [weeklyRes, achRes] = await Promise.all([
+          apiGet("/api/milestones/weekly-challenges"),
+          apiGet("/api/milestones/achievements/all"),
+        ])
+        if (!mounted) return
+
+        if (weeklyRes.ok) {
+          const data = await weeklyRes.json()
+          const challenges: WeeklyState[] = (data?.challenges ?? []).map((item: any) => ({
+            id: item.id,
+            titulo: item.titulo,
+            puntos: Number(item.puntos ?? 0),
+            completado: Boolean(item.completado),
+            reclamado: Boolean(item.reclamado),
+          }))
+          processWeekly(challenges)
+        }
+
+        if (achRes.ok) {
+          const data = await achRes.json()
+          const achievements: AchievementState[] = (data?.achievements ?? []).map((item: any) => ({
+            id: item.id,
+            titulo: item.titulo,
+            puntos: Number(item.puntos ?? 0),
+            completado: Boolean(item.completado),
+            reclamado: Boolean(item.reclamado),
+          }))
+          processAchievements(achievements)
+        }
+      } catch (error) {
+        console.error("Error fetching achievement states:", error)
+      }
+    }
+
+    fetchStates()
+    const interval = setInterval(fetchStates, POLL_INTERVAL)
 
     return () => {
       mounted = false
-      if (chWeekly) supabase.removeChannel(chWeekly)
-      if (chAch) supabase.removeChannel(chAch)
+      clearInterval(interval)
     }
-  }, [supabase, router])
+  }, [router])
 
   return null
 }

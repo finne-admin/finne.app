@@ -6,7 +6,7 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 type UserRole = 'admin' | 'user'
 
 // Paths that require authentication
-const PROTECTED_PATHS = ['/admin', '/library', '/milestones', '/notification', '/settings', '/statistics']
+const PROTECTED_PATHS = ['/admin', '/library', '/milestones', '/notifications', '/settings', '/statistics']
 
 // Function to check if path is protected
 const isProtectedPath = (pathname: string): boolean => {
@@ -45,7 +45,7 @@ export async function middleware(req: NextRequest) {
 
                 // Redirect to login if setup is completed
                 if (setupData?.value === true) {
-                    return NextResponse.redirect(new URL('/notification', req.url))
+                    return NextResponse.redirect(new URL('/notifications', req.url))
                 }
 
                 return res
@@ -74,7 +74,7 @@ export async function middleware(req: NextRequest) {
                         userId: session.user.id,
                         role: userRole
                     })
-                    return NextResponse.redirect(new URL('/notification', req.url))
+                    return NextResponse.redirect(new URL('/notifications', req.url))
                 }
             }
 
@@ -112,7 +112,7 @@ export const config = {
         '/admin/:path*',
         '/library/:path*',
         '/milestones/:path*',
-        '/notification/:path*',
+        '/notifications/:path*',
         '/settings/:path*',
         '/statistics/:path*',
         '/api/:path*'

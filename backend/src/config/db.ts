@@ -20,7 +20,7 @@ export async function createPool() {
     pool = new Pool({
       ...clientOpts,
       user: 'postgres',
-      database: 'finne_prod',
+      database: 'postgres',
     })
   } else {
     // En desarrollo → conexión directa por IP pública

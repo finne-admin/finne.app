@@ -2,16 +2,15 @@
 
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getMessaging, Messaging, onMessage, getToken } from 'firebase/messaging';
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCeTWV4MAIuT5J5iOdV5omkiMNZcxsGAkc",
-    authDomain: "finne-app.firebaseapp.com",
-    projectId: "finne-app",
-    storageBucket: "finne-app.firebasestorage.app",
-    messagingSenderId: "233326747096",
-    appId: "1:233326747096:web:02be2c3fbfc04ef0e4e6ad",
-    measurementId: "G-DTPM6L289S"
+  apiKey: "AIzaSyA2yPIAbqGJp7cwNWv7npATR9-x0yCHX5M",
+  authDomain: "elite-caster-474014-u9.firebaseapp.com",
+  projectId: "elite-caster-474014-u9",
+  storageBucket: "elite-caster-474014-u9.firebasestorage.app",
+  messagingSenderId: "114634150787",
+  appId: "1:114634150787:web:9536e666b8fa2546589cb6",
+  measurementId: "G-KJJLVYYB2K"
 };
 
 let firebaseApp: FirebaseApp;
@@ -49,18 +48,6 @@ export async function requestPermissionAndGetToken(): Promise<string | null> {
         if (currentToken) {
             console.log('FCM Token:', currentToken);
             return currentToken;
-        }
-
-        const supabase = createClientComponentClient();
-        const deviceId = localStorage.getItem('device_id');
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session?.user?.id) {
-            await supabase
-                .from('fcm_tokens')
-                .delete()
-                .eq('user_id', session.user.id)
-                .eq('device_id', deviceId);
         }
 
         console.log('No registration token available. Request permission to generate one.');

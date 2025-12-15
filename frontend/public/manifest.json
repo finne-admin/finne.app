@@ -1,6 +1,7 @@
 {
   "name": "Finne.app",
   "short_name": "Finne.app",
+  "version": "2025.11.13",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -1,5 +1,6 @@
 # Ignorar node_modules, logs, etc.
 node_modules/
+.next/
 *.log
 .git/
 .gitignore

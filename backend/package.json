@@ -6,20 +6,26 @@
   "scripts": {
     "dev": "ts-node src/server.ts",
     "build": "tsc",
-    "start": "node -r ts-node/register src/server.ts"
+    "start": "node -r ts-node/register src/server.ts",
+    "create-admin": "ts-node scripts/create-admin.ts",
+    "db:migrate": "ts-node scripts/migrate.ts",
+    "notifications:run": "ts-node src/jobs/dispatchNotifications.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/storage": "^7.11.0",
     "@google-cloud/cloud-sql-connector": "^1.8.4",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "firebase-admin": "^12.7.0",
     "form-data": "^4.0.4",
     "jsonwebtoken": "^9.0.2",
+    "luxon": "^3.5.0",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "pg": "^8.16.3",

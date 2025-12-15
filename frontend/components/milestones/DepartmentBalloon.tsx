@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { motion, useAnimationFrame, useMotionValue } from 'framer-motion'
 
 type Props = {
@@ -10,7 +9,8 @@ type Props = {
   className?: string
   height?: number
   ceilingPx?: number   // altura a evitar desde arriba (px)
-  showInlineCount?: boolean   // <— NUEVO
+  showInlineCount?: boolean   // <- NUEVO
+  current?: number
 }
 
 export default function CerditoGlobo({
@@ -18,10 +18,10 @@ export default function CerditoGlobo({
   className,
   height = 800,
   ceilingPx = 0,
-  showInlineCount = false,     // <— por defecto ya va fuera
-
+  showInlineCount = false,     // <- por defecto ya va fuera
+  current,
 }: Props) {
-  const [totalExp, setTotalExp] = useState<number | null>(null)
+  const [totalExp, setTotalExp] = useState<number | null>(current ?? null)
   const [ropePath, setRopePath] = useState<string>('')
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -82,19 +82,8 @@ export default function CerditoGlobo({
 
   // -------- Datos ----------
   useEffect(() => {
-    const fetchTotal = async () => {
-      const supabase = createClientComponentClient()
-      const { data } = await supabase.from('users').select('periodical_exp')
-      if (data) {
-        const total = data.reduce(
-          (acc, r: { periodical_exp: number | null }) => acc + (r.periodical_exp ?? 0),
-          0
-        )
-        setTotalExp(total)
-      }
-    }
-    fetchTotal()
-  }, [])
+    setTotalExp(current ?? null)
+  }, [current])
 
   const progress = Math.max(0, Math.min(1, (totalExp ?? 0) / goal))
   const scale = 0.85 + 0.6 * progress
@@ -129,6 +118,9 @@ export default function CerditoGlobo({
     if (!el) return
     const w = el.clientWidth
     const h = el.clientHeight
+    if (w <= 0 || h <= 0) {
+      return
+    }
     const dt = Math.min(32, deltaMs)
 
     const ax = w / 2

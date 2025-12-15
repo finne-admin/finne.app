@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+// Supabase removed
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle } from 'lucide-react'
 
@@ -18,7 +18,7 @@ interface FormState {
 }
 
 export default function ForgotPasswordPage() {
-    const supabase = createClientComponentClient()
+    // Supabase removed
     const router = useRouter()
 
     const [formState, setFormState] = useState<FormState>({
@@ -78,23 +78,22 @@ export default function ForgotPasswordPage() {
         updateFormState({ isLoading: true, errorMessage: '', successMessage: '' })
 
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password?token=true`,
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
             })
-
-            if (error) throw error
-
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                throw new Error(data?.error || 'Servicio no disponible')
+            }
             updateFormState({
                 successMessage: 'Email de restablecimiento enviado. Redirigiendo al inicio de sesión en 5 segundos...',
-                email: '' // Clear email after success
+                email: ''
             })
             startRedirectCountdown()
         } catch (error: any) {
-            console.error('Error de restablecimiento de contraseña:', error)
-            const errorMessage = error.status === 429
-                ? 'Demasiadas solicitudes. Por favor, inténtalo más tarde.'
-                : error.message || 'Error al enviar el email de restablecimiento'
-            updateFormState({ errorMessage })
+            updateFormState({ errorMessage: error.message || 'Servicio no disponible' })
         } finally {
             updateFormState({ isLoading: false })
         }
@@ -229,3 +228,4 @@ export default function ForgotPasswordPage() {
         </div>
     )
 }
+

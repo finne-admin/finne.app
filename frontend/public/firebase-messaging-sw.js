@@ -1,70 +1,97 @@
 importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging-compat.js');
 
-// Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCeTWV4MAIuT5J5iOdV5omkiMNZcxsGAkc",
-    authDomain: "finne-app.firebaseapp.com",
-    projectId: "finne-app",
-    storageBucket: "finne-app.firebasestorage.app",
-    messagingSenderId: "233326747096",
-    appId: "1:233326747096:web:02be2c3fbfc04ef0e4e6ad",
-    measurementId: "G-DTPM6L289S"
+  apiKey: 'AIzaSyA2yPIAbqGJp7cwNWv7npATR9-x0yCHX5M',
+  authDomain: 'elite-caster-474014-u9.firebaseapp.com',
+  projectId: 'elite-caster-474014-u9',
+  storageBucket: 'elite-caster-474014-u9.firebasestorage.app',
+  messagingSenderId: '114634150787',
+  appId: '1:114634150787:web:9536e666b8fa2546589cb6',
+  measurementId: 'G-KJJLVYYB2K',
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Handle background messages
 messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Received background message:', payload);
+  console.log('[firebase-messaging-sw.js] Received background message:', payload);
 
-    // Extract title and body from the data field
-    const notificationTitle = payload.data?.title ?? '¡Pausa Activa!';
-    const notificationOptions = {
-        body: payload.data?.body ?? '¡Es hora de tu pausa activa! 💪',
-        icon: '/logoprincipalRecurso 4@4x.png',
-        data: payload.data, // Pass the data to the notification
-    };
+  const notificationTitle = payload.data?.title ?? '¡Pausa Activa!';
+  const notificationOptions = {
+    body: payload.data?.body ?? '¡Es hora de tu pausa activa!',
+    icon: '/logoprincipalRecurso 4@4x.png',
+    data: payload.data ?? {},
+    requireInteraction: true,
+  };
 
-    // Display the notification
-    self.registration.showNotification(notificationTitle, notificationOptions);
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Handle notification click events
 self.addEventListener('notificationclick', (event) => {
-    event.notification.close(); // Close the notification immediately
+  event.notification.close();
 
-    event.waitUntil(
-        (async () => {
-            const action = event.action; // The action identifier (e.g., "GO_ACTION", "SNOOZE_ACTION")
-            const notificationData = event.notification.data || {};
-            const userId = notificationData.user_id; // Custom data passed with the notification
+  event.waitUntil(
+    (async () => {
+      const action = event.action;
+      const notificationData = event.notification.data || {};
 
-            try {
-                if (action === 'GO_ACTION') {
-                    // Open or focus a specific page in your PWA
-                    await clients.openWindow('/notification');
-                } else if (action === 'SNOOZE_ACTION') {
-                    // Send a POST request to your backend function (e.g., to snooze a reminder)
-                    await fetch('https://cgpqlasmzpabwrubvhyl.supabase.co/functions/v1/handle-snooze', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId }),
-                    });
-                } else {
-                    // Default action: open the homepage or another default page
-                    await clients.openWindow('/notification');
-                }
-            } catch (error) {
-                console.error('Error handling notification click:', error);
-            }
-        })()
-    );
+      try {
+        if (action === 'GO_ACTION') {
+          await clients.openWindow('/notifications');
+        } else if (action === 'SNOOZE_ACTION') {
+          await fetch('https://cgpqlasmzpabwrubvhyl.supabase.co/functions/v1/handle-snooze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: notificationData.user_id }),
+          });
+        } else {
+          await clients.openWindow('/notifications');
+        }
+      } catch (error) {
+        console.error('Error handling notification click:', error);
+      }
+    })(),
+  );
 });
 
-// (Optional) Listen for notification close events
 self.addEventListener('notificationclose', (event) => {
-    console.log('Notification was closed', event.notification);
+  console.log('Notification was closed', event.notification);
+});
+
+self.addEventListener('push', (event) => {
+  if (Notification.permission !== 'granted' || !event.data) {
+    return;
+  }
+
+  let parsed;
+  let isDevtoolsTest = false;
+
+  try {
+    parsed = event.data.json();
+  } catch (_err) {
+    isDevtoolsTest = true;
+  }
+
+  if (!isDevtoolsTest) {
+    const looksLikeFcm =
+      parsed?.data?.firebaseMessaging || parsed?.notification || parsed?.from;
+    if (looksLikeFcm) {
+      return;
+    }
+  }
+
+  const title = isDevtoolsTest
+    ? 'Push test desde DevTools'
+    : parsed?.title || 'Push test';
+
+  const body = isDevtoolsTest ? event.data.text() : parsed?.body || '';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/logoprincipalRecurso 4@4x.png',
+      data: parsed?.data || {},
+    })
+  );
 });

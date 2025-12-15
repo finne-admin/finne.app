@@ -1,0 +1,137 @@
+import { Request, Response } from "express";
+import { getGlobalStatistics, getUserStatistics } from "../db/queries/statisticsQueries";
+import { getMembershipForUser } from "../db/queries/userMembershipQueries";
+
+export const getUserStatisticsController = async (req: Request, res: Response) => {
+  try {
+    // Obtener el usuario autenticado desde el middleware
+    const authUser = (req as any).user;
+
+    if (!authUser?.id) {
+      return res.status(401).json({ error: "No autenticado" });
+    }
+
+    const userId: string = authUser.id;
+
+    const stats = await getUserStatistics(userId);
+
+    // Generar insights básicos
+    const insights: string[] = [];
+
+    if (Number(stats.summary.weekly_sessions) > 0) {
+      insights.push("💪 Has completado varias pausas esta semana. ¡Sigue así!");
+    }
+
+    if (stats.category_distribution.length > 0) {
+      const topCategory = stats.category_distribution[0].category;
+      insights.push(`🔥 Tu categoría más frecuente es ${topCategory}.`);
+    }
+
+    if (stats.weekly_pattern.length > 0) {
+      const topDay = stats.weekly_pattern[0].day_of_week.trim();
+      insights.push(`📅 Sueles hacer más ejercicio los ${topDay.toLowerCase()}.`);
+    }
+
+    const avgSat = Number(stats.summary.avg_satisfaction);
+    if (avgSat >= 4.5)
+      insights.push("😊 Te sientes muy satisfecho con tus sesiones últimamente.");
+    else if (avgSat < 3)
+      insights.push("😕 Tu satisfacción está baja, prueba otro tipo de ejercicio.");
+
+    res.json({
+      ...stats,
+      insights,
+    });
+  } catch (err) {
+    console.error("Error al obtener estadísticas:", err);
+    res.status(500).json({ error: "Error interno al obtener estadísticas" });
+  }
+};
+
+export const getGlobalStatisticsController = async (req: Request, res: Response) => {
+  try {
+    const organizationId =
+      typeof req.query.organizationId === "string" && req.query.organizationId.length
+        ? req.query.organizationId
+        : undefined
+    const departmentId =
+      typeof req.query.departmentId === "string" && req.query.departmentId.length
+        ? req.query.departmentId
+        : undefined
+
+    const stats = await getGlobalStatistics({ organizationId, departmentId })
+    return res.json(stats)
+  } catch (error) {
+    console.error("Error al obtener estadísticas globales:", error)
+    return res.status(500).json({ error: "Error interno al obtener estadísticas globales" })
+  }
+}
+
+export const getScopedStatisticsController = async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user
+    if (!authUser?.id) return res.status(401).json({ error: "No autenticado" })
+
+    const roleName = authUser.roleName?.toLowerCase()
+    let filters: { organizationId?: string | null; departmentId?: string | null } | undefined
+
+    if (roleName === "superadmin" || roleName === "soporte") {
+      const organizationId =
+        typeof req.query.organizationId === "string" && req.query.organizationId.trim().length
+          ? req.query.organizationId.trim()
+          : undefined
+      const departmentId =
+        typeof req.query.departmentId === "string" && req.query.departmentId.trim().length
+          ? req.query.departmentId.trim()
+          : undefined
+      filters = { organizationId, departmentId }
+    } else {
+      const membership = await getMembershipForUser(authUser.id)
+      if (!membership?.organization_id) {
+        return res.status(400).json({ error: "Tu cuenta no tiene organización asignada" })
+      }
+      filters = {
+        organizationId: membership.organization_id,
+      }
+    }
+
+    const stats = await getGlobalStatistics(filters)
+    return res.json(stats)
+  } catch (error) {
+    console.error("Error al obtener estadísticas del panel:", error)
+    return res.status(500).json({ error: "Error interno al obtener estadísticas" })
+  }
+}
+
+export const getUserStatisticsForAdminController = async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user
+    if (!authUser?.id) return res.status(401).json({ error: "No autenticado" })
+
+    const targetUserId = req.params.userId
+    if (!targetUserId) return res.status(400).json({ error: "Falta el usuario solicitado" })
+
+    const roleName = authUser.roleName?.toLowerCase()
+    const isGlobalAdmin = roleName === "superadmin" || roleName === "soporte"
+
+    if (!isGlobalAdmin) {
+      const requesterMembership = await getMembershipForUser(authUser.id)
+      if (!requesterMembership?.organization_id) {
+        return res.status(403).json({ error: "No tienes una organización asignada" })
+      }
+      const targetMembership = await getMembershipForUser(targetUserId)
+      if (
+        !targetMembership?.organization_id ||
+        targetMembership.organization_id !== requesterMembership.organization_id
+      ) {
+        return res.status(403).json({ error: "No autorizado para ver este usuario" })
+      }
+    }
+
+    const stats = await getUserStatistics(targetUserId)
+    return res.json(stats)
+  } catch (error) {
+    console.error("Error al obtener estadísticas del usuario:", error)
+    return res.status(500).json({ error: "Error interno al obtener estadísticas del usuario" })
+  }
+}

@@ -6,19 +6,34 @@ import wistiaRoutes from "./routes/wistiaRoutes"
 import tallyRoutes from "./routes/tallyRoutes"
 import { getPool } from "./config/dbManager"
 import authRoutes from "./routes/authRoutes"
+import questionnairesRoutes from "./routes/questionnairesRoutes"
+import quotaRoutes from "./routes/quotaRoutes";
+import statisticsRoutes from "./routes/statisticsRoutes";
+import activePauseRoutes from "./routes/activePauseRoutes";
+import tagsRoutes from "./routes/tagsRoutes"
+import xpRoutes from "./routes/xpRoutes"
+import exerciseRoutes from "./routes/exerciseRoutes"
+import favoriteRoutes from "./routes/favoriteRoutes"
+import milestonesRoutes from "./routes/milestonesRoutes"
+import userRoutes from "./routes/userRoutes"
+import notificationRoutes from "./routes/notificationRoutes"
+import adminRoutes from "./routes/adminRoutes"
+import achievementRoutes from "./routes/achievementRoutes"
+import socialRoutes from "./routes/socialRoutes"
+import systemRoutes from "./routes/systemRoutes"
 
 dotenv.config()
 
 const app = express()
 
-// CORS con credenciales para permitir cookies en peticiones cross-site
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000"
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "https://finne-beta.online";
+
 app.use(
   cors({
-    origin: FRONTEND_ORIGIN,
+    origin: [FRONTEND_ORIGIN, "https://www.finne-beta.online"],
     credentials: true,
   })
-)
+);
 
 // Parseo de JSON y cookies (para leer refresh_token)
 app.use(express.json())
@@ -26,6 +41,21 @@ app.use(cookieParser())
 app.use("/api/auth", authRoutes)
 app.use("/api/wistia", wistiaRoutes)
 app.use("/api/tally", tallyRoutes)
+app.use("/api/quota", quotaRoutes);
+app.use("/api/statistics", statisticsRoutes);
+app.use("/api/active-pauses", activePauseRoutes);
+app.use("/api/tags", tagsRoutes)
+app.use("/api/xp", xpRoutes)
+app.use("/api/exercises", exerciseRoutes)
+app.use("/api/exercises/favorites", favoriteRoutes)
+app.use("/api/questionnaires", questionnairesRoutes)
+app.use("/api/user", userRoutes)
+app.use("/api/notifications", notificationRoutes)
+app.use("/api/milestones", milestonesRoutes)
+app.use("/api/admin", adminRoutes)
+app.use("/api/achievements", achievementRoutes)
+app.use("/api/social", socialRoutes)
+app.use("/api/system", systemRoutes)
 
 // Ruta simple de prueba
 app.get("/", (_, res) => {

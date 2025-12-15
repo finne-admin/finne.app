@@ -7,12 +7,11 @@ export function middleware(req: NextRequest) {
   // Rutas protegidas
   const protectedPaths = [
     pathname.startsWith("/notifications"),
-    pathname.startsWith("/notification"),
     pathname.startsWith("/(authenticated)"),
   ];
 
   if (protectedPaths.some(Boolean)) {
-    const refreshCookie = req.cookies.get("refresh_token");
+    const refreshCookie = req.cookies.get("accessToken");
     if (!refreshCookie) {
       const url = new URL("/login", origin);
       url.searchParams.set("next", pathname);
@@ -24,6 +23,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/notifications", "/notification", "/(authenticated)(.*)"],
-};
-
+  matcher: ["/notifications/:path*", "/(authenticated)/:path*"],
+}

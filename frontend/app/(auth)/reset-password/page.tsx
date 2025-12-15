@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+// Supabase removed
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
@@ -21,7 +21,7 @@ interface FormState {
 }
 
 export default function ResetPasswordPage() {
-    const supabase = createClientComponentClient()
+    // Supabase removed
     const router = useRouter()
 
     const [formState, setFormState] = useState<FormState>({
@@ -75,25 +75,33 @@ export default function ResetPasswordPage() {
             updateFormState({ errorMessage: 'Las contraseñas no coinciden' })
             return
         }
-
         updateFormState({ isLoading: true, errorMessage: '', successMessage: '' })
 
         try {
-            const { error } = await supabase.auth.updateUser({ password })
-
-            if (error) throw error
-
+            const params = new URLSearchParams(window.location.search)
+            const token = params.get('token')
+            if (!token) {
+                updateFormState({ errorMessage: 'Token de restablecimiento faltante o inválido' })
+                updateFormState({ isLoading: false })
+                return
+            }
+            const res = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, password })
+            })
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                throw new Error(data?.error || 'Error al restablecer contraseña')
+            }
             updateFormState({
-                successMessage: '¡Contraseña restablecida con éxito! Redirigiendo al inicio de sesión en 5 segundos...',
+                successMessage: 'Contraseña restablecida. Redirigiendo al inicio de sesión en 5 segundos...',
                 password: '',
                 confirmPassword: ''
             })
             startRedirectCountdown()
         } catch (error: any) {
-            console.error('Error al restablecer contraseña:', error)
-            updateFormState({
-                errorMessage: error.message || 'Error al restablecer la contraseña'
-            })
+            updateFormState({ errorMessage: error.message || 'Error al restablecer contraseña' })
         } finally {
             updateFormState({ isLoading: false })
         }
@@ -262,3 +270,6 @@ export default function ResetPasswordPage() {
         </div>
     )
 }
+
+
+

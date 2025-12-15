@@ -3,8 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import BadgeDot from '@/components/ui/BadgeDot'
-import { useUnclaimedProgressSplit } from '@/components/hooks/useUnclaimedProgressSplit'
 
 const tabs = [
   { label: 'Perfil', href: '/milestones' },
@@ -15,7 +13,6 @@ const tabs = [
 
 export function MilestonesTabs() {
   const pathname = usePathname()
-  const { hasWeekly, hasAchievements } = useUnclaimedProgressSplit()
 
   return (
     <nav className="w-full border-b border-gray-300 mb-6">
@@ -23,9 +20,6 @@ export function MilestonesTabs() {
         {tabs.map(({ label, href }) => {
           const isActive =
             pathname === href || (href !== '/milestones' && pathname.startsWith(href))
-
-          const showWeekly = href === '/milestones' && hasWeekly
-          const showAchievements = href === '/milestones/logros' && hasAchievements
 
           return (
             <Link
@@ -40,10 +34,6 @@ export function MilestonesTabs() {
             >
               <span className="relative inline-flex items-center gap-2">
                 {label}
-                {/* Badge semanal → Perfil */}
-                {showWeekly && <BadgeDot show className="static ml-1" />}
-                {/* Badge logros normales → Logros */}
-                {showAchievements && <BadgeDot show className="static ml-1" />}
               </span>
             </Link>
           )

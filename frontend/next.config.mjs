@@ -12,6 +12,10 @@ const withPWA = nextPwa({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // 👇 evita fallos en build de Cloud Run
+  output: "standalone",
+  
   images: {
     remotePatterns: [
       {
@@ -36,7 +40,7 @@ const nextConfig = {
     return [
       {
         source: "/",
-        destination: "/notification",
+        destination: "/notifications",
         permanent: true,
       },
     ]

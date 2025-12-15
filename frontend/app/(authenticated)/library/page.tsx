@@ -1,17 +1,15 @@
 "use client"
 
 import { useEffect, useState, useCallback } from 'react'
-import { Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, ArrowLeft } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { ExerciseCard } from '@/components/ui/exercise-card'
 import { WistiaModal } from "@/components/wistia-modal/wistia-modal"
-import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
 import { checkAchievements } from '@/lib/achievements';
-import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
-
-const supabase = createClientComponentClient()
+import { apiGet, apiPost, apiDelete } from "@/lib/apiClient"
 
 function SkeletonCard() {
     return (
@@ -50,6 +48,7 @@ const TAGS = [
 ]
 
 export default function ExerciseLibrary() {
+    const router = useRouter()
     const [exercises, setExercises] = useState<WistiaMedia[]>([])
     const [loading, setLoading] = useState(true)
     const [showFavorites, setShowFavorites] = useState(false)
@@ -76,61 +75,53 @@ export default function ExerciseLibrary() {
         initializeData()
     }, [])
 
-    // Fetch user favorites from Supabase
+    // Fetch user favorites from API
     const fetchUserFavorites = useCallback(async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data, error } = await supabase
-            .from('exercise_favorites')
-            .select('video_hashed_id')
-            .eq('user_id', user.id)
-
-        if (error) {
-            setError('Error al cargar favoritos')
-            return
+        try {
+            const res = await apiGet("/api/exercises/favorites")
+            if (res.status === 401) {
+                setFavorites(new Set())
+                return
+            }
+            const data = await res.json()
+            if (!res.ok) {
+                throw new Error(data.error || "Error al cargar favoritos")
+            }
+            const list = Array.isArray(data.favorites) ? data.favorites : []
+            setFavorites(new Set(list.map((fav: any) => fav.video_hashed_id || fav)))
+        } catch (err) {
+            console.error("Error al cargar favoritos:", err)
+            setError("Error al cargar favoritos")
         }
-
-        setFavorites(new Set(data.map((f: { video_hashed_id: any }) => f.video_hashed_id)))
     }, [])
 
     // Toggle favorite handler
     const handleFavoriteToggle = async (hashedId: string) => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            setError('Debes iniciar sesión para guardar favoritos')
-            return
-        }
-
         try {
             const isFavorite = favorites.has(hashedId)
-            const newFavorites = new Set(favorites)
+            setFavorites((prev) => {
+                const updated = new Set(prev)
+                if (isFavorite) {
+                    updated.delete(hashedId)
+                } else {
+                    updated.add(hashedId)
+                }
+                return updated
+            })
 
-            // Optimistic update
-            if (isFavorite) {
-                newFavorites.delete(hashedId)
-            } else {
-                newFavorites.add(hashedId)
+            const response = isFavorite
+                ? await apiDelete("/api/exercises/favorites", { video_hashed_id: hashedId })
+                : await apiPost("/api/exercises/favorites", { video_hashed_id: hashedId })
+            const data = await response.json()
+            if (!response.ok) {
+                throw new Error(data.error || "Error al actualizar favorito")
             }
-            setFavorites(newFavorites)
 
-            // Database update
-            if (isFavorite) {
-                await supabase
-                    .from('exercise_favorites')
-                    .delete()
-                    .match({ user_id: user.id, video_hashed_id: hashedId })
-            } else {
-                await supabase
-                    .from('exercise_favorites')
-                    .insert({
-                        user_id: user.id,
-                        video_hashed_id: hashedId
-                    })
-
-                await checkAchievements(user.id, 'favorito_marcado')
+            if (!isFavorite) {
+                await checkAchievements('favorito_marcado')
             }
         } catch (err) {
+            console.error("Error al actualizar favorito:", err)
             setError('Error al actualizar favorito')
             await fetchUserFavorites() // Revert to actual state
         }
@@ -140,7 +131,7 @@ export default function ExerciseLibrary() {
     async function fetchWistiaVideos(tag?: string | null) {
         try {
             setLoading(true)
-            let url = '/api/wistia'
+            let url = '/api/wistia/videos'
             if (tag) {
                 const params = new URLSearchParams()
                 params.set('tags', tag)
@@ -233,7 +224,18 @@ export default function ExerciseLibrary() {
 
     return (
         <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-6">Explorar Ejercicios</h1>
+            <div className="flex flex-wrap items-center gap-4 mb-6">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-700"
+                    onClick={() => router.back()}
+                >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Volver
+                </Button>
+                <h1 className="text-3xl font-semibold text-gray-900">Explorar Ejercicios</h1>
+            </div>
 
             {/* Error Display */}
             {error && (

@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '--no-cache',
+      '-t', 'europe-southwest1-docker.pkg.dev/elite-caster-474014-u9/finne-repo/frontend:latest',
+      '--build-arg', 'NEXT_PUBLIC_API_URL=https://api.finne-beta.online',
+      '.'
+    ]
+images:
+  - 'europe-southwest1-docker.pkg.dev/elite-caster-474014-u9/finne-repo/frontend:latest'

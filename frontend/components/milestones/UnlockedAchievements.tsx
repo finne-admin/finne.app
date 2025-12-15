@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useEffect, useState } from "react"
+import { apiGet } from "@/lib/apiClient"
 
 type Logro = {
   id: string
@@ -15,48 +15,17 @@ export function LogrosDesbloqueados() {
 
   useEffect(() => {
     const fetchLogros = async () => {
-      const supabase = createClientComponentClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // 1. Traer solo los logros completados del usuario
-      const { data, error } = await supabase
-        .from('user_achievements')
-        .select('achievement_id')
-        .eq('user_id', user.id)
-        .eq('completado', true)
-
-      if (error) {
-        console.error('Error al cargar logros completados:', error)
-        return
+      try {
+        const res = await apiGet("/api/milestones/achievements/unlocked")
+        const data = await res.json()
+        if (!res.ok) {
+          console.error("Error al cargar logros desbloqueados:", data)
+          return
+        }
+        setLogros(Array.isArray(data.achievements) ? data.achievements : [])
+      } catch (error) {
+        console.error("Error al obtener logros desbloqueados:", error)
       }
-
-      const idsLogros = data?.map(l => l.achievement_id)
-
-      if (!idsLogros || idsLogros.length === 0) {
-        setLogros([])
-        return
-      }
-
-      // 2. Traer los datos del catálogo para esos logros
-      const { data: catalogo, error: catalogoError } = await supabase
-        .from('achievements_catalog')
-        .select('id, title, description, icon')
-        .in('id', idsLogros)
-
-      if (catalogoError) {
-        console.error('Error al cargar logros del catálogo:', catalogoError)
-        return
-      }
-
-      const logrosConvertidos: Logro[] = catalogo.map((item) => ({
-        id: item.id,
-        titulo: item.title,
-        descripcion: item.description,
-        icono: item.icon
-      }))
-
-      setLogros(logrosConvertidos)
     }
 
     fetchLogros()

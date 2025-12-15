@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { apiGet } from "@/lib/apiClient"
 import {
     Download,
     Filter,
@@ -33,11 +33,12 @@ import {
     Title,
     Tooltip,
     Legend,
+    Filler,
     type ChartOptions,
 } from "chart.js"
 
 // Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 interface EmployeeAnalyticsProps {
     className?: string
@@ -89,49 +90,52 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
     const [isFilterExpanded, setIsFilterExpanded] = useState(false)
     const [windowWidth, setWindowWidth] = useState(0)
 
-    const supabase = createClientComponentClient()
+    const fetchAnalyticsData = useCallback(async () => {
+        try {
+            setError(null)
 
-    // Fetch data
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setIsLoading(true)
-                setError(null)
+            const [exerciseRes, usersRes] = await Promise.all([
+                apiGet("/api/admin/exercise-satisfaction"),
+                apiGet("/api/admin/users"),
+            ])
 
-                const { data: satisfactionData, error: satisfactionError } = await supabase
-                    .from("exercise_satisfaction")
-                    .select("*")
-                    .order("created_at", { ascending: false })
-
-                if (satisfactionError) throw satisfactionError
-
-                // Fetch users
-                const { data: usersData, error: usersError } = await supabase.from("users").select("*")
-
-                if (usersError) throw usersError
-
-                // Process data
-                setExerciseData(satisfactionData || [])
-                setUserData(usersData || [])
-
-                // Extract available tags
-                const tags = new Set<string>()
-                satisfactionData?.forEach((item) => {
-                    if (item.tags && Array.isArray(item.tags)) {
-                        item.tags.forEach((tag: string) => tags.add(tag))
-                    }
-                })
-                setAvailableTags(Array.from(tags))
-            } catch (err) {
-                console.error("Error al obtener datos de análisis:", err)
-                setError(err instanceof Error ? err.message : "Ha ocurrido un error al obtener los datos")
-            } finally {
-                setIsLoading(false)
+            const exerciseJson = await exerciseRes.json()
+            if (!exerciseRes.ok) {
+                throw new Error(exerciseJson.error || "Error al obtener ejercicios")
             }
-        }
 
-        fetchData()
-    }, [supabase, isRefreshing])
+            const usersJson = await usersRes.json()
+            if (!usersRes.ok) {
+                throw new Error(usersJson.error || "Error al obtener usuarios")
+            }
+
+            const satisfactionData: ExerciseSatisfaction[] = Array.isArray(exerciseJson.records)
+                ? exerciseJson.records
+                : []
+            const usersData: UserProfile[] = Array.isArray(usersJson.users) ? usersJson.users : []
+
+            setExerciseData(satisfactionData)
+            setUserData(usersData)
+
+            const tags = new Set<string>()
+            satisfactionData.forEach((item) => {
+                if (item.tags && Array.isArray(item.tags)) {
+                    item.tags.forEach((tag) => tags.add(tag))
+                }
+            })
+            setAvailableTags(Array.from(tags))
+        } catch (err) {
+            console.error("Error al obtener datos de análisis:", err)
+            setError(err instanceof Error ? err.message : "Ha ocurrido un error al obtener los datos")
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        setIsLoading(true)
+        fetchAnalyticsData()
+    }, [fetchAnalyticsData])
 
     // Set window width on client side only
     useEffect(() => {
@@ -518,9 +522,13 @@ export function EmployeeAnalytics({ className }: EmployeeAnalyticsProps) {
         },
     }
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
         setIsRefreshing(true)
-        setTimeout(() => setIsRefreshing(false), 500)
+        try {
+            await fetchAnalyticsData()
+        } finally {
+            setIsRefreshing(false)
+        }
     }
 
     const handleExportData = () => {

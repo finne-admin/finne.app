@@ -3,33 +3,37 @@ import { PerfilResumen } from '@/components/milestones/ProfileSummary'
 import { ActividadSemanal } from '@/components/milestones/WeeklyActivity'
 import { LogrosDesbloqueados } from '@/components/milestones/UnlockedAchievements'
 import { RetosSemanales } from '@/components/milestones/WeeklyChallenges'
+import CountdownCircles from '@/components/milestones/WeeklyCountdownCircles'
 
 export default function MilestonesPage() {
   return (
-    <div className="w-full space-y-6">
-      <RetosSemanales />
-
-      <div className="text-center mb-8 select-none">
-        <h2
-          className="title-cq font-extrabold tracking-wide text-gradient bg-ink-melt animate-ink-melt animate-ink-melt-fast"
-          style={{ ['--tw-gradient-image' as any]: 'linear-gradient(90deg,#059669,#10b981,#047857)' }}
-        >
-          Temporada de Otoño
-        </h2>
-        <p className="sub-cq mt-2 text-gray-600">1 de octubre — 30 de diciembre</p>
+    <div className="w-full space-y-8 lg:space-y-10">
+      {/* Bloque 1: Perfil en ancho completo (sin contenedor extra) */}
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.16em] text-emerald-600 font-semibold">Perfil</p>
+        </div>
+        <PerfilResumen />
       </div>
 
-      {/* grid a ancho completo */}
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-12 lg:col-span-5 space-y-6">
-          <PerfilResumen />
-          <ActividadSemanal />
+      {/* Bloque 2: Retos semanales + contador + columna derecha sin contenedores extra */}
+      <section className="grid gap-6 lg:grid-cols-[0.35fr_0.65fr] items-start">
+        <div className="space-y-4 min-w-0">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.12em] text-emerald-600 font-semibold">Retos semanales</p>
+            <div className="w-full max-w-xl">
+              <CountdownCircles target={new Date('2025-12-14T23:59:59')} sizePx={52} />
+            </div>
+          </div>
+          {/* Retos sin tarjeta, listados en vertical */}
+          <RetosSemanales />
         </div>
-        <div className="col-span-12 lg:col-span-7 h-full self-stretch">
+
+        <div className="space-y-4 min-w-0">
+          <ActividadSemanal />
           <LogrosDesbloqueados />
         </div>
-      </div>
+      </section>
     </div>
   )
 }
-

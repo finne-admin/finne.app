@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import CountdownCircles from './CountdownCircles'
-import GoalBadge from './GoalBadge'
-import CerditoGlobo from './DepartmentBalloon'
+import { useEffect, useRef, useState } from "react"
+import CountdownCircles from "./CountdownCircles"
+import GoalBadge from "./GoalBadge"
+import CerditoGlobo from "./DepartmentBalloon"
+import { apiGet } from "@/lib/apiClient"
 
 type Props = {
   goal: number
@@ -14,28 +14,34 @@ type Props = {
 }
 
 export default function HuchaPanel({ goal, deadline, pigHeight = 520, className }: Props) {
-  const supabase = createClientComponentClient()
   const [totalExp, setTotalExp] = useState(0)
 
-  // medimos todo el bloque superior (contador + badge)
   const topBlockRef = useRef<HTMLDivElement>(null)
   const [ceilingPx, setCeilingPx] = useState(0)
 
   useEffect(() => {
     const fetchTotal = async () => {
-      const { data } = await supabase.from('users').select('periodical_exp')
-      if (data) {
-        setTotalExp(data.reduce((acc, r: any) => acc + (r.periodical_exp ?? 0), 0))
+      try {
+        const res = await apiGet("/api/milestones/department/progress")
+        const data = await res.json()
+        if (!res.ok) {
+          console.error("Error al obtener progreso del departamento:", data)
+          return
+        }
+        setTotalExp(Number(data.total ?? 0))
+      } catch (error) {
+        console.error("Error al cargar progreso del departamento:", error)
       }
     }
+
     fetchTotal()
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     const el = topBlockRef.current
     if (!el) return
-    const ro = new ResizeObserver(entries => {
-      setCeilingPx(entries[0].contentRect.height + 12) // +16px de separación
+    const ro = new ResizeObserver((entries) => {
+      setCeilingPx(entries[0].contentRect.height + 12)
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -50,6 +56,7 @@ export default function HuchaPanel({ goal, deadline, pigHeight = 520, className 
 
       <CerditoGlobo
         goal={goal}
+        current={totalExp}
         height={pigHeight}
         className="w-[var(--pig)]"
         ceilingPx={ceilingPx}

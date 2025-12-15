@@ -2,9 +2,7 @@
 
 import { EmployeeTable } from '@/components/ui/data-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { EmployeeAnalytics } from '@/components/employee-analytics'
-
-
+import { OrganizationStatsPanel } from '@/components/admin/OrganizationStatsPanel'
 
 export default function AdminDashboard() {
 
@@ -23,13 +21,13 @@ export default function AdminDashboard() {
                         <CardTitle>Tabla de Empleados</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <EmployeeTable />
+                        <EmployeeTable mode="organization" />
                     </CardContent>
                 </Card>
 
                 {/* Charts Section */}
-                <section className="mt-12">
-                    <EmployeeAnalytics />
+                <section className="mt-12 space-y-8">
+                    <OrganizationStatsPanel />
                 </section>
             </div>
         </div>

@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import BadgeDot from '@/components/ui/BadgeDot'
 import { LogoutButton } from '@/components/auth/LogoutButton'
-import { useUnclaimedProgressSplit } from '@/components/hooks/useUnclaimedProgressSplit'
 import { usePendingQuestionnaires } from '@/components/hooks/usePendingQuestionnaires'
 
 type MenuItem = {
@@ -15,32 +14,15 @@ type MenuItem = {
   href: string
 }
 
-export function Sidebar({ menuItems }: { menuItems: MenuItem[] }) {
+export function Sidebar({ primaryItems, footerItems }: { primaryItems: MenuItem[]; footerItems: MenuItem[] }) {
   const pathname = usePathname()
-  const { hasWeekly, hasAchievements } = useUnclaimedProgressSplit()
   const { pendingCount, loading, hasPending } = usePendingQuestionnaires()
 
-  return (
-    <div className="flex flex-col h-full w-full">
-      <div className="p-6">
-        <Image
-          src="/logonegativoRecurso.png"
-          alt="Finne Logo"
-          width={100}
-          height={40}
-          className="mb-8"
-          priority
-        />
-        <nav className="space-y-2">
-          {menuItems.map((item, idx) => {
+  const renderMenuList = (items: MenuItem[]) =>
+    items.map((item, idx) => {
             const isActive =
               pathname === item.href ||
               (item.href !== '/milestones' && pathname.startsWith(item.href))
-
-            // Lógica existente para logros
-            const showWeekly = item.href === '/milestones' && hasWeekly
-            const showAchievements =
-              (item.href === '/milestones/logros' || item.href === '/milestones') && hasAchievements
 
             // Dot para Cuestionarios (admite /questionnaires o /cuestionarios)
             const isQuestionnaires =
@@ -70,18 +52,28 @@ export function Sidebar({ menuItems }: { menuItems: MenuItem[] }) {
                       variant="inline"
                       />
                     )}
-                    {(showWeekly || showAchievements) && (
-                      <BadgeDot show className="static" variant="inline" />
-                    )}
                     </span>
                 </span>
               </Link>
             )
-          })}
-        </nav>
+          })
+
+  return (
+    <div className="flex flex-col h-full w-full">
+      <div className="p-6">
+        <Image
+          src="/logonegativoRecurso.png"
+          alt="Finne Logo"
+          width={100}
+          height={40}
+          className="mb-8"
+          priority
+        />
+        <nav className="space-y-2">{renderMenuList(primaryItems)}</nav>
       </div>
 
-      <div className="mt-auto p-6">
+      <div className="mt-auto p-6 flex flex-col gap-6">
+        <nav className="space-y-2">{renderMenuList(footerItems)}</nav>
         <LogoutButton />
       </div>
     </div>

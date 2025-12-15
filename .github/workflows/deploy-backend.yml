@@ -3,8 +3,6 @@ name: Deploy Backend to Cloud Run
 on:
   push:
     branches: ["main"]
-    paths:
-      - "backend/**"
 
 jobs:
   deploy:
@@ -25,22 +23,5 @@ jobs:
           project_id: elite-caster-474014-u9
           install_components: 'beta'
 
-      - name: Build and push Docker image
-        run: |
-          gcloud builds submit \
-            --project=elite-caster-474014-u9 \
-            --region=europe-southwest1 \
-            --tag=europe-southwest1-docker.pkg.dev/elite-caster-474014-u9/finne-repo/backend:latest \
-            ./backend
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy backend \
-            --project=elite-caster-474014-u9 \
-            --region=europe-southwest1 \
-            --image=europe-southwest1-docker.pkg.dev/elite-caster-474014-u9/finne-repo/backend:latest \
-            --allow-unauthenticated \
-            --port=8080 \
-            --timeout=300 \
-            --set-env-vars=NODE_ENV=development \
-            --set-secrets=JWT_SECRET=JWT_SECRET:1
+      - name: Deploy backend via script (-UpdateJob)
+        run: pwsh -File ./scripts/deploy-backend.ps1 -UpdateJob

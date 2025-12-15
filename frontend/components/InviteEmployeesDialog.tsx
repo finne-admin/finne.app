@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Trash2 } from 'lucide-react'
 import { Fragment } from "react"
 import { Dialog, Transition } from "@headlessui/react"
-import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from "@/lib/apiClient"
+import { apiFetch } from "@/lib/apiClient"
 
 interface InviteEmployeesDialogProps {
     isOpen: boolean
     onClose: () => void
+    onSuccess?: () => void
 }
 
-export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmployeesDialogProps>) {
+export function InviteEmployeesDialog({ isOpen, onClose, onSuccess }: Readonly<InviteEmployeesDialogProps>) {
 
     type EmailWithRole = {
     email: string
@@ -86,6 +87,7 @@ export function InviteEmployeesDialog({ isOpen, onClose }: Readonly<InviteEmploy
 
             setInviteSuccess(`Invitaciones enviadas a ${emailList.length} email(s).`)
             setEmailList([])
+            onSuccess?.()
             setTimeout(() => {
                 setInviteSuccess("")
                 onClose()

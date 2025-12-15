@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Heart, Play, Check } from 'lucide-react'
+import { useMemo, useState } from "react"
 import Image from "next/image"
+import { Heart, Play, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface VideoCardProps {
   id: string
+  hashedId?: string
   title: string
   description: string
   duration: string
@@ -15,8 +16,10 @@ interface VideoCardProps {
   isSelected: boolean
   onSelect: (id: string) => void
   disabled?: boolean
-  /** NUEVO: texto del badge, p. ej. "(+10 PA)". Si no se pasa, no se muestra */
   badge?: string
+  tags?: string[]
+  isFavorite?: boolean
+  onFavoriteToggle?: (hashedId: string) => void
 }
 
 interface Asset {
@@ -26,7 +29,7 @@ interface Asset {
   type: string
 }
 
-function getBestThumbnail(assets: Asset[], targetWidth: number): Asset | null {
+const getBestThumbnail = (assets: Asset[], targetWidth: number): Asset | null => {
   const stillImages = assets.filter((asset) => asset.type === "StillImageFile")
   if (stillImages.length === 0) return null
   return stillImages.reduce((best, current) => {
@@ -38,6 +41,7 @@ function getBestThumbnail(assets: Asset[], targetWidth: number): Asset | null {
 
 export function VideoCard({
   id,
+  hashedId,
   title,
   description,
   duration,
@@ -45,15 +49,24 @@ export function VideoCard({
   isSelected,
   onSelect,
   disabled = false,
-  badge, // NUEVO
+  badge,
+  tags = [],
+  isFavorite,
+  onFavoriteToggle,
 }: Readonly<VideoCardProps>) {
-  const [favorite, setFavorite] = useState(false)
+  const [internalFavorite, setInternalFavorite] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const thumbnail = useMemo(() => getBestThumbnail(assets, 640), [assets])
+  const favoriteState = typeof isFavorite === "boolean" ? isFavorite : internalFavorite
 
   const handleToggleFavorite = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
-    if (!disabled) setFavorite((prev) => !prev)
+    if (disabled) return
+    if (hashedId && onFavoriteToggle) {
+      onFavoriteToggle(hashedId)
+    } else {
+      setInternalFavorite((prev) => !prev)
+    }
   }
 
   const handleSelect = () => !disabled && onSelect(id)
@@ -70,7 +83,6 @@ export function VideoCard({
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >
-      {/* Thumbnail Container */}
       <div className="relative aspect-video bg-gray-100 overflow-hidden">
         {thumbnail ? (
           <>
@@ -94,12 +106,9 @@ export function VideoCard({
           </div>
         )}
 
-        {/* Hover Overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
 
-        {/* Top Bar */}
         <div className="absolute top-0 left-0 right-0 flex justify-between items-start p-2">
-          {/* Izquierda: duración + badge (si hay) */}
           <div className="flex items-center gap-2">
             <div className="px-2 py-1 rounded-full bg-black/50 text-white text-xs font-medium">
               {duration}
@@ -111,23 +120,21 @@ export function VideoCard({
             )}
           </div>
 
-          {/* Derecha: favorito */}
           <button
             onClick={handleToggleFavorite}
             disabled={disabled}
             className={cn(
               "p-1.5 rounded-full backdrop-blur-sm transition-all",
-              favorite
+              favoriteState
                 ? "text-red-500 bg-white/90 hover:bg-white"
                 : "text-white bg-black/30 hover:bg-black/40"
             )}
-            aria-label={favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+            aria-label={favoriteState ? "Quitar de favoritos" : "Añadir a favoritos"}
           >
-            <Heart className={cn("w-4 h-4 transition-colors", favorite && "fill-current")} />
+            <Heart className={cn("w-4 h-4 transition-colors", favoriteState && "fill-current")} />
           </button>
         </div>
 
-        {/* Selection Indicator */}
         <div className="absolute bottom-2 left-2">
           <div
             className={cn(
@@ -144,9 +151,26 @@ export function VideoCard({
             />
           </div>
         </div>
+
+        {tags.length > 0 && (
+          <div className="absolute inset-x-0 bottom-0 px-3 pb-2 pt-6 flex flex-wrap gap-1 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none">
+            {tags.slice(0, 3).map((tag) => (
+              <span
+                key={`${id}-overlay-${tag}`}
+                className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-white/15 text-white border border-white/20"
+              >
+                {tag}
+              </span>
+            ))}
+            {tags.length > 3 && (
+              <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-white/15 text-white border border-white/20">
+                +{tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Card Content */}
       <div className="p-4 space-y-2">
         <h3 className="font-semibold text-gray-900 line-clamp-1">{title}</h3>
         <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">{description}</p>
@@ -159,7 +183,7 @@ export function VideoCard({
               : "bg-gray-100 text-gray-600 group-hover:bg-gray-200"
           )}
         >
-          {isSelected ? "Seleccionado" : "Seleccionar Vídeo"}
+          {isSelected ? "Seleccionado" : "Seleccionar Video"}
         </div>
       </div>
     </div>

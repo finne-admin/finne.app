@@ -1,5 +1,5 @@
 import express from "express";
-import { requireAuth, requireAdmin } from "../middlewares/verifyToken";
+import { requireAuth, requireOrganizationAdmin } from "../middlewares/verifyToken";
 
 const router = express.Router();
 // Use Node 18+ built-in fetch to avoid ESM import issues
@@ -8,7 +8,7 @@ const TALLY_API_KEY = process.env.TALLY_API_KEY!;
 const TALLY_FORM_ID = process.env.TALLY_FORM_ID!;
 
 // 📄 Solo administradores pueden leer respuestas
-router.get("/responses", requireAuth, requireAdmin, async (_req, res) => {
+router.get("/responses", requireAuth, requireOrganizationAdmin, async (_req, res) => {
   try {
     const response = await fetch(`https://api.tally.so/v1/forms/${TALLY_FORM_ID}/responses`, {
       headers: {

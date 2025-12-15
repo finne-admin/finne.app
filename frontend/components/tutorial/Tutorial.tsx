@@ -53,7 +53,7 @@ export function Tutorial({ onClose, run }: TutorialProps) {
           )
         },
         {
-          target: "a[href='/notification']",
+          target: "a[href='/notifications']",
           title: "Pausa Activa",
           content: "Desde aquí accedes a tus sesiones diarias."
         },

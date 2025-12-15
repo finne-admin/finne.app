@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { X, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import {Button} from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react"
 
 declare global {
     interface Window {
@@ -21,24 +21,20 @@ interface WistiaModalProps {
     isLoading?: boolean
 }
 
-export function WistiaModalNotification({
-                                            hashedId,
-                                            onClose,
-                                            onVideoEnd,
-                                            isLoading = false
-                                        }: WistiaModalProps) {
+export function WistiaModalNotification({ hashedId, onClose, onVideoEnd, isLoading = false }: WistiaModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
     const videoRef = useRef<any>(null)
     const [isVideoReady, setIsVideoReady] = useState(false)
     const [error, setError] = useState("")
+    const [containerKey, setContainerKey] = useState(0)
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
         window._wq = window._wq || []
     }
 
-    // Shared script loading
     useEffect(() => {
-        if (document.querySelector("#wistia-script")) {
+        const existing = document.querySelector<HTMLScriptElement>("#wistia-script")
+        if (existing) {
             setIsVideoReady(true)
             return
         }
@@ -54,76 +50,64 @@ export function WistiaModalNotification({
             setIsVideoReady(true)
             window._wq = window._wq || []
         }
-
-        return () => {
-            document.body.removeChild(script)
-        }
     }, [])
 
-    // Video initialization
     useEffect(() => {
-    if (!isVideoReady || isLoading || !hashedId) return;
+        setContainerKey((prev) => prev + 1)
+    }, [hashedId])
 
-    let destroyed = false;
-    let player: any = null;
+    useEffect(() => {
+        if (!isVideoReady || !hashedId) return
 
-    const initPlayer = () => {
-        if (destroyed) return;
+        let destroyed = false
+        let player: any = null
 
-        (window as any)._wq = (window as any)._wq || [];
-        (window as any)._wq.push({
-        id: hashedId,
-        options: {
-            autoPlay: true,
-            playbar: true,
-            volumeControl: true,
-            fullscreenButton: true,
-        },
-        onReady: (video: any) => {
-            if (destroyed || !video) return;
+        window._wq = window._wq || []
+        window._wq.push({
+            id: hashedId,
+            options: {
+                autoPlay: true,
+                playbar: true,
+                volumeControl: true,
+                fullscreenButton: true,
+            },
+            onReady: (video: any) => {
+                if (destroyed || !video) return
 
-            player = video;
-            videoRef.current = video;
+                player = video
+                videoRef.current = video
 
-            try { video.play?.(); } catch {}
+                try {
+                    video.play?.()
+                } catch {}
 
-            // 🔐 Opción A: usar 'afterend' para evitar la carrera interna de Wistia
-            video.bind("afterend", () => {
-            onVideoEnd?.();
-            video.unbind("afterend"); // limpieza
-            });
-        },
-        });
-    };
+                video.bind("afterend", () => {
+                    onVideoEnd?.()
+                    video.unbind("afterend")
+                })
+            },
+        })
 
-    initPlayer();
-
-    return () => {
-        destroyed = true;
-        try {
-        player?.unbind?.("afterend");
-        player?.unbind?.("end");     // por si acaso estaba bindeado
-        player?.remove?.();
-        } finally {
-        videoRef.current = null;
-        player = null;
+        return () => {
+            destroyed = true
+            try {
+                player?.unbind?.("afterend")
+                player?.unbind?.("end")
+                player?.remove?.()
+            } finally {
+                videoRef.current = null
+                player = null
+            }
         }
-    };
-    }, [hashedId, onVideoEnd, isVideoReady, isLoading]);
+    }, [hashedId, onVideoEnd, isVideoReady])
 
-
-
-    // Event handlers
     useEffect(() => {
         const handleKeydown = (e: KeyboardEvent) => {
             if (e.key === "Escape" && !isLoading) onClose()
         }
 
         const handleClickOutside = (e: MouseEvent) => {
-            if (modalRef.current &&
-                !modalRef.current.contains(e.target as Node) &&
-                !isLoading
-            ) {
+            if (modalRef.current && !modalRef.current.contains(e.target as Node) && !isLoading) {
                 onClose()
             }
         }
@@ -182,11 +166,24 @@ export function WistiaModalNotification({
                     </div>
                 )}
 
-                <div className="wistia_responsive_padding" style={{ padding: "56.25% 0 0 0" }}>
-                    <div className="wistia_responsive_wrapper">
+                <div
+                    className="wistia_responsive_padding"
+                    style={{ padding: "56.25% 0 0 0", position: "relative" }}
+                >
+                    <div
+                        className="wistia_responsive_wrapper"
+                        key={containerKey}
+                        style={{
+                            height: "100%",
+                            left: 0,
+                            position: "absolute",
+                            top: 0,
+                            width: "100%",
+                        }}
+                    >
                         <div
                             className={`wistia_embed wistia_async_${hashedId} videoFoam=true`}
-                            style={{ visibility: isLoading ? "hidden" : "visible" }}
+                            style={{ height: "100%", width: "100%" }}
                         />
                     </div>
                 </div>

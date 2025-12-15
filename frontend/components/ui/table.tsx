@@ -59,6 +59,8 @@ const TableHead = React.forwardRef<
         ref={ref}
         className={cn(
             "h-10 px-4 text-left align-middle font-medium text-gray-500 [&:has([role=checkbox])]:pr-0",
+            // Minimizar espacio si contiene una checkbox
+            "[&:has([role=checkbox])]:w-8 [&:has([role=checkbox])]:p-0 [&:has([role=checkbox])]:text-center whitespace-nowrap [&:has([role=checkbox])]:align-middle",
             className
         )}
         {...props}
@@ -72,7 +74,11 @@ const TableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <td
         ref={ref}
-        className={cn("p-2 sm:p-4 align-middle [&:has([role=checkbox])]:pr-0 break-words text-gray-900", className)}
+        className={cn(
+            "p-1 sm:p-2 align-middle break-words text-sm text-gray-900",
+            "[&:has([role=checkbox])]:w-8 [&:has([role=checkbox])]:p-0 [&:has([role=checkbox])]:text-center [&:has([role=checkbox])]:align-middle",
+            className
+        )}
         {...props}
     />
 ))

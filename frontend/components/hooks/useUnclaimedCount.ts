@@ -42,7 +42,7 @@ export function useUnclaimedCount(opts: Opts = {}) {
           schema: 'public',
           table: 'user_achievements',
           filter: `user_id=eq.${user.id}`
-        }, async (payload) => {
+        }, async (payload: { new?: any; old?: any; eventType?: 'INSERT'|'UPDATE'|'DELETE'|string }) => {
           // Solo reaccionamos si afecta a "reclamado" o "type"
           const n = (payload.new ?? {}) as any
           const o = (payload.old ?? {}) as any

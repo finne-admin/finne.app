@@ -5,16 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { AjustesAvatar } from '@/components/settings/SettingsAvatar'
-import { Loader2, Pencil, Plus, Clock, X, Bell } from 'lucide-react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Loader2, Pencil, Plus, Clock, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
@@ -32,50 +23,49 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { apiGet, apiPut } from '@/lib/apiClient'
 
 interface UserProfile {
-  email: string;
-  first_name?: string;
-  last_name?: string;
+  id?: string
+  email: string
+  first_name?: string
+  last_name?: string
+  role?: string
 }
 
 interface LoadingStates {
-  userInfo: boolean;
-  saveProfile: boolean;
-  notifications: boolean;
+  userInfo: boolean
+  saveProfile: boolean
+  notifications: boolean
 }
 
 interface NotificationPreferences {
-  active: boolean;
-  times: string[];
-  isCustomized: boolean;
-  allow_weekend_notifications?: boolean;
+  active: boolean
+  times: string[]
+  isCustomized: boolean
+  allow_weekend_notifications?: boolean
 }
 
 export default function SettingsPage() {
-  const supabase = createClientComponentClient()
   const router = useRouter()
 
   const [userRole, setUserRole] = useState<string | null>(null)
 
-  // Loading States
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({
     userInfo: true,
     saveProfile: false,
-    notifications: true
+    notifications: true,
   })
 
-  // Profile States
   const [profile, setProfile] = useState<UserProfile>({
     email: '',
     first_name: '',
     last_name: '',
   })
 
-  // Muscle Groups States (placeholder UI local)
   const [muscleGroups, setMuscleGroups] = useState({
     upperBody: false,
     lowerBody: true,
@@ -83,24 +73,22 @@ export default function SettingsPage() {
     core: true,
   })
 
-  // UI States
   const [isEditingName, setIsEditingName] = useState(false)
-
-  // Notification States
   const [defaultTimes, setDefaultTimes] = useState<string[]>([])
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     active: false,
     times: [],
-    isCustomized: false
+    isCustomized: false,
+    allow_weekend_notifications: true,
   })
+
   const [isAddTimeOpen, setIsAddTimeOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<number | null>(null)
   const [newHour, setNewHour] = useState('9')
   const [newMinute, setNewMinute] = useState('0')
-
-  const [isEditingTime, setIsEditingTime] = useState<number | null>(null);
-  const [editHour, setEditHour] = useState('');
-  const [editMinute, setEditMinute] = useState('');
+  const [isEditingTime, setIsEditingTime] = useState<number | null>(null)
+  const [editHour, setEditHour] = useState('')
+  const [editMinute, setEditMinute] = useState('')
 
   const format12Hour = (time: string) => {
     const [hour, minute] = time.split(':')
@@ -112,9 +100,7 @@ export default function SettingsPage() {
 
   const isValidNewTime = () => {
     const newTimeStr = `${newHour.padStart(2, '0')}:${newMinute.padStart(2, '0')}`
-
     if (preferences.times.includes(newTimeStr)) return false
-
     return preferences.times.every(existingTime => {
       const [existingHour, existingMinute] = existingTime.split(':').map(Number)
       const existingMinutes = existingHour * 60 + existingMinute
@@ -126,37 +112,21 @@ export default function SettingsPage() {
   const isValidEditedTime = (newTime: string, skipIndex: number) => {
     return preferences.times.every((existingTime, index) => {
       if (index === skipIndex) return true
-
       const [existingHour, existingMinute] = existingTime.split(':').map(Number)
       const [nH, nM] = newTime.split(':').map(Number)
-
       const existingMinutes = existingHour * 60 + existingMinute
       const newMinutes = nH * 60 + nM
-
       return Math.abs(existingMinutes - newMinutes) >= 15
     })
   }
 
   // ======= Guardado inmediato =======
-
   const savePreferences = async (newPrefs: NotificationPreferences) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
-          user_id: user?.id,
-          active: newPrefs.active,
-          times: newPrefs.times,
-          allow_weekend_notifications: newPrefs.allow_weekend_notifications ?? true,
-        })
-
-      if (error) throw error
-
-      // ya hacemos optimista antes en cada handler, aquí solo confirmamos estado
+      const res = await apiPut('/api/notifications/preferences', newPrefs)
+      if (!res.ok) throw new Error()
       setPreferences(newPrefs)
-    toast.success('Preferencias de notificación guardadas', { duration: 1500 })
+      toast.success('Preferencias de notificación guardadas', { duration: 1500 })
     } catch (error) {
       console.error('Error al guardar preferencias:', error)
       toast.error('Error al guardar preferencias')
@@ -166,20 +136,14 @@ export default function SettingsPage() {
   const handleAddTime = async () => {
     const newTimeStr = `${newHour.padStart(2, '0')}:${newMinute.padStart(2, '0')}`
     if (!isValidNewTime()) return
-
     const updatedPreferences = {
       ...preferences,
       times: [...preferences.times, newTimeStr].sort(),
       active: true,
       isCustomized: true,
     }
-
-    // Optimista
     setPreferences(updatedPreferences)
-
-    // Persiste
     await savePreferences(updatedPreferences)
-
     setIsAddTimeOpen(false)
   }
 
@@ -192,28 +156,20 @@ export default function SettingsPage() {
 
   const handleSaveEditedTime = async (index: number) => {
     const newTimeStr = `${editHour}:${editMinute}`
-
     if (!isValidEditedTime(newTimeStr, index)) {
       toast.error('Los horarios deben estar separados al menos 15 minutos entre sí')
       return
     }
-
     const updatedTimes = [...preferences.times]
     updatedTimes[index] = newTimeStr
-
     const updatedPreferences = {
       ...preferences,
       times: updatedTimes.sort(),
       active: true,
       isCustomized: true,
     }
-
-    // Optimista
     setPreferences(updatedPreferences)
-
-    // Persiste
     await savePreferences(updatedPreferences)
-
     setIsEditingTime(null)
     setEditHour('')
     setEditMinute('')
@@ -224,32 +180,28 @@ export default function SettingsPage() {
     const updatedPreferences = {
       ...preferences,
       times: updatedTimes,
-      active: updatedTimes.length > 0 ? true : false,
+      active: updatedTimes.length > 0,
       isCustomized: true,
     }
-
-    // Optimista
     setPreferences(updatedPreferences)
-
-    // Persiste
     await savePreferences(updatedPreferences)
   }
 
   // ======= Perfil =======
-
   async function handleSave() {
     setLoadingStates(prev => ({ ...prev, saveProfile: true }))
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-        }
+      const res = await apiPut('/api/user/update', {
+        id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
       })
-      if (error) throw error
+      if (!res.ok) throw new Error('Error al actualizar usuario')
+      toast.success('Perfil actualizado correctamente')
       setIsEditingName(false)
     } catch (error) {
       console.error('Error al actualizar usuario:', error)
+      toast.error('Error al guardar cambios')
     } finally {
       setLoadingStates(prev => ({ ...prev, saveProfile: false }))
     }
@@ -264,83 +216,44 @@ export default function SettingsPage() {
   }
 
   // ======= Effects: usuario =======
-
   useEffect(() => {
     async function getUserData() {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser()
-        if (error) throw error
-
-        if (user) {
-          setProfile({
-            email: user.email ?? '',
-            first_name: user.user_metadata?.first_name || '',
-            last_name: user.user_metadata?.last_name || ''
-          })
-
-          // Obtener rol desde tabla "users"
-          const { data: userData, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-          if (roleError) {
-            console.warn('No se pudo obtener el rol del usuario:', roleError)
-          } else {
-            setUserRole(userData?.role ?? null)
-          }
-        }
+        const res = await apiGet('/api/auth/me')
+        if (!res.ok) throw new Error('No autenticado')
+        const data = await res.json()
+        const user = data.user
+        setProfile({
+          id: user.id,
+          email: user.email ?? '',
+          first_name: user.first_name || user.firstName || '',
+          last_name: user.last_name || user.lastName || '',
+        })
+        setUserRole(user.role ?? null)
       } catch (error) {
         console.error('Error al obtener usuario:', error)
+        toast.error('No se pudo cargar tu información de usuario')
       } finally {
         setLoadingStates(prev => ({ ...prev, userInfo: false }))
       }
     }
-
     getUserData()
-  }, [supabase])
+  }, [])
 
   // ======= Effects: notificaciones =======
-
   useEffect(() => {
     async function fetchNotificationData() {
       try {
-        // Default times
-        const { data: defaultData, error: defaultError } = await supabase
-          .from('default_notification_times')
-          .select('times')
-          .single()
-
-        if (defaultError) throw defaultError
-
-        // User preferences
-        const { data: { user } } = await supabase.auth.getUser()
-        const { data: prefData, error: prefError } = await supabase
-          .from('notification_preferences')
-          .select('*')
-          .eq('user_id', user?.id)
-          .single()
-
-        if (defaultData) {
-          setDefaultTimes(defaultData.times)
-        }
-
-        if (prefData) {
-          setPreferences({
-            active: prefData.active,
-            times: prefData.times || [],
-            isCustomized: prefData.active,
-            allow_weekend_notifications: prefData.allow_weekend_notifications ?? true,
-          })
-        } else {
-          // Si no hay preferencias, usar por defecto
-          setPreferences({
-            active: false,
-            times: defaultData.times || [],
-            isCustomized: false
-          })
-        }
+        const res = await apiGet('/api/notifications/preferences')
+        if (!res.ok) throw new Error('Error al obtener preferencias')
+        const data = await res.json()
+        setPreferences({
+          active: data.active ?? false,
+          times: data.times ?? [],
+          isCustomized: data.active ?? false,
+          allow_weekend_notifications: data.allow_weekend_notifications ?? true,
+        })
+        setDefaultTimes(data.times ?? [])
       } catch (error) {
         console.error('Error al cargar configuración de notificaciones:', error)
         toast.error('Error al cargar configuración de notificaciones')
@@ -348,9 +261,8 @@ export default function SettingsPage() {
         setLoadingStates(prev => ({ ...prev, notifications: false }))
       }
     }
-
     fetchNotificationData()
-  }, [supabase])
+  }, [])
 
   // ======= Render =======
 
@@ -711,7 +623,7 @@ export default function SettingsPage() {
 
                       {/* Acciones siempre visibles en modo card (cuando no se está editando esa card) */}
                       {isEditingTime !== index && (
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-100">
                           <Button
                             variant="ghost"
                             size="sm"
