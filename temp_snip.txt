@@ -1,1 +1,0 @@
-  const token = req.cookies?.refresh_token;  if (token) await revokeRefreshToken(token);  res.clearCookie("refresh_token");  res.json({ success: true, message: "Sesión cerrada correctamente" });  } catch (err) {    console.error("Error en logout:", err);    res.status(500).json({ error: "Error al cerrar sesión" });
