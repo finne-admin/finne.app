@@ -30,6 +30,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+desktop.ini
 
 elite-caster-474014-u9-26d089afd1a8.json
 
