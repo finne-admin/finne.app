@@ -22,7 +22,7 @@ export default function MilestonesPage() {
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.12em] text-emerald-600 font-semibold">Retos semanales</p>
             <div className="w-full max-w-xl">
-              <CountdownCircles target={new Date('2025-12-14T23:59:59')} sizePx={52} />
+              <CountdownCircles target={new Date('2025-12-21T23:59:59')} sizePx={52} />
             </div>
           </div>
           {/* Retos sin tarjeta, listados en vertical */}
