@@ -20,8 +20,12 @@ import {
   getUserRankingPosition,
   countActiveParticipants,
   RankingFilter,
+  getVideoCategoriesSet,
+  getAchievementInfo,
+  calculateActivePauseTotals,
 } from "../db/queries/milestonesQueries"
 import { getMembershipForUser } from "../db/queries/userMembershipQueries"
+import { findDepartmentById, findOrganizationById } from "../db/queries/adminQueries"
 import { calculateWorkdayStreak } from "../utils/streak"
 import { getZonedDateInfo, nextCalendarDay, shiftDateByDays } from "../utils/timezone"
 import { addUserXP } from "../db/queries/xpQueries"
@@ -91,14 +95,13 @@ const fetchScopeNames = async (organizationId?: string | null, departmentId?: st
     return { organizationName, departmentName }
   }
 
-  const pool = await getPool()
   if (organizationId) {
-    const org = await pool.query<{ name: string }>(`SELECT name FROM organizations WHERE id = $1`, [organizationId])
-    organizationName = org.rows[0]?.name ?? null
+    const org = await findOrganizationById(organizationId)
+    organizationName = org?.name ?? null
   }
   if (departmentId) {
-    const dept = await pool.query<{ name: string }>(`SELECT name FROM departments WHERE id = $1`, [departmentId])
-    departmentName = dept.rows[0]?.name ?? null
+    const dept = await findDepartmentById(departmentId)
+    departmentName = dept?.name ?? null
   }
   return { organizationName, departmentName }
 }
@@ -202,7 +205,7 @@ export const getAllAchievementsController = async (req: Request, res: Response) 
     return res.json({ achievements: formatted })
   } catch (error) {
     console.error("Error en getAllAchievements:", error)
-    return res.status(500).json({ error: "Error al obtener católogo de logros" })
+    return res.status(500).json({ error: "Error al obtener catalogo de logros" })
   }
 }
 
@@ -220,15 +223,12 @@ export const claimAchievementController = async (req: Request, res: Response) =>
     const row = await claimAchievementRow(client, userId, achievementId)
     if (!row) {
       await client.query("ROLLBACK")
-      return res.status(400).json({ error: "El logro no está disponible para reclamar" })
+      return res.status(400).json({ error: "El logro no esta disponible para reclamar" })
     }
 
     const [points, achievementInfo] = await Promise.all([
       getAchievementPoints(achievementId),
-      client
-        .query(`SELECT title, icon FROM achievements_catalog WHERE id = $1`, [achievementId])
-        .then((res) => res.rows[0])
-        .catch(() => null),
+      getAchievementInfo(achievementId, client),
     ])
 
     await client.query("COMMIT")
@@ -241,7 +241,7 @@ export const claimAchievementController = async (req: Request, res: Response) =>
           achievement_icon: achievementInfo?.icon ?? null,
         })
       } catch (error) {
-        console.error("Error añadiendo XP tras reclamar logro:", error)
+        console.error("Error anadiendo XP tras reclamar logro:", error)
       }
     }
     return res.json({ success: true, points })
@@ -294,38 +294,8 @@ export const getWeeklyChallengesCatalogController = async (_req: Request, res: R
     return res.json({ challenges: filtered })
   } catch (error) {
     console.error("Error en getWeeklyChallengesCatalogController:", error)
-    return res.status(500).json({ error: "Error al obtener catálogo de retos" })
+    return res.status(500).json({ error: "Error al obtener catalogo de retos" })
   }
-}
-
-const parseCategoryArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value.map((v) => String(v))
-  if (typeof value === "string") {
-    const trimmed = value.trim()
-    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-      return trimmed
-        .slice(1, -1)
-        .split(",")
-        .map((item) => item.replace(/(^"|"$)/g, "").trim())
-        .filter(Boolean)
-    }
-    return trimmed ? [trimmed] : []
-  }
-  return []
-}
-
-const getVideoCategories = async (ids: string[]): Promise<Set<string>> => {
-  if (!ids.length) return new Set()
-  const pool = await getPool()
-  const { rows } = await pool.query<{ id: string; categorias: any }>(
-    `SELECT id, categorias FROM videos WHERE id = ANY($1::uuid[])`,
-    [ids]
-  )
-  const categories = new Set<string>()
-  for (const row of rows) {
-    parseCategoryArray(row.categorias).forEach((cat) => categories.add(cat.toLowerCase()))
-  }
-  return categories
 }
 
 export const postWeeklyChallengeProgressController = async (req: Request, res: Response) => {
@@ -347,8 +317,7 @@ export const postWeeklyChallengeProgressController = async (req: Request, res: R
     const videoIds = [payload?.video1_id, payload?.video2_id]
       .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
 
-    const categories = await getVideoCategories(videoIds)
-    const lowercaseCategories = new Set(Array.from(categories))
+    const categories = await getVideoCategoriesSet(videoIds)
 
     const increments: { challengeId: string; inc: number; goal: number }[] = []
     const addIncrement = (type: string, amount: number) => {
@@ -364,10 +333,10 @@ export const postWeeklyChallengeProgressController = async (req: Request, res: R
 
     addIncrement("pausas_semana", 1)
 
-    if (lowercaseCategories.has("miembro superior")) addIncrement("ejercicios_brazos", 1)
-    if (lowercaseCategories.has("miembro inferior")) addIncrement("ejercicios_piernas", 1)
-    if (lowercaseCategories.has("core")) addIncrement("ejercicios_core", 1)
-    if (lowercaseCategories.has("movilidad")) addIncrement("ejercicios_movilidad", 1)
+    if (categories.has("miembro superior")) addIncrement("ejercicios_brazos", 1)
+    if (categories.has("miembro inferior")) addIncrement("ejercicios_piernas", 1)
+    if (categories.has("core")) addIncrement("ejercicios_core", 1)
+    if (categories.has("movilidad")) addIncrement("ejercicios_movilidad", 1)
 
     if (!increments.length) return res.json({ updated: 0 })
 
@@ -400,7 +369,7 @@ export const claimWeeklyChallengeController = async (req: Request, res: Response
     const result = await claimWeeklyChallengeRow(client, userId, challengeId, weekId)
     if (!result) {
       await client.query("ROLLBACK")
-      return res.status(400).json({ error: "El reto no está disponible para reclamar" })
+      return res.status(400).json({ error: "El reto no esta disponible para reclamar" })
     }
 
     const definition = await getWeeklyChallengeDefinition(challengeId)
@@ -414,7 +383,7 @@ export const claimWeeklyChallengeController = async (req: Request, res: Response
           challenge_title: definition?.title ?? null,
         })
       } catch (error) {
-        console.error("Error añadiendo XP tras reclamar reto semanal:", error)
+        console.error("Error anadiendo XP tras reclamar reto semanal:", error)
       }
     }
     return res.json({ success: true, points })
@@ -589,7 +558,7 @@ export const calculateGoalController = async (req: Request, res: Response) => {
 
     const deadlineDate = new Date(deadline)
     if (Number.isNaN(deadlineDate.getTime())) {
-      return res.status(400).json({ error: "Deadline inválido" })
+      return res.status(400).json({ error: "Deadline invalido" })
     }
 
     const { start, end } = threeMonthWindowFromDeadline(deadlineDate)
@@ -602,22 +571,13 @@ export const calculateGoalController = async (req: Request, res: Response) => {
       if (usersCount <= 0) usersCount = 1
     }
 
-    const pool = await getPool()
-    const { rows } = await pool.query(
-      `
-      SELECT *
-      FROM calc_ap_totals(
-        p_start := $1,
-        p_end := $2,
-        p_users := $3,
-        p_include_one_shots := $4,
-        p_only_business_days := $5
-      )
-      `,
-      [startISO, endISO, usersCount, includeOneShots, onlyBusinessDays]
+    const payload = await calculateActivePauseTotals(
+      startISO,
+      endISO,
+      usersCount,
+      includeOneShots,
+      onlyBusinessDays
     )
-
-    const payload = Array.isArray(rows) && rows.length > 0 ? rows[0] : null
     const goal75 = Number(payload?.dept_target_75 ?? 5000)
     const rawTotal = Number(payload?.dept_total_ap ?? goal75)
     const perUserTotal = Number(payload?.per_user_total ?? 0)

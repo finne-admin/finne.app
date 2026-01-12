@@ -123,12 +123,10 @@ export default function NotificationPage() {
     setStreakHit(null)
     setShowConfetti(false)
   }
-
-  const DAILY_LIMIT = 3
   const POINTS_PER_PAUSE = 20 // 2 vídeos x 10 PA
 
-  const { usedToday, remainingToday, loadingQuota, quotaError, refetchQuota } =
-    useDailyQuota(DAILY_LIMIT)
+  const { usedToday, remainingToday, loadingQuota, quotaError, refetchQuota, limit: dailyLimit } =
+    useDailyQuota()
 
   const maxSelections = 2
   const selectedExerciseData = exercises.filter((ex) =>
@@ -662,7 +660,7 @@ export default function NotificationPage() {
               Selecciona exactamente dos ejercicios para comenzar tu sesión
             </p>
             <DailyQuotaBar
-              limit={DAILY_LIMIT}
+              limit={dailyLimit}
               usedToday={usedToday}
               loading={loadingQuota}
               error={quotaError}
@@ -779,8 +777,7 @@ export default function NotificationPage() {
 
           {!isLoading && !error && remainingToday <= 0 && (
             <p className="mt-2 text-center text-xs text-gray-500">
-              Has llegado al máximo de {DAILY_LIMIT} pausas con recompensa. ¡Puedes
-              seguir entrenando sin XP!
+              Has llegado al maximo de {dailyLimit} pausas por hoy.
             </p>
           )}
         </div>

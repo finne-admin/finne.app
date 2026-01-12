@@ -11,6 +11,9 @@ import {
   listJoinCodesController,
   createJoinCodeController,
   deleteJoinCodeController,
+  createOrganizationController,
+  createDepartmentController,
+  updateOrganizationDailyLimitController,
   getOrganizationStructure,
   listRolesController,
   updateUserRoleController,
@@ -44,6 +47,9 @@ router.put("/users/:id/membership", requireSuperAdmin, updateUserMembershipContr
 router.get("/join-codes", requireSuperAdmin, listJoinCodesController);
 router.post("/join-codes", requireSuperAdmin, createJoinCodeController);
 router.delete("/join-codes/:id", requireSuperAdmin, deleteJoinCodeController);
+router.post("/organizations", requireSuperAdmin, createOrganizationController);
+router.put("/organizations/:id/daily-limit", requireSuperAdmin, updateOrganizationDailyLimitController);
+router.post("/departments", requireSuperAdmin, createDepartmentController);
 router.get("/org-structure", requireSuperAdmin, getOrganizationStructure);
 router.get(
   "/notification-defaults",

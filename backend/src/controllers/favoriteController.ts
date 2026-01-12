@@ -1,11 +1,16 @@
 import { Request, Response } from "express"
-import { getPool } from "../config/dbManager"
+import {
+  deleteFavorite,
+  insertFavorite,
+  listFavoritesByUser,
+} from "../db/queries/favoriteQueries"
 
 const getAuthUserId = (req: Request): string | undefined => {
   const authUser = (req as any).user
   return authUser?.id
 }
 
+// Lista favoritos del usuario autenticado.
 export const listFavorites = async (req: Request, res: Response) => {
   try {
     const userId = getAuthUserId(req)
@@ -13,24 +18,15 @@ export const listFavorites = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "No autenticado" })
     }
 
-    const pool = await getPool()
-    const { rows } = await pool.query(
-      `
-      SELECT video_hashed_id, created_at
-      FROM exercise_favorites
-      WHERE user_id = $1
-      ORDER BY created_at DESC
-      `,
-      [userId]
-    )
-
-    return res.json({ favorites: rows })
+    const favorites = await listFavoritesByUser(userId)
+    return res.json({ favorites })
   } catch (error) {
     console.error("Error al obtener favoritos:", error)
     return res.status(500).json({ error: "Error interno al obtener favoritos" })
   }
 }
 
+// Inserta un favorito si no existe; idempotente.
 export const addFavorite = async (req: Request, res: Response) => {
   try {
     const userId = getAuthUserId(req)
@@ -43,22 +39,11 @@ export const addFavorite = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Falta video_hashed_id" })
     }
 
-    const pool = await getPool()
-    const { rowCount, rows } = await pool.query(
-      `
-      INSERT INTO exercise_favorites (user_id, video_hashed_id)
-      SELECT $1, $2
-      WHERE NOT EXISTS (
-        SELECT 1 FROM exercise_favorites WHERE user_id = $1 AND video_hashed_id = $2
-      )
-      RETURNING id, created_at
-      `,
-      [userId, video_hashed_id.trim()]
-    )
+    const favorite = await insertFavorite(userId, video_hashed_id.trim())
 
-    return res.status(rowCount > 0 ? 201 : 200).json({
-      added: rowCount > 0,
-      favorite: rows[0] ?? null,
+    return res.status(favorite ? 201 : 200).json({
+      added: Boolean(favorite),
+      favorite: favorite ?? null,
     })
   } catch (error) {
     console.error("Error al agregar favorito:", error)
@@ -66,6 +51,7 @@ export const addFavorite = async (req: Request, res: Response) => {
   }
 }
 
+// Elimina un favorito existente.
 export const removeFavorite = async (req: Request, res: Response) => {
   try {
     const userId = getAuthUserId(req)
@@ -78,16 +64,9 @@ export const removeFavorite = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Falta video_hashed_id" })
     }
 
-    const pool = await getPool()
-    const { rowCount } = await pool.query(
-      `
-      DELETE FROM exercise_favorites
-      WHERE user_id = $1 AND video_hashed_id = $2
-      `,
-      [userId, video_hashed_id.trim()]
-    )
+    const removed = await deleteFavorite(userId, video_hashed_id.trim())
 
-    return res.json({ removed: rowCount > 0 })
+    return res.json({ removed })
   } catch (error) {
     console.error("Error al eliminar favorito:", error)
     return res.status(500).json({ error: "Error interno al eliminar favorito" })

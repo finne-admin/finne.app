@@ -12,7 +12,7 @@ function loadServiceAccount(): admin.ServiceAccount {
 
   const defaultPath =
     process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-    path.resolve(process.cwd(), "elite-caster-474014-u9-26d089afd1a8.json")
+    path.resolve(process.cwd(), "elite-caster-474014-u9-d9c720c29a1d.json")
 
   if (!fs.existsSync(defaultPath)) {
     throw new Error(

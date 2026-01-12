@@ -6,6 +6,7 @@ import { apiGet } from "@/lib/apiClient"; // ya lo usas en notifications
 type QuotaState = {
   usedToday: number;
   remainingToday: number;
+  limit: number;
   loadingQuota: boolean;
   quotaError: string | null;
   refetchQuota: () => Promise<void>;
@@ -14,6 +15,7 @@ type QuotaState = {
 export function useDailyQuota(limit = 3): QuotaState {
   const [usedToday, setUsedToday] = useState(0);
   const [remainingToday, setRemainingToday] = useState(limit);
+  const [dailyLimit, setDailyLimit] = useState(limit);
   const [loadingQuota, setLoadingQuota] = useState(true);
   const [quotaError, setQuotaError] = useState<string | null>(null);
 
@@ -26,8 +28,10 @@ export function useDailyQuota(limit = 3): QuotaState {
       if (!res.ok) throw new Error("Error al consultar el cupo diario");
 
       const data = await res.json();
+      const apiLimit = typeof data.limit === "number" ? data.limit : limit;
+      setDailyLimit(apiLimit);
       setUsedToday(data.usedToday ?? 0);
-      setRemainingToday(data.remainingToday ?? limit);
+      setRemainingToday(data.remainingToday ?? apiLimit);
     } catch (err: any) {
       setQuotaError(err.message || "Error al cargar el cupo");
     } finally {
@@ -39,7 +43,14 @@ export function useDailyQuota(limit = 3): QuotaState {
     void fetchDailyQuota();
   }, [fetchDailyQuota]);
 
-  return { usedToday, remainingToday, loadingQuota, quotaError, refetchQuota: fetchDailyQuota };
+  return {
+    usedToday,
+    remainingToday,
+    limit: dailyLimit,
+    loadingQuota,
+    quotaError,
+    refetchQuota: fetchDailyQuota,
+  };
 }
 
 /* =========================
@@ -116,7 +127,7 @@ export function DailyQuotaBar({
       </div>
 
       <div className="text-[11px] text-gray-500">
-        Puedes hacer más pausas, pero sólo las primeras {limit} dan experiencia.
+        Puedes hacer hasta {limit} pausas con recompensa al dia.
       </div>
     </div>
   );

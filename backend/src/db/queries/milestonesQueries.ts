@@ -58,6 +58,17 @@ export type RankingFilter = {
   departmentId?: string | null
 }
 
+export type AchievementInfo = {
+  title: string | null
+  icon: string | null
+}
+
+export type CalcTotalsResult = {
+  dept_target_75: number | null
+  dept_total_ap: number | null
+  per_user_total: number | null
+}
+
 export const getUserBasics = async (userId: string) => {
   const pool = await getPool()
   const { rows } = await pool.query(
@@ -410,4 +421,71 @@ export const countActiveParticipants = async (startISO: string, endISO: string) 
     [startISO, endISO]
   )
   return rows[0]?.total ?? 0
+}
+
+const parseCategoryArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map((v) => String(v))
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      return trimmed
+        .slice(1, -1)
+        .split(",")
+        .map((item) => item.replace(/(^"|"$)/g, "").trim())
+        .filter(Boolean)
+    }
+    return trimmed ? [trimmed] : []
+  }
+  return []
+}
+
+export const getVideoCategoriesSet = async (ids: string[]): Promise<Set<string>> => {
+  if (!ids.length) return new Set()
+  const pool = await getPool()
+  const { rows } = await pool.query<{ id: string; categorias: unknown }>(
+    `SELECT id, categorias FROM videos WHERE id = ANY($1::uuid[])`,
+    [ids]
+  )
+  const categories = new Set<string>()
+  for (const row of rows) {
+    parseCategoryArray(row.categorias).forEach((cat) => categories.add(cat.toLowerCase()))
+  }
+  return categories
+}
+
+export const getAchievementInfo = async (
+  achievementId: string,
+  client?: PoolClient
+): Promise<AchievementInfo | null> => {
+  const db = client ?? (await getPool())
+  const { rows } = await db.query(
+    `SELECT title, icon FROM achievements_catalog WHERE id = $1`,
+    [achievementId]
+  )
+  if (!rows[0]) return null
+  return { title: rows[0].title ?? null, icon: rows[0].icon ?? null }
+}
+
+export const calculateActivePauseTotals = async (
+  startISO: string,
+  endISO: string,
+  usersCount: number,
+  includeOneShots: boolean,
+  onlyBusinessDays: boolean
+): Promise<CalcTotalsResult | null> => {
+  const pool = await getPool()
+  const { rows } = await pool.query<CalcTotalsResult>(
+    `
+    SELECT *
+    FROM calc_ap_totals(
+      p_start := $1,
+      p_end := $2,
+      p_users := $3,
+      p_include_one_shots := $4,
+      p_only_business_days := $5
+    )
+    `,
+    [startISO, endISO, usersCount, includeOneShots, onlyBusinessDays]
+  )
+  return rows[0] ?? null
 }

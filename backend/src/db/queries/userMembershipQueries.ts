@@ -53,3 +53,19 @@ export const getMembershipForUser = async (
   );
   return rows[0];
 };
+
+export const getDailyActivePauseLimitForUser = async (userId: string, fallback = 3) => {
+  const db = await resolveClient();
+  const { rows } = await db.query<{ max_daily_active_pauses: number | null }>(
+    `
+    SELECT o.max_daily_active_pauses
+    FROM user_membership um
+    LEFT JOIN organizations o ON o.id = um.organization_id
+    WHERE um.user_id = $1
+    `,
+    [userId]
+  );
+
+  const value = rows[0]?.max_daily_active_pauses;
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+};

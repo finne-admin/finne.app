@@ -19,6 +19,27 @@ export class DailySatisfactionLimitError extends Error {
   }
 }
 
+export class DailyActivePauseLimitError extends Error {
+  constructor(limit: number) {
+    super(`Has alcanzado el limite diario de ${limit} pausas activas.`)
+    this.name = "DailyActivePauseLimitError"
+  }
+}
+
+export class ActivePauseNotFoundError extends Error {
+  constructor() {
+    super("Pausa activa no encontrada")
+    this.name = "ActivePauseNotFoundError"
+  }
+}
+
+export class InvalidVideosError extends Error {
+  constructor() {
+    super("Los videos seleccionados no son validos.")
+    this.name = "InvalidVideosError"
+  }
+}
+
 let hasActivePauseLinkSupport: boolean | null = null
 
 export const exerciseSatisfactionSupportsActivePauseLink = async () => {
@@ -54,16 +75,25 @@ export const exerciseSatisfactionSupportsActivePauseLink = async () => {
   return hasActivePauseLinkSupport
 }
 
-/**
- * Inserta una nueva pausa activa.
- */
-export const insertActivePause = async (
-  client: PoolClient,
-  userId: string,
-  video1Id: string,
-  video2Id: string
-) => {
-  const { rows: recent } = await client.query<{ id: string }>(
+const countTodaysActivePauses = async (client: PoolClient, userId: string) => {
+  const { start, end } = getMadridDayBounds()
+  const { rows } = await client.query<{ id: string }>(
+    `
+    SELECT id
+    FROM active_pauses
+    WHERE user_id = $1
+      AND created_at >= $2
+      AND created_at < $3
+    FOR UPDATE
+    `,
+    [userId, start, end]
+  )
+
+  return rows.length
+}
+
+const findRecentActivePauseId = async (client: PoolClient, userId: string) => {
+  const { rows } = await client.query<{ id: string }>(
     `
     SELECT id
     FROM active_pauses
@@ -75,11 +105,16 @@ export const insertActivePause = async (
     [userId]
   )
 
-  if (recent.length > 0) {
-    return recent[0].id
-  }
+  return rows[0]?.id ?? null
+}
 
-  const { rows: existing } = await client.query<{ id: string }>(
+const findDuplicateActivePauseId = async (
+  client: PoolClient,
+  userId: string,
+  video1Id: string,
+  video2Id: string
+) => {
+  const { rows } = await client.query<{ id: string }>(
     `
     SELECT id
     FROM active_pauses
@@ -95,23 +130,147 @@ export const insertActivePause = async (
     [userId, video1Id, video2Id]
   )
 
-  if (existing.length > 0) {
-    return existing[0].id
+  return rows[0]?.id ?? null
+}
+
+export const getVideosByIds = async (
+  client: PoolClient,
+  ids: string[]
+): Promise<{ id: string; wistia_id: string | null }[]> => {
+  if (!ids || ids.length === 0) return []
+
+  const { rows } = await client.query<{ id: string; wistia_id: string | null }>(
+    `
+    SELECT id, wistia_id
+    FROM videos
+    WHERE id = ANY($1::uuid[])
+    `,
+    [ids]
+  )
+
+  return rows
+}
+
+const getFavoriteFlags = async (
+  client: PoolClient,
+  userId: string,
+  wistiaMap: Map<string, string>,
+  video1Id: string,
+  video2Id: string
+) => {
+  const wistiaValues = [wistiaMap.get(video1Id) ?? "", wistiaMap.get(video2Id) ?? ""]
+    .filter(Boolean)
+    .map((value) => value.trim())
+
+  if (wistiaValues.length === 0) {
+    return { video1FromFavorite: false, video2FromFavorite: false }
   }
 
-  const pauseId = uuidv7()
-  await client.query(
+  const { rows } = await client.query<{ video_hashed_id: string }>(
     `
-    INSERT INTO active_pauses (id, user_id, video1_id, video2_id, created_at)
-    VALUES ($1, $2, $3, $4, NOW())
+    SELECT video_hashed_id
+    FROM exercise_favorites
+    WHERE user_id = $1
+      AND video_hashed_id = ANY($2)
     `,
-    [pauseId, userId, video1Id, video2Id]
+    [userId, wistiaValues]
   )
-  return pauseId
+
+  const favorites = new Set(rows.map((row) => row.video_hashed_id))
+  return {
+    video1FromFavorite: favorites.has(wistiaMap.get(video1Id) ?? ""),
+    video2FromFavorite: favorites.has(wistiaMap.get(video2Id) ?? ""),
+  }
+}
+
+const insertActivePauseRecord = async (
+  client: PoolClient,
+  userId: string,
+  video1Id: string,
+  video2Id: string,
+  video1FromFavorite: boolean,
+  video2FromFavorite: boolean
+) => {
+  const id = uuidv7()
+  const { rows } = await client.query<{ id: string }>(
+    `
+    INSERT INTO active_pauses (id, user_id, video1_id, video2_id, created_at, video1_from_favorite, video2_from_favorite)
+    VALUES ($1, $2, $3, $4, NOW(), $5, $6)
+    RETURNING id
+    `,
+    [id, userId, video1Id, video2Id, video1FromFavorite, video2FromFavorite]
+  )
+
+  return rows[0]?.id ?? id
 }
 
 /**
- * Inserta nivel de satisfacción asociado a la pausa activa.
+ * Inserta una pausa activa validando limites y previniendo duplicados.
+ */
+export const createActivePause = async (
+  userId: string,
+  video1Id: string,
+  video2Id: string,
+  dailyLimit: number
+): Promise<{ id: string; reused: boolean }> => {
+  const pool = await getPool()
+  const client = await pool.connect()
+
+  try {
+    await client.query("BEGIN")
+
+    const todaysCount = await countTodaysActivePauses(client, userId)
+    if (todaysCount >= dailyLimit) {
+      throw new DailyActivePauseLimitError(dailyLimit)
+    }
+
+    const recentId = await findRecentActivePauseId(client, userId)
+    if (recentId) {
+      await client.query("ROLLBACK")
+      return { id: recentId, reused: true }
+    }
+
+    const duplicateId = await findDuplicateActivePauseId(client, userId, video1Id, video2Id)
+    if (duplicateId) {
+      await client.query("ROLLBACK")
+      return { id: duplicateId, reused: true }
+    }
+
+    const videos = await getVideosByIds(client, [video1Id, video2Id])
+    if (videos.length < 2) {
+      throw new InvalidVideosError()
+    }
+
+    const wistiaMap = new Map(videos.map((row) => [row.id, row.wistia_id ?? ""]))
+    const { video1FromFavorite, video2FromFavorite } = await getFavoriteFlags(
+      client,
+      userId,
+      wistiaMap,
+      video1Id,
+      video2Id
+    )
+
+    const createdId = await insertActivePauseRecord(
+      client,
+      userId,
+      video1Id,
+      video2Id,
+      video1FromFavorite,
+      video2FromFavorite
+    )
+
+    await client.query("COMMIT")
+    return { id: createdId, reused: false }
+  } catch (error) {
+    await client.query("ROLLBACK")
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+/**
+ * Inserta nivel de satisfaccion asociado a la pausa activa.
  */
 export const insertExerciseSatisfaction = async (
   client: PoolClient,
@@ -180,6 +339,59 @@ export const insertExerciseSatisfaction = async (
     `,
     [id, userId, videoIds, satisfactionLevel, tags || []]
   )
+}
+
+export const updateActivePauseSatisfactionRecord = async (
+  activePauseId: string,
+  satisfactionLevel: unknown,
+  tags: string[],
+  videoHashes: string[]
+) => {
+  const pool = await getPool()
+  const client = await pool.connect()
+
+  try {
+    await client.query("BEGIN")
+
+    const normalizedLevel = (satisfactionLevel as any) ?? null
+
+    const result = await client.query<{ user_id: string }>(
+      `
+      UPDATE active_pauses
+      SET satisfaction_level = $1,
+          tags = $2,
+          updated_at = NOW()
+      WHERE id = $3
+      RETURNING user_id
+      `,
+      [normalizedLevel, tags, activePauseId]
+    )
+
+    if (result.rowCount === 0) {
+      throw new ActivePauseNotFoundError()
+    }
+
+    const { user_id: userId } = result.rows[0]
+
+    if (typeof satisfactionLevel === "number" && Number.isFinite(satisfactionLevel)) {
+      await insertExerciseSatisfaction(
+        client,
+        activePauseId,
+        userId,
+        videoHashes,
+        satisfactionLevel,
+        tags
+      )
+    }
+
+    await client.query("COMMIT")
+    return { userId }
+  } catch (error) {
+    await client.query("ROLLBACK")
+    throw error
+  } finally {
+    client.release()
+  }
 }
 
 /**

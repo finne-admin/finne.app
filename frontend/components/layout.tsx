@@ -32,6 +32,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [ringScale, setRingScale] = useState(6);
 
   useEffect(() => {
+    document.documentElement.classList.add("overflow-hidden");
+    document.body.classList.add("overflow-hidden");
+    return () => {
+      document.documentElement.classList.remove("overflow-hidden");
+      document.body.classList.remove("overflow-hidden");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!streakOpen) return;
     const compute = () => {
       const el = wrapperRef.current;

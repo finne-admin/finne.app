@@ -137,3 +137,155 @@ export const fetchExerciseSatisfactionRecords = async (limit: number) => {
   );
   return rows;
 };
+
+export const findOrganizationById = async (organizationId: string) => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `SELECT id, name, slug, max_daily_active_pauses FROM organizations WHERE id = $1`,
+    [organizationId]
+  );
+  return rows[0];
+};
+
+export const createOrganization = async (
+  name: string,
+  slug: string,
+  maxDailyActivePauses?: number
+) => {
+  const pool = await getPool();
+  if (typeof maxDailyActivePauses === "number") {
+    const { rows } = await pool.query(
+      `
+      INSERT INTO organizations (name, slug, max_daily_active_pauses)
+      VALUES ($1, $2, $3)
+      RETURNING id, name, slug, max_daily_active_pauses
+      `,
+      [name, slug, maxDailyActivePauses]
+    );
+    return rows[0];
+  }
+
+  const { rows } = await pool.query(
+    `
+    INSERT INTO organizations (name, slug)
+    VALUES ($1, $2)
+    RETURNING id, name, slug, max_daily_active_pauses
+    `,
+    [name, slug]
+  );
+  return rows[0];
+};
+
+export const findDepartmentById = async (departmentId: string) => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `SELECT id, name, organization_id FROM departments WHERE id = $1`,
+    [departmentId]
+  );
+  return rows[0];
+};
+
+export const createDepartment = async (organizationId: string, name: string) => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `
+    INSERT INTO departments (name, organization_id)
+    VALUES ($1, $2)
+    RETURNING id, name, organization_id
+    `,
+    [name, organizationId]
+  );
+  return rows[0];
+};
+
+export const updateUserRoleById = async (userId: string, roleId: string) => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `
+    UPDATE users
+    SET role_id = $2,
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING id, email, first_name, last_name, role_id
+    `,
+    [userId, roleId]
+  );
+  return rows[0];
+};
+
+export const fetchOrganizationStructure = async () => {
+  const pool = await getPool();
+  const { rows: orgs } = await pool.query(
+    `SELECT id, name, slug, max_daily_active_pauses FROM organizations ORDER BY name`
+  );
+  const { rows: depts } = await pool.query(
+    `SELECT id, name, organization_id FROM departments ORDER BY name`
+  );
+  return { orgs, depts };
+};
+
+export const listOrganizationNotificationDefaults = async () => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `
+    SELECT
+      id,
+      name,
+      slug,
+      default_notification_times,
+      default_notification_active,
+      default_allow_weekend_notifications
+    FROM organizations
+    ORDER BY name
+    `
+  );
+
+  return rows;
+};
+
+export const updateOrganizationNotificationDefaultsById = async (
+  organizationId: string,
+  times: string[],
+  active?: boolean,
+  allowWeekend?: boolean
+) => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `
+    UPDATE organizations
+    SET
+      default_notification_times = $2::text[],
+      default_notification_active = COALESCE($3, default_notification_active),
+      default_allow_weekend_notifications = COALESCE($4, default_allow_weekend_notifications)
+    WHERE id = $1
+    RETURNING
+      id,
+      name,
+      slug,
+      default_notification_times,
+      default_notification_active,
+      default_allow_weekend_notifications
+    `,
+    [organizationId, times, active, allowWeekend]
+  );
+
+  return rows[0];
+};
+
+export const updateOrganizationDailyLimitById = async (
+  organizationId: string,
+  maxDailyActivePauses: number
+) => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `
+    UPDATE organizations
+    SET max_daily_active_pauses = $2
+    WHERE id = $1
+    RETURNING id, name, slug, max_daily_active_pauses
+    `,
+    [organizationId, maxDailyActivePauses]
+  );
+
+  return rows[0];
+};
