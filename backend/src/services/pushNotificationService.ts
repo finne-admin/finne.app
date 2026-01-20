@@ -15,12 +15,23 @@ export async function sendReminderToTokens(
   }
 
   const messaging = getFirebaseMessaging()
+  const reminderTitles = [
+    "Es hora de tu pausa activa!",
+    "Un respiro para recargar energias!",
+    "Tu bienestar es importante! Haz tu pausa activa ahora",
+    "Es hora de moverte! Dedica un momento para ti.",
+    "Pausa activa! 1 minuto para cuidar tu salud. Tu puedes!",
+    "Pequenos movimientos, grandes beneficios! Toca moverte.",
+  ]
+  const body = reminderTitles[Math.floor(Math.random() * reminderTitles.length)]
+
   const message = {
     tokens,
     notification: {
-      title: "¡Hora de tu pausa activa!",
-      body: "Toca para registrar tu ejercicio del día",
+      title: "¡Pausa activa!",
+      body,
     },
+
     data: {
       user_id: payload.userId,
       reminder_time: payload.reminderLabel,

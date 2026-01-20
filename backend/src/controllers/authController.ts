@@ -10,7 +10,7 @@ import {
 import { findRoleByName } from "../db/queries/roleQueries"
 import { getPool } from "../config/dbManager"
 import { findJoinCodeByCode, incrementJoinCodeUsage } from "../db/queries/joinCodeQueries"
-import { upsertUserMembership } from "../db/queries/userMembershipQueries"
+import { getMembershipForUser, upsertUserMembership } from "../db/queries/userMembershipQueries"
 import {
   createRefreshToken,
   findRefreshToken,
@@ -452,6 +452,8 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Usuario no encontrado" })
     }
 
+    const membership = await getMembershipForUser(authUser.id)
+
     const userPayload = {
       id: dbUser.id,
       email: dbUser.email,
@@ -468,6 +470,9 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       approvedAt: dbUser.approved_at,
       approvedBy: dbUser.approved_by,
       registrationRequestedAt: dbUser.registration_requested_at,
+      organizationId: membership?.organization_id ?? null,
+      organizationName: membership?.organization_name ?? null,
+      organizationSlug: membership?.organization_slug ?? null,
     }
 
     res.json({ success: true, user: userPayload })

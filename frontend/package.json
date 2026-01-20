@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "svelte:build": "vite build --config svelte-lab/vite.config.mjs",
+    "svelte:dev": "vite build --watch --config svelte-lab/vite.config.mjs"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.2.3",
@@ -69,12 +71,15 @@
     "@types/node": "^20",
     "@types/react": "^18.3.26",
     "@types/react-dom": "^18.3.7",
+    "@sveltejs/vite-plugin-svelte": "^3.0.2",
     "autoprefixer": "^10.4.22",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.3",
     "postcss": "^8.5.6",
+    "svelte": "^4.2.20",
     "supabase": "^2.2.1",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^5.4.11"
   }
 }

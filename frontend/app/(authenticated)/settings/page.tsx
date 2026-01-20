@@ -410,7 +410,7 @@ export default function SettingsPage() {
       </section>
 
       {/* Exercise Preferences Section */}
-      <section>
+      {/* <section>
         <h2 className="text-2xl font-semibold mb-6 text-gray-900">Preferencias de Ejercicio</h2>
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-medium mb-2 text-gray-900">Grupo Muscular</h3>
@@ -468,7 +468,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Notification Settings Section */}
       <section>

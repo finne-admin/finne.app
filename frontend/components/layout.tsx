@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTutorialState } from '@/components/tutorial/useTutorial';
 import { Tutorial } from '@/components/tutorial/Tutorial';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { apiGet } from "@/lib/apiClient";
 
 import { useAdminMenuItems } from '@/components/hooks/useAdminMenuItems';
 import { MobileNav } from '@/components/navigation/MobileNav';
@@ -22,6 +23,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const supabase = createClientComponentClient();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
 
   // --- Estado para racha (overlay con Rive) ---
   const [streakOpen, setStreakOpen] = useState(false);
@@ -76,6 +78,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
     })();
   }, [supabase]);
 
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await apiGet("/api/auth/me");
+        if (!res.ok) return;
+        const data = await res.json();
+        const slug = data?.user?.organizationSlug;
+        if (!active || !slug) return;
+        setOrgLogoUrl(`/org-logos/${slug}.png`);
+      } catch {
+        // ignore missing logo
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const triggerStreak = useCallback(async () => {
     setCheckingStreak(true);
     try {
@@ -91,13 +112,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const headerContent = useMemo(
     () => (
       <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
-        <div className="flex-1 flex items-center max-w-xl ml-12 lg:ml-0" />
+        <div className="flex items-center gap-3 max-w-xl">
+          {orgLogoUrl && (
+            <div className="h-8 w-8 rounded-full bg-white overflow-hidden">
+              <Image
+                src={orgLogoUrl}
+                alt="Logo organizacion"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+                onError={() => setOrgLogoUrl(null)}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
-            className="hover:bg-gray-200"
+            className="hidden"
             onClick={triggerStreak}
             title="Celebrar racha"
           >

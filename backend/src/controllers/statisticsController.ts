@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
+import { DateTime } from "luxon";
 import { getGlobalStatistics, getUserStatistics } from "../db/queries/statisticsQueries";
 import { getMembershipForUser } from "../db/queries/userMembershipQueries";
+import { getWeeklyActivityPauses } from "../db/queries/milestonesQueries";
+import { getUserXpHistory } from "../db/queries/xpQueries";
 
 export const getUserStatisticsController = async (req: Request, res: Response) => {
   try {
@@ -129,7 +132,26 @@ export const getUserStatisticsForAdminController = async (req: Request, res: Res
     }
 
     const stats = await getUserStatistics(targetUserId)
-    return res.json(stats)
+    const xpHistory = await getUserXpHistory(targetUserId, 10, 0)
+
+    const zone = "Europe/Madrid"
+    const weekStart = DateTime.now().setZone(zone).startOf("week")
+    const weekEnd = weekStart.plus({ days: 7 })
+    const weeklyPauses = await getWeeklyActivityPauses(targetUserId)
+    const activeDays = new Set<number>()
+
+    weeklyPauses.forEach((row) => {
+      const dt = DateTime.fromJSDate(new Date(row.created_at)).setZone(zone)
+      if (dt >= weekStart && dt < weekEnd) {
+        activeDays.add(dt.weekday)
+      }
+    })
+
+    return res.json({
+      ...stats,
+      weeklyActiveDays: Array.from(activeDays).sort((a, b) => a - b),
+      xpHistory,
+    })
   } catch (error) {
     console.error("Error al obtener estadísticas del usuario:", error)
     return res.status(500).json({ error: "Error interno al obtener estadísticas del usuario" })

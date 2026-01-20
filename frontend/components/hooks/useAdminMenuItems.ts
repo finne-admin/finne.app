@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   NotebookPen,
   Shield,
+  FlaskConical,
 } from 'lucide-react'
 
 export type MenuItem = {
@@ -43,6 +44,12 @@ const globalAdminMenuItem: MenuItem = {
   href: '/admin/global',
 }
 
+const svelteLabMenuItem: MenuItem = {
+  icon: FlaskConical,
+  label: 'Lab Svelte',
+  href: '/svelte-lab',
+}
+
 const buildMenus = (opts?: { isOrgAdmin?: boolean; isSuperAdmin?: boolean }): MenuCollections => {
   const footer: MenuItem[] = []
   if (opts?.isSuperAdmin) {
@@ -50,6 +57,11 @@ const buildMenus = (opts?: { isOrgAdmin?: boolean; isSuperAdmin?: boolean }): Me
   }
   if (opts?.isOrgAdmin) {
     footer.push(adminMenuItem)
+  }
+  const showSvelteLab =
+    process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SVELTE_LAB === 'true'
+  if (showSvelteLab) {
+    footer.push(svelteLabMenuItem)
   }
   footer.push(settingsMenuItem)
 

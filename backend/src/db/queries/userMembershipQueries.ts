@@ -28,6 +28,7 @@ export const upsertUserMembership = async (
 
 export interface UserMembershipWithNames {
   organization_id: string | null;
+  organization_slug?: string | null;
   department_id: string | null;
   organization_name: string | null;
   department_name: string | null;
@@ -43,6 +44,7 @@ export const getMembershipForUser = async (
       um.organization_id,
       um.department_id,
       o.name AS organization_name,
+      o.slug AS organization_slug,
       d.name AS department_name
     FROM user_membership um
     LEFT JOIN organizations o ON o.id = um.organization_id

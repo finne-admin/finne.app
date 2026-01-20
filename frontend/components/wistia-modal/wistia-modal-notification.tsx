@@ -67,7 +67,7 @@ export function WistiaModalNotification({ hashedId, onClose, onVideoEnd, isLoadi
             id: hashedId,
             options: {
                 autoPlay: true,
-                playbar: true,
+                playbar: false,
                 volumeControl: true,
                 fullscreenButton: true,
             },

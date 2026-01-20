@@ -89,6 +89,8 @@ interface UserStatsResponse {
   favorite_videos: { title: string; wistia_id: string | null; total_sessions: number }[]
   weekly_comparison: { week_start: string; sessions: number }[]
   time_summary: { week_minutes: number; month_minutes: number }
+  weeklyActiveDays?: number[]
+  xpHistory?: XpLog[]
 }
 
 const ACCOUNT_STATUS_META: Record<
@@ -134,6 +136,39 @@ const formatMinutes = (minutes?: number | null) => {
   if (minutes < 60) return `${minutes.toFixed(0)} min`
   const hours = minutes / 60
   return `${hours.toFixed(1)} h`
+}
+
+type XpLog = {
+  id: string
+  points: number
+  action_type?: string | null
+  created_at?: string | null
+  metadata?: Record<string, any> | null
+}
+
+const XP_SOURCE_LABELS: Record<string, string> = {
+  active_pause: "Pausa activa",
+  pause: "Pausa activa",
+  achievement: "Logro",
+  weekly_challenge: "Reto semanal",
+  questionnaire: "Cuestionario",
+  xp_gain: "XP",
+}
+
+const resolveXpLabel = (entry: XpLog) => {
+  const meta = entry.metadata ?? {}
+  const source = (meta.source || entry.action_type || "xp_gain") as string
+  return XP_SOURCE_LABELS[source] ?? "XP"
+}
+
+const formatXpDate = (value?: string | null) => {
+  if (!value) return ""
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ""
+  return parsed.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "short",
+  })
 }
 
 type EmployeeTableMode = "organization" | "global"
@@ -1226,6 +1261,56 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
                     <p className="text-xl font-semibold text-gray-900">
                       {formatMinutes(statsModal.data.time_summary?.month_minutes)}
                     </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm font-semibold text-gray-900 mb-2">Actividad semanal</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs text-gray-500">
+                        {statsModal.data.weeklyActiveDays?.length ?? 0}/7 dias activos
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {["L", "M", "X", "J", "V", "S", "D"].map((label, index) => {
+                        const day = index + 1
+                        const isActive = statsModal.data.weeklyActiveDays?.includes(day)
+                        return (
+                          <span
+                            key={label}
+                            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${
+                              isActive ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-400"
+                            }`}
+                          >
+                            {label}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm font-semibold text-gray-900 mb-3">Historial de XP</p>
+                    {(statsModal.data.xpHistory?.length ?? 0) === 0 ? (
+                      <p className="text-sm text-gray-500">Sin movimientos recientes.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {statsModal.data.xpHistory?.slice(0, 5).map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-xs"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-800">{resolveXpLabel(entry)}</span>
+                              {formatXpDate(entry.created_at) && (
+                                <span className="text-gray-400">{formatXpDate(entry.created_at)}</span>
+                              )}
+                            </div>
+                            <span className="font-semibold text-emerald-600">+{entry.points} PA</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
