@@ -1,7 +1,7 @@
 <script>
   export let title = 'Capas activas'
   export let intensity = 18
-  export let blur = 0.6
+  export let blurAmount = 0.6
 
   let rx = 0
   let ry = 0
@@ -28,7 +28,7 @@
 
 <div
   class="stack"
-  style={`--rx:${rx}deg; --ry:${ry}deg; --px:${px}px; --py:${py}px; --blur:${blur}`}
+  style={`--rx:${rx}deg; --ry:${ry}deg; --px:${px}px; --py:${py}px; --blur:${blurAmount}`}
   on:pointermove={handleMove}
   on:pointerleave={reset}
 >

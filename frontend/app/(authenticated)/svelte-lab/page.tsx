@@ -82,7 +82,7 @@ type SvelteFlipCounterElement = HTMLElement & {
 type SvelteParallaxStackElement = HTMLElement & {
   title?: string
   intensity?: number
-  blur?: number
+  blurAmount?: number
 }
 
 export default function SvelteLabPage() {
@@ -249,7 +249,7 @@ export default function SvelteLabPage() {
     if (!el) return
     el.title = 'Capas activas'
     el.intensity = stackIntensity
-    el.blur = stackBlur
+    el.blurAmount = stackBlur
   }, [stackIntensity, stackBlur, scriptReady])
 
   useEffect(() => {

@@ -72,7 +72,7 @@ declare global {
       'svelte-parallax-stack': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
         title?: string
         intensity?: number
-        blur?: number
+        blurAmount?: number
       }
     }
   }
