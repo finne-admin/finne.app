@@ -2,9 +2,10 @@ import { DateTime } from "luxon"
 import {
   deleteTokens,
   fetchActiveNotificationPreferences,
+  fetchTipNotificationTargets,
   fetchTokensForUsers,
 } from "../db/queries/notificationJobQueries"
-import { sendReminderToTokens } from "./pushNotificationService"
+import { sendReminderToTokens, sendTipToTokens } from "./pushNotificationService"
 
 const DEFAULT_TIMEZONE = "Europe/Madrid"
 
@@ -17,6 +18,27 @@ function normalizeTime(value: string): string {
   return trimmed.padStart(5, "0")
 }
 
+function normalizeSlot(value: string): string | null {
+  const normalized = normalizeTime(value)
+  return normalized ? normalized : null
+}
+
+function buildTipSlots(slotDate: DateTime, times: string[]): Set<string> {
+  const slots = new Set<string>()
+  for (const time of times) {
+    const normalized = normalizeSlot(time)
+    if (!normalized) continue
+    const [hourStr, minuteStr] = normalized.split(":")
+    const hour = Number(hourStr)
+    const minute = Number(minuteStr)
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue
+    const base = slotDate.set({ hour, minute })
+    slots.add(base.minus({ minutes: 20 }).toFormat("HH:mm"))
+    slots.add(base.plus({ minutes: 20 }).toFormat("HH:mm"))
+  }
+  return slots
+}
+
 export async function dispatchPendingNotifications(
   referenceDate: Date = new Date()
 ): Promise<{
@@ -24,11 +46,13 @@ export async function dispatchPendingNotifications(
   processedUsers: number
   sent: number
   invalidTokens: number
+  tipsProcessedUsers: number
+  tipsSent: number
+  tipsInvalidTokens: number
 }> {
   const timezone = process.env.NOTIFICATION_TIMEZONE || DEFAULT_TIMEZONE
   const now = DateTime.fromJSDate(referenceDate, { zone: "utc" }).setZone(timezone)
-  const slotMinute = Math.floor(now.minute / 15) * 15
-  const slotDate = now.set({ minute: slotMinute, second: 0, millisecond: 0 })
+  const slotDate = now.set({ second: 0, millisecond: 0 })
   const slotLabel = slotDate.toFormat("HH:mm")
   const isWeekend = slotDate.weekday === 6 || slotDate.weekday === 7
 
@@ -40,7 +64,17 @@ export async function dispatchPendingNotifications(
   })
 
   if (!dueUsers.length) {
-    return { slot: slotLabel, processedUsers: 0, sent: 0, invalidTokens: 0 }
+    // still process tips even if no pause reminders
+    const tipResult = await dispatchTips(slotDate, slotLabel, isWeekend)
+    return {
+      slot: slotLabel,
+      processedUsers: 0,
+      sent: 0,
+      invalidTokens: 0,
+      tipsProcessedUsers: tipResult.processedUsers,
+      tipsSent: tipResult.sent,
+      tipsInvalidTokens: tipResult.invalidTokens,
+    }
   }
 
   const userIds = dueUsers.map((pref) => pref.user_id)
@@ -67,9 +101,62 @@ export async function dispatchPendingNotifications(
     await deleteTokens(invalidTokens)
   }
 
+  const tipResult = await dispatchTips(slotDate, slotLabel, isWeekend)
+
   return {
     slot: slotLabel,
     processedUsers: dueUsers.length,
+    sent,
+    invalidTokens: invalidTokens.length,
+    tipsProcessedUsers: tipResult.processedUsers,
+    tipsSent: tipResult.sent,
+    tipsInvalidTokens: tipResult.invalidTokens,
+  }
+}
+
+async function dispatchTips(
+  slotDate: DateTime,
+  slotLabel: string,
+  isWeekend: boolean
+): Promise<{ processedUsers: number; sent: number; invalidTokens: number }> {
+  const tipTargets = await fetchTipNotificationTargets()
+  const dueTips = tipTargets.filter((target) => {
+    if (!target.times?.length) return false
+    if (!target.allow_weekend_notifications && isWeekend) return false
+    const tipSlots = buildTipSlots(slotDate, target.times)
+    return tipSlots.has(slotLabel)
+  })
+
+  if (!dueTips.length) {
+    return { processedUsers: 0, sent: 0, invalidTokens: 0 }
+  }
+
+  const userIds = dueTips.map((target) => target.user_id)
+  const tokensMap = await fetchTokensForUsers(userIds)
+
+  let sent = 0
+  let invalidTokens: string[] = []
+
+  for (const target of dueTips) {
+    const tokens = tokensMap[target.user_id] || []
+    if (!tokens.length) continue
+
+    const result = await sendTipToTokens(tokens, {
+      userId: target.user_id,
+      tipLabel: slotLabel,
+      tipIso: slotDate.toISO() ?? new Date().toISOString(),
+    })
+
+    sent += result.successCount
+    invalidTokens = invalidTokens.concat(result.failedTokens)
+  }
+
+  if (invalidTokens.length) {
+    await deleteTokens(invalidTokens)
+  }
+
+  return {
+    processedUsers: dueTips.length,
     sent,
     invalidTokens: invalidTokens.length,
   }

@@ -6,6 +6,12 @@ export interface NotificationPreferenceRow {
   allow_weekend_notifications: boolean
 }
 
+export interface TipNotificationTargetRow {
+  user_id: string
+  times: string[]
+  allow_weekend_notifications: boolean
+}
+
 export async function fetchActiveNotificationPreferences(): Promise<NotificationPreferenceRow[]> {
   const pool = await getPool()
   const { rows } = await pool.query<NotificationPreferenceRow>(
@@ -13,6 +19,24 @@ export async function fetchActiveNotificationPreferences(): Promise<Notification
       SELECT user_id, times, allow_weekend_notifications
       FROM notification_preferences
       WHERE active = TRUE
+    `
+  )
+  return rows || []
+}
+
+export async function fetchTipNotificationTargets(): Promise<TipNotificationTargetRow[]> {
+  const pool = await getPool()
+  const { rows } = await pool.query<TipNotificationTargetRow>(
+    `
+      SELECT
+        np.user_id,
+        o.default_notification_times AS times,
+        COALESCE(o.default_allow_weekend_notifications, np.allow_weekend_notifications) AS allow_weekend_notifications
+      FROM notification_preferences np
+      JOIN user_membership um ON um.user_id = np.user_id
+      JOIN organizations o ON o.id = um.organization_id
+      WHERE np.active = TRUE
+        AND (o.default_notification_active IS DISTINCT FROM FALSE)
     `
   )
   return rows || []
