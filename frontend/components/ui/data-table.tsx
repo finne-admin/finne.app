@@ -1275,7 +1275,7 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
                     <div className="flex flex-wrap gap-2">
                       {["L", "M", "X", "J", "V", "S", "D"].map((label, index) => {
                         const day = index + 1
-                        const isActive = statsModal.data.weeklyActiveDays?.includes(day)
+                        const isActive = statsModal.data?.weeklyActiveDays?.includes(day)
                         return (
                           <span
                             key={label}
