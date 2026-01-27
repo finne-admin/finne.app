@@ -53,6 +53,8 @@ export default function SettingsPage() {
   const router = useRouter()
 
   const [userRole, setUserRole] = useState<string | null>(null)
+  const normalizedRole = (userRole ?? '').toLowerCase()
+  const canManageSchedules = normalizedRole === 'admin' || normalizedRole === 'superadmin'
 
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({
     userInfo: true,
@@ -134,6 +136,7 @@ export default function SettingsPage() {
   }
 
   const handleAddTime = async () => {
+    if (!canManageSchedules) return
     const newTimeStr = `${newHour.padStart(2, '0')}:${newMinute.padStart(2, '0')}`
     if (!isValidNewTime()) return
     const updatedPreferences = {
@@ -148,6 +151,7 @@ export default function SettingsPage() {
   }
 
   const handleStartEditing = (index: number, time: string) => {
+    if (!canManageSchedules) return
     const [hour, minute] = time.split(':')
     setEditHour(hour)
     setEditMinute(minute)
@@ -155,6 +159,7 @@ export default function SettingsPage() {
   }
 
   const handleSaveEditedTime = async (index: number) => {
+    if (!canManageSchedules) return
     const newTimeStr = `${editHour}:${editMinute}`
     if (!isValidEditedTime(newTimeStr, index)) {
       toast.error('Los horarios deben estar separados al menos 15 minutos entre sí')
@@ -176,6 +181,7 @@ export default function SettingsPage() {
   }
 
   const handleDeleteTime = async (index: number) => {
+    if (!canManageSchedules) return
     const updatedTimes = preferences.times.filter((_, i) => i !== index)
     const updatedPreferences = {
       ...preferences,
@@ -229,7 +235,7 @@ export default function SettingsPage() {
           first_name: user.first_name || user.firstName || '',
           last_name: user.last_name || user.lastName || '',
         })
-        setUserRole(user.role ?? null)
+        setUserRole(user.roleName || user.role || null)
       } catch (error) {
         console.error('Error al obtener usuario:', error)
         toast.error('No se pudo cargar tu información de usuario')
@@ -517,6 +523,8 @@ export default function SettingsPage() {
           </Button> */}
         </div>
 
+        
+
         <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
           {loadingStates.notifications ? (
             <div className="space-y-4">
@@ -544,6 +552,12 @@ export default function SettingsPage() {
                   Deben estar separados al menos 15 minutos.
                 </p>
               </div>
+
+              {!canManageSchedules && (
+                <div className="mt-3 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Solo los administradores pueden añadir, editar o eliminar horarios de notificaciones.
+                </div>
+              )}
 
               <div className="space-y-6">
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
@@ -622,7 +636,7 @@ export default function SettingsPage() {
                       </div>
 
                       {/* Acciones siempre visibles en modo card (cuando no se está editando esa card) */}
-                      {isEditingTime !== index && (
+                      {canManageSchedules && isEditingTime !== index && (
                         <div className="absolute top-2 right-2 flex gap-1 opacity-100">
                           <Button
                             variant="ghost"
@@ -645,14 +659,15 @@ export default function SettingsPage() {
                     </div>
                   ))}
 
-                  {/* Botón Añadir siempre visible */}
-                  <button
-                    onClick={() => setIsAddTimeOpen(true)}
-                    className="h-full min-h-[120px] rounded-lg border-2 border-dashed border-gray-200 hover:border-[#8BC5B5] flex items-center justify-center text-gray-500 hover:text-[#8BC5B5] transition-colors"
-                  >
-                    <Plus className="h-6 w-6 mr-2" />
-                    Añadir Horario
-                  </button>
+                  {canManageSchedules && (
+                    <button
+                      onClick={() => setIsAddTimeOpen(true)}
+                      className="h-full min-h-[120px] rounded-lg border-2 border-dashed border-gray-200 hover:border-[#8BC5B5] flex items-center justify-center text-gray-500 hover:text-[#8BC5B5] transition-colors:"
+                    >
+                      <Plus className="h-6 w-6 mr-2" />
+                      Añadir Horario
+                    </button>
+                  )}
                 </div>
               </div>
             </>
