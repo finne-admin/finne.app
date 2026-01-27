@@ -49,15 +49,38 @@ export default function RecompensasPage() {
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userOrgId, setUserOrgId] = useState<string | null>(null)
   const [orgOptions, setOrgOptions] = useState<OrgOption[]>([])
   const [filter, setFilter] = useState<RankingFilter>({ scope: 'global' })
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
   const [selectedDept, setSelectedDept] = useState<string>('all')
+  const isSuperAdmin = (userRole ?? '').toLowerCase() === 'superadmin'
 
   const selectedOrgData = useMemo(
     () => orgOptions.find((org) => org.id === selectedOrg),
     [orgOptions, selectedOrg]
   )
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await apiGet('/api/auth/me')
+        const data = await res.json()
+        if (res.ok) {
+          setUserRole(data?.user?.roleName || data?.user?.role || null)
+          setUserOrgId(data?.user?.organizationId || null)
+        } else {
+          setUserRole(null)
+          setUserOrgId(null)
+        }
+      } catch (err) {
+        console.error('Error obteniendo usuario:', err)
+        setUserRole(null)
+        setUserOrgId(null)
+      }
+    })()
+  }, [])
 
   const fetchRanking = useCallback(async () => {
     setLoading(true)
@@ -96,6 +119,7 @@ export default function RecompensasPage() {
   }, [fetchRanking])
 
   useEffect(() => {
+    if (!isSuperAdmin) return
     if (!ranking?.canSelectOrganization || orgOptions.length > 0) return
     ;(async () => {
       try {
@@ -111,10 +135,10 @@ export default function RecompensasPage() {
         console.error('Error cargando estructura organizativa:', err)
       }
     })()
-  }, [ranking?.canSelectOrganization, orgOptions.length, selectedOrg])
+  }, [isSuperAdmin, ranking?.canSelectOrganization, orgOptions.length, selectedOrg])
 
   useEffect(() => {
-    if (!ranking?.canSelectOrganization) return
+    if (!isSuperAdmin || !ranking?.canSelectOrganization) return
     if (filter.scope === 'global') {
       setSelectedOrg('global')
       setSelectedDept('all')
@@ -122,7 +146,14 @@ export default function RecompensasPage() {
       setSelectedOrg(filter.organizationId)
       setSelectedDept(filter.departmentId ?? 'all')
     }
-  }, [filter, ranking?.canSelectOrganization])
+  }, [filter, isSuperAdmin, ranking?.canSelectOrganization])
+
+  useEffect(() => {
+    if (isSuperAdmin) return
+    if (!userOrgId) return
+    if (filter.scope !== 'global') return
+    setFilter({ scope: 'organization', organizationId: userOrgId })
+  }, [filter.scope, isSuperAdmin, userOrgId])
 
   const handleOrgChange = (value: string) => {
     setSelectedOrg(value)
@@ -178,7 +209,7 @@ export default function RecompensasPage() {
           </p>
         </div>
 
-        {ranking?.canSelectOrganization && orgOptions.length > 0 && (
+        {isSuperAdmin && ranking?.canSelectOrganization && orgOptions.length > 0 && (
           <div className="mx-auto flex max-w-4xl flex-col gap-3 rounded-3xl border border-emerald-100 bg-white/80 p-4 shadow-sm md:flex-row md:items-center">
             <Select value={selectedOrg} onValueChange={handleOrgChange}>
               <SelectTrigger className="w-full md:w-60">

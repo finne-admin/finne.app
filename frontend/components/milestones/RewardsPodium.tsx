@@ -53,7 +53,7 @@ export function RewardsPodium({ users, rewards, scopeLabel, loading = false }: R
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-emerald-100 pb-4">
         <div className="space-y-1">
           <p className="text-[10px] tracking-[0.4em] uppercase text-emerald-500 font-semibold">
-            Podio semanal
+            Podio temporada
           </p>
           <h2 className="text-2xl font-bold text-gray-900">Top Activos</h2>
           {scopeLabel && <p className="text-sm text-gray-500">{scopeLabel}</p>}
