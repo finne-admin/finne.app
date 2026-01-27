@@ -10,6 +10,7 @@ import SvelteAchievementCard from './SvelteAchievementCard.svelte'
 import SvelteParallaxCard from './SvelteParallaxCard.svelte'
 import SvelteFlipCounter from './SvelteFlipCounter.svelte'
 import SvelteParallaxStack from './SvelteParallaxStack.svelte'
+import SvelteVideoCard from './SvelteVideoCard.svelte'
 
 const defineElement = (tag: string, ctor: unknown) => {
   const elementCtor = (ctor as { element?: CustomElementConstructor }).element
@@ -30,3 +31,4 @@ defineElement('svelte-achievement-card', SvelteAchievementCard)
 defineElement('svelte-parallax-card', SvelteParallaxCard)
 defineElement('svelte-flip-counter', SvelteFlipCounter)
 defineElement('svelte-parallax-stack', SvelteParallaxStack)
+defineElement('svelte-video-card', SvelteVideoCard)

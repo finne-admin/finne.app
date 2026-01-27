@@ -64,30 +64,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('users')
-        .select('avatar_url')
-        .eq('id', user.id)
-        .single();
-
-      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
-    })();
-  }, [supabase]);
-
-  useEffect(() => {
     let active = true;
     (async () => {
       try {
         const res = await apiGet("/api/auth/me");
         if (!res.ok) return;
         const data = await res.json();
+        const avatar = data?.user?.avatarUrl;
         const slug = data?.user?.organizationSlug;
-        if (!active || !slug) return;
-        setOrgLogoUrl(`/org-logos/${slug}.png`);
+        if (!active) return;
+        if (typeof avatar === "string" && avatar.length) {
+          setAvatarUrl(avatar);
+        }
+        if (slug) {
+          setOrgLogoUrl(`/org-logos/${slug}.png`);
+        }
       } catch {
         // ignore missing logo
       }
@@ -114,13 +105,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
         <div className="flex items-center gap-3 max-w-xl">
           {orgLogoUrl && (
-            <div className="h-8 w-8 rounded-full bg-white overflow-hidden">
+            <div className="h-14 w-14 squared-full bg-white overflow-hidden">
               <Image
                 src={orgLogoUrl}
                 alt="Logo organizacion"
-                width={32}
-                height={32}
-                className="h-8 w-8 object-contain"
+                width={56}
+                height={56}
+                className="h-14 w-14 object-contain"
                 onError={() => setOrgLogoUrl(null)}
               />
             </div>

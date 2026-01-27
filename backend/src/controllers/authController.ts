@@ -465,6 +465,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       roleScope: dbUser.role_scope,
       dateOfBirth: dbUser.date_of_birth,
       sex: dbUser.sex,
+      avatarUrl: dbUser.avatar_url ?? null,
       createdAt: dbUser.created_at,
       accountStatus: dbUser.account_status,
       approvedAt: dbUser.approved_at,

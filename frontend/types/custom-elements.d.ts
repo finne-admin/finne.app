@@ -74,6 +74,23 @@ declare global {
         intensity?: number
         blurAmount?: number
       }
+      'svelte-video-card': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        videoId?: string
+        hashedId?: string
+        title?: string
+        description?: string
+        duration?: string
+        thumbnail?: string
+        selected?: boolean
+        disabled?: boolean
+        badge?: string
+        tags?: string[]
+        favorite?: boolean
+        categoryLeft?: string
+        categoryRight?: string
+        categoryLeftColor?: string
+        categoryRightColor?: string
+      }
     }
   }
 }

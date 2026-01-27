@@ -61,10 +61,13 @@ export default function RankingPage() {
 
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loadingRanking, setLoadingRanking] = useState(true)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userOrgId, setUserOrgId] = useState<string | null>(null)
   const [filter, setFilter] = useState<RankingFilter>({ scope: 'global' })
   const [orgOptions, setOrgOptions] = useState<OrgOption[]>([])
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
   const [selectedDept, setSelectedDept] = useState<string>('all')
+  const isSuperAdmin = (userRole ?? '').toLowerCase() === 'superadmin'
 
   useEffect(() => {
     ;(async () => {
@@ -75,6 +78,33 @@ export default function RankingPage() {
       setGoal(goal75)
     })()
   }, [deadline])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await apiGet('/api/auth/me')
+        const data = await res.json()
+        if (res.ok) {
+          setUserRole(data?.user?.roleName || data?.user?.role || null)
+          setUserOrgId(data?.user?.organizationId || null)
+        } else {
+          setUserRole(null)
+          setUserOrgId(null)
+        }
+      } catch (error) {
+        console.error('Error obteniendo usuario:', error)
+        setUserRole(null)
+        setUserOrgId(null)
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    if (isSuperAdmin) return
+    if (!userOrgId) return
+    if (filter.scope !== 'global') return
+    setFilter({ scope: 'organization', organizationId: userOrgId })
+  }, [filter.scope, isSuperAdmin, userOrgId])
 
   const loadRanking = useCallback(async () => {
     setLoadingRanking(true)
@@ -111,6 +141,7 @@ export default function RankingPage() {
   }, [loadRanking])
 
   useEffect(() => {
+    if (!isSuperAdmin) return
     if (!ranking?.canSelectOrganization || orgOptions.length > 0) return
     ;(async () => {
       try {
@@ -123,10 +154,10 @@ export default function RankingPage() {
         console.error('Error cargando organizaciones para ranking:', error)
       }
     })()
-  }, [ranking?.canSelectOrganization, orgOptions.length])
+  }, [isSuperAdmin, ranking?.canSelectOrganization, orgOptions.length])
 
   useEffect(() => {
-    if (!ranking?.canSelectOrganization) return
+    if (!isSuperAdmin || !ranking?.canSelectOrganization) return
     if (filter.scope === 'global') {
       setSelectedOrg('global')
       setSelectedDept('all')
@@ -134,7 +165,7 @@ export default function RankingPage() {
       setSelectedOrg(filter.organizationId)
       setSelectedDept(filter.departmentId ?? 'all')
     }
-  }, [filter, ranking?.canSelectOrganization])
+  }, [filter, isSuperAdmin, ranking?.canSelectOrganization])
 
   const selectedOrgData = useMemo(
     () => orgOptions.find((org) => org.id === selectedOrg),
@@ -192,7 +223,7 @@ export default function RankingPage() {
             <p className="text-sm text-gray-500">{scopeDescription}</p>
           </div>
 
-          {ranking?.canSelectOrganization && orgOptions.length > 0 && (
+          {isSuperAdmin && ranking?.canSelectOrganization && orgOptions.length > 0 && (
             <div className="space-y-3">
               <Select value={selectedOrg} onValueChange={handleOrgChange}>
                 <SelectTrigger>

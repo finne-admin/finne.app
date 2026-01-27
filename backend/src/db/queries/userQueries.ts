@@ -27,6 +27,7 @@ const baseUserSelect = `
   u.email,
   u.first_name,
   u.last_name,
+  u.avatar_url,
   u.role_id,
   r.name AS role_name,
   r.scope AS role_scope,
@@ -159,4 +160,19 @@ export const rejectUserAccount = async (userId: string, adminId: string) => {
   }
 
   return findUserById(userId, pool);
+};
+
+export const updateUserAvatarUrl = async (userId: string, avatarUrl: string | null) => {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `
+    UPDATE users
+    SET avatar_url = $2,
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING id, email, first_name, last_name, avatar_url
+    `,
+    [userId, avatarUrl]
+  );
+  return rows[0] || null;
 };

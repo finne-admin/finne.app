@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { VideoCard } from "@/components/ui/video-card"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -16,6 +15,7 @@ import CategoryCountsPopover from "@/components/utils/CategoryCountsPopover"
 import { getVideoExp } from "@/lib/experience"
 import { apiGet, apiPost, apiDelete, apiFetch, API_BASE_URL } from "@/lib/apiClient"
 import { useDailyQuota, DailyQuotaBar } from "@/components/utils/DailyQuotaBar"
+import { SvelteVideoCard } from "@/components/svelte/SvelteVideoCard"
 
 interface Asset {
   url: string
@@ -82,6 +82,7 @@ type Step = "selection" | "video1" | "countdown" | "video2" | "satisfaction" | "
 const COUNTDOWN_SECONDS = 3
 
 export default function NotificationPage() {
+  const sharedPauseEnabled = false
   const [allVideos, setAllVideos] = useState<WistiaMedia[]>([])
   const [exercises, setExercises] = useState<WistiaMedia[]>([])
   const [selectedVideos, setSelectedVideos] = useState<string[]>([])
@@ -117,6 +118,7 @@ export default function NotificationPage() {
   const waitingOnInvite = Boolean(activeInvite)
   const [videoTags, setVideoTags] = useState<Record<string, string[]>>({})
   const [favoriteHashes, setFavoriteHashes] = useState<Set<string>>(new Set())
+  const [svelteReady, setSvelteReady] = useState(false)
 
   const closeStreakCelebration = () => {
     setShowStreakCelebration(false)
@@ -132,7 +134,11 @@ export default function NotificationPage() {
   const selectedExerciseData = exercises.filter((ex) =>
     selectedVideos.includes(String(ex.id))
   )
-  const canInvite = selectedVideos.length === maxSelections && remainingToday > 0 && !isStarting
+  const canInvite =
+    sharedPauseEnabled &&
+    selectedVideos.length === maxSelections &&
+    remainingToday > 0 &&
+    !isStarting
 
   // 🔹 Obtener usuario autenticado
   useEffect(() => {
@@ -241,6 +247,24 @@ export default function NotificationPage() {
   }
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+    if (window.customElements?.get("svelte-video-card")) {
+      setSvelteReady(true)
+      return
+    }
+    const script = document.createElement("script")
+    script.type = "module"
+    script.src = "/svelte/svelte-lab.js"
+    script.onload = () => setSvelteReady(true)
+    script.onerror = () => setSvelteReady(false)
+    document.head.appendChild(script)
+    return () => {
+      script.remove()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!sharedPauseEnabled) return
     if (currentStep !== "selection") return
 
     fetchInvites().catch(() => {})
@@ -260,6 +284,7 @@ export default function NotificationPage() {
   }, [currentStep])
 
   useEffect(() => {
+    if (!sharedPauseEnabled) return
     if (!activeInvite || currentStep !== "selection") return
     const current = sentInvites.find((inv) => inv.id === activeInvite.id)
     if (!current) return
@@ -278,6 +303,7 @@ export default function NotificationPage() {
   }, [sentInvites, activeInvite, maxSelections])
 
   useEffect(() => {
+    if (!sharedPauseEnabled) return
     if (!autoStartInvite) return
     if (selectedExerciseData.length !== maxSelections) return
     setAutoStartInvite(false)
@@ -285,6 +311,7 @@ export default function NotificationPage() {
   }, [autoStartInvite, selectedExerciseData, maxSelections])
 
   useEffect(() => {
+    if (!sharedPauseEnabled) return
     if (currentStep !== "selection") return
     if (!pendingStartHashes || pendingStartHashes.length !== maxSelections) return
     if (!allVideos.length) return
@@ -612,6 +639,7 @@ export default function NotificationPage() {
   }
 
   const openInviteModal = () => {
+    if (!sharedPauseEnabled) return
     if (!canInvite) return
     if (departmentUsers.length === 0) {
       fetchDepartmentUsers().catch(() => {})
@@ -681,7 +709,7 @@ export default function NotificationPage() {
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {exercises.map((ex) => (
-                <VideoCard
+                <SvelteVideoCard
                   key={ex.id}
                   id={String(ex.id)}
                   hashedId={ex.hashed_id}
@@ -699,6 +727,7 @@ export default function NotificationPage() {
                       !selectedVideos.includes(String(ex.id))) ||
                     remainingToday <= 0
                   }
+                  scriptReady={svelteReady}
                 />
               ))}
             </div>
@@ -750,26 +779,31 @@ export default function NotificationPage() {
                     "Iniciar Ejercicios"
                   )}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={openInviteModal}
-                  disabled={!canInvite || socialBusy || waitingOnInvite}
-                >
-                  Compartir Pausa
-                </Button>
-                {invitesLoading ? (
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Revisando invitaciones...
-                  </span>
-                ) : invites.length > 0 ? (
-                  <Button
-                    variant="secondary"
-                    className="border-emerald-400 text-emerald-800 bg-emerald-50 shadow-[0_0_10px_rgba(16,185,129,0.35)]"
-                    onClick={() => setPendingModalOpen(true)}
-                  >
-                    Invitación pendiente ({invites.length})
-                  </Button>
-                ) : null}
+                {sharedPauseEnabled && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={openInviteModal}
+                      disabled={!canInvite || socialBusy || waitingOnInvite}
+                    >
+                      Compartir Pausa
+                    </Button>
+                    {invitesLoading ? (
+                      <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Revisando invitaciones...
+                      </span>
+                    ) : invites.length > 0 ? (
+                      <Button
+                        variant="secondary"
+                        className="border-emerald-400 text-emerald-800 bg-emerald-50 shadow-[0_0_10px_rgba(16,185,129,0.35)]"
+                        onClick={() => setPendingModalOpen(true)}
+                      >
+                        Invitaci▋ pendiente ({invites.length})
+                      </Button>
+                    ) : null}
+                  </>
+                )}
+
                 <CategoryCountsPopover />
               </div>
             </div>
@@ -783,7 +817,7 @@ export default function NotificationPage() {
         </div>
       </div>
 
-      {activeInvite && (
+      {sharedPauseEnabled && activeInvite && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 text-center">
             <div className="flex flex-col items-center gap-3">
@@ -885,7 +919,7 @@ export default function NotificationPage() {
         </div>
       )}
 
-      {inviteModalOpen && (
+      {sharedPauseEnabled && inviteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -932,7 +966,7 @@ export default function NotificationPage() {
         </div>
       )}
 
-      {pendingModalOpen && (
+      {sharedPauseEnabled && pendingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between">

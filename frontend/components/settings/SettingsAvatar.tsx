@@ -2,10 +2,8 @@
 
 import { useCallback, useState } from 'react'
 import Cropper, { Area } from 'react-easy-crop'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import type { FileObject } from '@supabase/storage-js'
 import { Button } from '@/components/ui/button'
-import { Upload, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import getCroppedImg from '@/components/utils/cropImage'
 import {
   Dialog,
@@ -14,17 +12,20 @@ import {
   DialogDescription,
   DialogHeader,
 } from '@/components/ui/dialog'
+import { API_BASE_URL } from '@/lib/apiClient'
 
-const avatarOptions = [
-  'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default1.png',
-  'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default2.png',
-  'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default3.png',
-  'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default4.png',
-  'https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/default5.png',
-]
+const avatarOptions = ['/default-avatar.png']
+
+const getAuthHeaders = () => {
+  const headers = new Headers()
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  return headers
+}
 
 export function AjustesAvatar() {
-  const supabase = createClientComponentClient()
   const [selected, setSelected] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [imageSrc, setImageSrc] = useState<string | null>(null)
@@ -34,11 +35,15 @@ export function AjustesAvatar() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
   const handleSetAvatar = async (url: string) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
     setSelected(url)
-    await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
+    const headers = getAuthHeaders()
+    headers.set('Content-Type', 'application/json')
+    await fetch(`${API_BASE_URL}/api/user/avatar`, {
+      method: 'PUT',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({ avatarUrl: url }),
+    })
   }
 
   const onCropComplete = useCallback(
@@ -64,54 +69,28 @@ export function AjustesAvatar() {
     if (!imageSrc || !croppedAreaPixels) return
     setUploading(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
     const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels)
-    const timestamp = Date.now()
-    const fileName = `${user.email}_${user.id}_${timestamp}.png`
+    const formData = new FormData()
+    formData.append('file', croppedBlob, 'avatar.png')
 
-    // Buscar y eliminar imágenes anteriores del mismo usuario
-    const { data: listData, error: listError } = await supabase.storage
-      .from('avatars')
-      .list('', { limit: 1000 }) // Ajusta si tienes más de 1000 archivos
+    const res = await fetch(`${API_BASE_URL}/api/user/avatar/upload`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData,
+      credentials: 'include',
+    })
 
-    if (listError) {
-      console.error('Error listando archivos:', listError)
-    } else {
-      const files: FileObject[] = listData ?? []
-      const toDelete = files
-        .filter((file) => file.name.includes(user.id))
-        .map((file) => file.name)
-
-      if (toDelete.length > 0) {
-        const { error: deleteError } = await supabase.storage
-          .from('avatars')
-          .remove(toDelete)
-        if (deleteError) {
-          console.error('Error borrando antiguos:', deleteError)
-        }
-      }
-    }
-
-    // Subir la nueva imagen
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, croppedBlob, {
-        contentType: 'image/png',
-        upsert: true,
-      })
-
-    if (uploadError) {
-      console.error('❌ Error subiendo imagen:', uploadError)
+    if (!res.ok) {
+      console.error('Error subiendo imagen:', res.status)
       setUploading(false)
       return
     }
 
-    const publicUrl = `https://cgpqlasmzpabwrubvhyl.supabase.co/storage/v1/object/public/avatars/${fileName}`
-    await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
-
-    setSelected(publicUrl)
+    const data = await res.json().catch(() => null)
+    const publicUrl = data?.avatarUrl
+    if (typeof publicUrl === 'string') {
+      setSelected(publicUrl)
+    }
     setUploading(false)
     setOpenCropper(false)
   }
