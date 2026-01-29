@@ -63,6 +63,8 @@ export async function sendReminderToTokens(
       user_id: payload.userId,
       reminder_time: payload.reminderLabel,
       generated_at: payload.reminderIso,
+      title: "Pausa activa!",
+      body,
     },
     webpush: {
       headers: {
@@ -114,15 +116,13 @@ export async function sendTipToTokens(
   const messaging = getFirebaseMessaging()
   const message = {
     tokens,
-    notification: {
-      title: "Consejo",
-      body: tip,
-    },
     data: {
       user_id: payload.userId,
       tip_time: payload.tipLabel,
       generated_at: payload.tipIso,
       notification_type: "tip",
+      title: "Consejo",
+      body: tip,
     },
     webpush: {
       headers: {
