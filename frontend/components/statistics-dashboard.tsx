@@ -153,6 +153,19 @@ const formatWeekLabel = (weekStart: string) => {
   return `Semana ${date.toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}`
 }
 
+const resolveCategoryColor = (value: string) => {
+  const label = value.toLowerCase()
+  if (label.includes("movilidad")) return "#7E2FF5"
+  if (label.includes("cervical")) return "#f59e0b"
+  if (label.includes("core")) return "#DE87D5"
+  if (label.includes("cardio")) return "#ef4444"
+  if (label.includes("fuerza") && label.includes("superior")) return "#3b82f6"
+  if (label.includes("fuerza") && label.includes("inferior")) return "#10b981"
+  if (label.includes("miembro inferior")) return "#10b981"
+  if (label.includes("miembro superior")) return "#3b82f6"
+  return "#94a3b8"
+}
+
 export function StatisticsDashboard() {
   const router = useRouter()
   const [data, setData] = useState<StatisticsData | null>(null)
@@ -376,7 +389,9 @@ export function StatisticsDashboard() {
                 {
                   label: "Sesiones completadas",
                   data: data.category_distribution.map((d) => d.total_sessions),
-                  backgroundColor: ["#3b82f6", "#8AC5B5", "#f59e0b", "#10b981", "#8b5cf6", "#ef4444"],
+                  backgroundColor: data.category_distribution.map((d) =>
+                    resolveCategoryColor(d.category)
+                  ),
                   borderRadius: 8,
                 },
               ],

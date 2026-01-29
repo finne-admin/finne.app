@@ -39,9 +39,9 @@ const getBestThumbnail = (assets: Asset[], targetWidth: number) => {
 
 const resolveCategoryColor = (label: string) => {
   const value = label.toLowerCase()
-  if (value.includes("movilidad")) return "#AD6EE0"
+  if (value.includes("movilidad")) return "#7E2FF5  "
   if (value.includes("cervical")) return "#f59e0b"
-  if (value.includes("core")) return "#8b5cf6"
+  if (value.includes("core")) return "#DE87D5"
   if (value.includes("cardio")) return "#ef4444"
   if (value.includes("fuerza") && value.includes("superior")) return "#3b82f6"
   if (value.includes("fuerza") && value.includes("inferior")) return "#10b981"
