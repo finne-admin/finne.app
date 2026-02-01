@@ -14,6 +14,8 @@ import {
   createOrganizationController,
   createDepartmentController,
   updateOrganizationDailyLimitController,
+  listOrganizationSeasonTimers,
+  updateOrganizationSeasonTimer,
   getOrganizationStructure,
   listRolesController,
   updateUserRoleController,
@@ -21,6 +23,7 @@ import {
   listOrganizationNotificationDefaults,
   updateOrganizationNotificationDefaults,
   getExerciseSatisfaction,
+  resetOrganizationDataController,
 } from "../controllers/adminController";
 import {
   deleteRewardDefinitionController,
@@ -49,6 +52,8 @@ router.post("/join-codes", requireSuperAdmin, createJoinCodeController);
 router.delete("/join-codes/:id", requireSuperAdmin, deleteJoinCodeController);
 router.post("/organizations", requireSuperAdmin, createOrganizationController);
 router.put("/organizations/:id/daily-limit", requireSuperAdmin, updateOrganizationDailyLimitController);
+router.get("/season-timers", requireSuperAdmin, listOrganizationSeasonTimers);
+router.put("/season-timers/:organizationId", requireSuperAdmin, updateOrganizationSeasonTimer);
 router.post("/departments", requireSuperAdmin, createDepartmentController);
 router.get("/org-structure", requireSuperAdmin, getOrganizationStructure);
 router.get(
@@ -61,6 +66,7 @@ router.put(
   requireSuperAdmin,
   updateOrganizationNotificationDefaults
 );
+router.post("/reset", requireSuperAdmin, resetOrganizationDataController);
 router.get("/roles", requireSuperAdmin, listRolesController);
 router.get("/exercise-satisfaction", getExerciseSatisfaction);
 router.get("/rewards", requireSuperAdmin, listRewardDefinitionsController);

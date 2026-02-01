@@ -35,6 +35,8 @@ type RankingResponse = {
   userPosition: number | null
   totalUsers: number | null
   scope: RankingScope
+  seasonDeadline?: string | null
+  seasonTimezone?: string | null
   membership: {
     organizationId: string | null
     organizationName: string | null
@@ -57,7 +59,6 @@ type RankingFilter =
 
 export default function RankingPage() {
   const [goal, setGoal] = useState<number | null>(null)
-  const deadline = new Date('2026-02-01T00:00:01')
 
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loadingRanking, setLoadingRanking] = useState(true)
@@ -68,6 +69,14 @@ export default function RankingPage() {
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
   const [selectedDept, setSelectedDept] = useState<string>('all')
   const isSuperAdmin = (userRole ?? '').toLowerCase() === 'superadmin'
+  const fallbackDeadline = new Date('2026-02-01T00:00:01')
+  const deadline = useMemo(() => {
+    if (ranking?.seasonDeadline) {
+      const parsed = new Date(ranking.seasonDeadline)
+      if (!Number.isNaN(parsed.getTime())) return parsed
+    }
+    return fallbackDeadline
+  }, [ranking?.seasonDeadline])
 
   useEffect(() => {
     ;(async () => {

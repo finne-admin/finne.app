@@ -8,6 +8,8 @@ import { OrganizationNotificationDefaults } from '@/components/admin/Organizatio
 import { OrganizationManager } from '@/components/admin/OrganizationManager'
 import { RewardsManager } from '@/components/admin/RewardsManager'
 import { GlobalStatsPanel } from '@/components/admin/GlobalStatsPanel'
+import { OrganizationSeasonTimers } from '@/components/admin/OrganizationSeasonTimers'
+import { GlobalResetPanel } from '@/components/admin/GlobalResetPanel'
 
 export default function GlobalAdminPage() {
   return (
@@ -23,6 +25,7 @@ export default function GlobalAdminPage() {
         <TabsList className="bg-white shadow-sm rounded-lg">
           <TabsTrigger value="management">Gestión</TabsTrigger>
           <TabsTrigger value="stats">Estadísticas</TabsTrigger>
+          <TabsTrigger value="reset">Reinicio</TabsTrigger>
         </TabsList>
 
         <TabsContent value="management" className="flex flex-col gap-6">
@@ -35,6 +38,7 @@ export default function GlobalAdminPage() {
             </CardContent>
           </Card>
           <OrganizationManager />
+          <OrganizationSeasonTimers />
           <OrganizationNotificationDefaults />
           <JoinCodeManager />
           <RewardsManager />
@@ -43,6 +47,10 @@ export default function GlobalAdminPage() {
         <TabsContent value="stats" className="flex flex-col gap-6">
           <GlobalStatsPanel />
           
+        </TabsContent>
+
+        <TabsContent value="reset" className="flex flex-col gap-6">
+          <GlobalResetPanel />
         </TabsContent>
       </Tabs>
     </div>

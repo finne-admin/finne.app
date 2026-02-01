@@ -431,6 +431,8 @@ export const getRankingController = async (req: Request, res: Response) => {
   let filters: RankingFilter | undefined
   let membershipInfo: any = null
   let scopeInfo: any = { mode: "global" as const }
+  let seasonDeadline: string | null = null
+  let seasonTimezone: string | null = null
 
   const normalizeScopeId = (value?: string) => {
     if (!value) return undefined
@@ -475,6 +477,9 @@ export const getRankingController = async (req: Request, res: Response) => {
           requestedOrg,
           requestedDept
         )
+        const org = await findOrganizationById(requestedOrg)
+        seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
+        seasonTimezone = org?.season_timezone ?? null
         scopeInfo = {
           mode: requestedDept ? "department" : "organization",
           organizationId: requestedOrg,
@@ -492,6 +497,9 @@ export const getRankingController = async (req: Request, res: Response) => {
           .status(400)
           .json({ error: "Tu cuenta no esta asociada a una organizacion y departamento" })
       }
+      const org = await findOrganizationById(membership.organization_id)
+      seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
+      seasonTimezone = org?.season_timezone ?? null
       filters = {
         organizationId: membership.organization_id,
         departmentId: membership.department_id,
@@ -521,6 +529,8 @@ export const getRankingController = async (req: Request, res: Response) => {
       scope: scopeInfo,
       membership: membershipInfo,
       canSelectOrganization: isSuperAdmin,
+      seasonDeadline,
+      seasonTimezone,
       rewards,
     })
   } catch (error) {

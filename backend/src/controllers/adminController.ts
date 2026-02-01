@@ -18,7 +18,10 @@ import {
   updateAdminUser,
   updateOrganizationDailyLimitById,
   updateOrganizationNotificationDefaultsById,
+  listOrganizationSeasonTimers as listOrganizationSeasonTimersQuery,
+  updateOrganizationSeasonTimerById,
   updateUserRoleById,
+  resetOrganizationScopeData,
 } from "../db/queries/adminQueries"
 import {
   createJoinCode as createJoinCodeQuery,
@@ -509,6 +512,54 @@ export const updateOrganizationDailyLimitController = async (req: Request, res: 
   }
 }
 
+export const listOrganizationSeasonTimers = async (_req: Request, res: Response) => {
+  try {
+    const organizations = await listOrganizationSeasonTimersQuery()
+    return res.json({ organizations })
+  } catch (error) {
+    console.error("Error listando temporizadores de temporada:", error)
+    return res.status(500).json({ error: "Error al obtener temporizadores de temporada" })
+  }
+}
+
+export const updateOrganizationSeasonTimer = async (req: Request, res: Response) => {
+  const { organizationId } = req.params
+  const { season_deadline, season_timezone } = req.body || {}
+
+  if (!organizationId) {
+    return res.status(400).json({ error: "Falta el ID de la organizacion" })
+  }
+
+  let parsedDeadline: string | null = null
+  if (season_deadline) {
+    const date = new Date(season_deadline)
+    if (Number.isNaN(date.getTime())) {
+      return res.status(400).json({ error: "Fecha de temporada invalida" })
+    }
+    parsedDeadline = date.toISOString().slice(0, 10)
+  }
+
+  const timezone =
+    typeof season_timezone === "string" && season_timezone.trim().length
+      ? season_timezone.trim()
+      : null
+
+  try {
+    const organization = await updateOrganizationSeasonTimerById(
+      organizationId,
+      parsedDeadline,
+      timezone
+    )
+    if (!organization) {
+      return res.status(404).json({ error: "Organizacion no encontrada" })
+    }
+    return res.json({ organization })
+  } catch (error) {
+    console.error("Error actualizando temporizador de temporada:", error)
+    return res.status(500).json({ error: "Error al actualizar temporizador de temporada" })
+  }
+}
+
 // Devuelve organizaciones y sus departamentos.
 export const getOrganizationStructure = async (_req: Request, res: Response) => {
   try {
@@ -570,6 +621,65 @@ export const updateUserMembershipController = async (req: Request, res: Response
   } catch (error) {
     console.error("Error actualizando membership:", error)
     return res.status(500).json({ error: "Error al actualizar organizacion/departamento" })
+  }
+}
+
+// Reinicio manual de datos por organizacion/departamento.
+export const resetOrganizationDataController = async (req: Request, res: Response) => {
+  const {
+    organizationId,
+    departmentId,
+    resetGeneralAchievements,
+    resetWeeklyAchievements,
+    resetActivePauses,
+    resetRanking,
+  } = req.body || {}
+
+  if (!organizationId) {
+    return res.status(400).json({ error: "Falta la organizacion" })
+  }
+
+  const hasAny =
+    Boolean(resetGeneralAchievements) ||
+    Boolean(resetWeeklyAchievements) ||
+    Boolean(resetActivePauses) ||
+    Boolean(resetRanking)
+
+  if (!hasAny) {
+    return res.status(400).json({ error: "Selecciona al menos un parametro de reinicio" })
+  }
+
+  try {
+    const organization = await findOrganizationById(organizationId)
+    if (!organization) {
+      return res.status(404).json({ error: "Organizacion no encontrada" })
+    }
+
+    if (departmentId) {
+      const department = await findDepartmentById(departmentId)
+      if (!department) {
+        return res.status(404).json({ error: "Departamento no encontrado" })
+      }
+      if (department.organization_id !== organizationId) {
+        return res.status(400).json({
+          error: "El departamento no pertenece a la organizacion seleccionada",
+        })
+      }
+    }
+
+    const result = await resetOrganizationScopeData({
+      organizationId,
+      departmentId: departmentId ?? null,
+      resetGeneralAchievements: Boolean(resetGeneralAchievements),
+      resetWeeklyAchievements: Boolean(resetWeeklyAchievements),
+      resetActivePauses: Boolean(resetActivePauses),
+      resetRanking: Boolean(resetRanking),
+    })
+
+    return res.json({ success: true, result })
+  } catch (error) {
+    console.error("Error en reinicio global:", error)
+    return res.status(500).json({ error: "Error al ejecutar el reinicio" })
   }
 }
 
