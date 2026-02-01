@@ -69,7 +69,7 @@ export default function RankingPage() {
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
   const [selectedDept, setSelectedDept] = useState<string>('all')
   const isSuperAdmin = (userRole ?? '').toLowerCase() === 'superadmin'
-  const fallbackDeadline = new Date('2026-02-01T00:00:01')
+  const fallbackDeadline = new Date('2026-05-01T00:00:01')
   const deadline = useMemo(() => {
     if (ranking?.seasonDeadline) {
       const parsed = new Date(ranking.seasonDeadline)
