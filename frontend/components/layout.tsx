@@ -16,6 +16,7 @@ import { MobileNav } from '@/components/navigation/MobileNav';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import FireCounter from '@/components/animations/FireCounter';
 import { motion, AnimatePresence } from "framer-motion";
+import { SvelteSeasonPopup } from '@/components/svelte/SvelteSeasonPopup';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const menuItems = useAdminMenuItems();
@@ -24,6 +25,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const supabase = createClientComponentClient();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [seasonPopupOpen, setSeasonPopupOpen] = useState(false);
+  const [svelteReady, setSvelteReady] = useState(false);
 
   // --- Estado para racha (overlay con Rive) ---
   const [streakOpen, setStreakOpen] = useState(false);
@@ -72,6 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         const avatar = data?.user?.avatarUrl;
         const slug = data?.user?.organizationSlug;
+        const id = data?.user?.id;
         if (!active) return;
         if (typeof avatar === "string" && avatar.length) {
           setAvatarUrl(avatar);
@@ -79,12 +84,40 @@ export function Layout({ children }: { children: React.ReactNode }) {
         if (slug) {
           setOrgLogoUrl(`/org-logos/${slug}.png`);
         }
+        if (typeof id === "string" && id.length) {
+          setUserId(id);
+        }
       } catch {
         // ignore missing logo
       }
     })();
     return () => {
       active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!userId || typeof window === "undefined") return;
+    const storageKey = `season_end_popup_seen_${userId}`;
+    if (localStorage.getItem(storageKey)) return;
+    localStorage.setItem(storageKey, "1");
+    setSeasonPopupOpen(true);
+  }, [userId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.customElements?.get("svelte-season-popup")) {
+      setSvelteReady(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = "/svelte/svelte-lab.js";
+    script.onload = () => setSvelteReady(true);
+    script.onerror = () => setSvelteReady(false);
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
     };
   }, []);
 
@@ -212,6 +245,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <Tutorial onClose={stopTutorial} run={isOpen} />
       </div>
+
+      {svelteReady && (
+        <SvelteSeasonPopup
+          open={seasonPopupOpen}
+          onClose={() => setSeasonPopupOpen(false)}
+          scriptReady={svelteReady}
+        />
+      )}
 
       {/* ===== OVERLAY RIVE ===== */}
       <AnimatePresence>

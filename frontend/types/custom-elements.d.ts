@@ -91,6 +91,12 @@ declare global {
         categoryLeftColor?: string
         categoryRightColor?: string
       }
+      'svelte-season-popup': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        open?: boolean
+        title?: string
+        message?: string
+        cta?: string
+      }
     }
   }
 }
