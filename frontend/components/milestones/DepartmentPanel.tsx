@@ -49,9 +49,13 @@ export default function HuchaPanel({ goal, deadline, pigHeight = 520, className 
 
   return (
     <div className={className}>
-      <div ref={topBlockRef} className="space-y-3 mb-2">
+      {/* <div ref={topBlockRef} className="space-y-3 mb-2">
         <CountdownCircles target={deadline} />
         <GoalBadge current={totalExp} goal={goal} />
+      </div> */}
+      <div ref={topBlockRef} className="space-y-3 mb-2">
+        <CountdownCircles target={deadline} />
+        
       </div>
 
       <CerditoGlobo
