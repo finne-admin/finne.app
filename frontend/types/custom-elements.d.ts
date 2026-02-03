@@ -97,6 +97,28 @@ declare global {
         message?: string
         cta?: string
       }
+      'svelte-quota-token': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        status?: string
+        timeLabel?: string
+        points?: number
+        unit?: string
+      }
+      'svelte-user-stats-panel': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        name?: string
+        email?: string
+        summary?: string
+        timeSummary?: string
+        weeklyActiveDays?: string
+        xpHistory?: string
+        categoryDistribution?: string
+        favoriteVideos?: string
+        insights?: string
+        xpTotal?: number
+        xpLimit?: number
+        xpOffset?: number
+        xpFrom?: string
+        xpTo?: string
+      }
     }
   }
 }

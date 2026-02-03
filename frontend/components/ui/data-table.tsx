@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { Eye, Pencil, Trash2, Search, Loader2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiGet, apiFetch, API_BASE_URL } from "@/lib/apiClient"
@@ -1191,7 +1192,7 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
 
       {statsModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4 py-6">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-4 sm:p-6">
             <div className="flex flex-col gap-2 border-b pb-4 mb-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1228,18 +1229,14 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
             )}
 
             {!statsModal.loading && !statsModal.error && statsModal.data && (
-              <div className="space-y-6">
-                <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
                   {[
                     { label: "Total de pausas", value: statsModal.data.summary.total_exercises.toLocaleString("es-ES") },
                     { label: "Sesiones esta semana", value: statsModal.data.summary.weekly_sessions.toLocaleString("es-ES") },
                     {
                       label: "Satisfacción promedio",
                       value: `${Number(statsModal.data.summary.avg_satisfaction || 0).toFixed(1)} / 5`,
-                    },
-                    {
-                      label: "Días activos",
-                      value: statsModal.data.summary.distinct_days.toLocaleString("es-ES"),
                     },
                   ].map((item) => (
                     <div key={item.label} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
@@ -1249,109 +1246,25 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
                   ))}
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border p-4">
-                    <p className="text-xs uppercase tracking-wide text-gray-500">Tiempo saludable (7 días)</p>
-                    <p className="text-xl font-semibold text-gray-900">
-                      {formatMinutes(statsModal.data.time_summary?.week_minutes)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border p-4">
-                    <p className="text-xs uppercase tracking-wide text-gray-500">Tiempo saludable (30 días)</p>
-                    <p className="text-xl font-semibold text-gray-900">
-                      {formatMinutes(statsModal.data.time_summary?.month_minutes)}
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm text-gray-500">
+                  Última actividad: {formatDateTime(statsModal.employee.last_active)}
+                </p>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border p-4">
-                    <p className="text-sm font-semibold text-gray-900 mb-2">Actividad semanal</p>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs text-gray-500">
-                        {statsModal.data.weeklyActiveDays?.length ?? 0}/7 dias activos
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {["L", "M", "X", "J", "V", "S", "D"].map((label, index) => {
-                        const day = index + 1
-                        const isActive = statsModal.data?.weeklyActiveDays?.includes(day)
-                        return (
-                          <span
-                            key={label}
-                            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${
-                              isActive ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-400"
-                            }`}
-                          >
-                            {label}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border p-4">
-                    <p className="text-sm font-semibold text-gray-900 mb-3">Historial de XP</p>
-                    {(statsModal.data.xpHistory?.length ?? 0) === 0 ? (
-                      <p className="text-sm text-gray-500">Sin movimientos recientes.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {statsModal.data.xpHistory?.slice(0, 5).map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-xs"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-800">{resolveXpLabel(entry)}</span>
-                              {formatXpDate(entry.created_at) && (
-                                <span className="text-gray-400">{formatXpDate(entry.created_at)}</span>
-                              )}
-                            </div>
-                            <span className="font-semibold text-emerald-600">+{entry.points} PA</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border p-4">
-                    <p className="text-sm font-semibold text-gray-900 mb-3">Categorías favoritas</p>
-                    {statsModal.data.category_distribution.length === 0 && (
-                      <p className="text-sm text-gray-500">Sin actividad registrada.</p>
-                    )}
-                    {statsModal.data.category_distribution.slice(0, 3).map((cat) => (
-                      <div key={cat.category} className="flex items-center justify-between text-sm py-1">
-                        <span className="text-gray-600">{cat.category}</span>
-                        <span className="font-medium">{cat.total_sessions}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rounded-lg border p-4">
-                    <p className="text-sm font-semibold text-gray-900 mb-3">Ejercicios más repetidos</p>
-                    {statsModal.data.favorite_videos.length === 0 && (
-                      <p className="text-sm text-gray-500">Aún no hay ejercicios destacados.</p>
-                    )}
-                    {statsModal.data.favorite_videos.slice(0, 3).map((fav) => (
-                      <div key={fav.title + fav.wistia_id} className="flex items-center justify-between text-sm py-1">
-                        <span className="text-gray-600">{fav.title}</span>
-                        <span className="font-medium">{fav.total_sessions}x</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border p-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-2">Insights</p>
-                  {statsModal.data.insights.length === 0 ? (
-                    <p className="text-sm text-gray-500">Sin insights por ahora.</p>
-                  ) : (
-                    <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                      {statsModal.data.insights.map((insight, idx) => (
-                        <li key={`${insight}-${idx}`}>{insight}</li>
-                      ))}
-                    </ul>
-                  )}
+                <div className="flex flex-wrap gap-3 border-t pt-3 text-sm">
+                  {(() => {
+                    const baseUrl = `/admin/users/${statsModal.employee.id}/stats`
+                    const name = `${statsModal.employee.first_name} ${statsModal.employee.last_name}`.trim()
+                    const query = new URLSearchParams({
+                      name,
+                      email: statsModal.employee.email,
+                    }).toString()
+                    const detailUrl = `${baseUrl}?${query}`
+                    return (
+                      <Link className="text-emerald-700 hover:underline" href={detailUrl}>
+                        Ver detalle completo
+                      </Link>
+                    )
+                  })()}
                 </div>
 
                 <div className="flex justify-end">

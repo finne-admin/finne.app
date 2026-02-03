@@ -716,29 +716,48 @@ export default function NotificationPage() {
               <p className="text-yellow-700">No hay ejercicios disponibles</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {exercises.map((ex) => (
-                <SvelteVideoCard
-                  key={ex.id}
-                  id={String(ex.id)}
-                  hashedId={ex.hashed_id}
-                  title={ex.name}
-                  description={ex.description.replace(/<[^>]+>/g, "")}
-                  duration={`${Math.round(ex.duration)}s`}
-                  assets={ex.assets}
-                  isSelected={selectedVideos.includes(String(ex.id))}
-                  onSelect={handleVideoSelect}
-                  tags={videoTags[ex.hashed_id] || []}
-                  isFavorite={Boolean(ex.hashed_id && favoriteHashes.has(ex.hashed_id))}
-                  onFavoriteToggle={handleFavoriteToggle}
-                  disabled={
-                    (selectedVideos.length >= maxSelections &&
-                      !selectedVideos.includes(String(ex.id))) ||
-                    remainingToday <= 0
-                  }
-                  scriptReady={svelteReady}
-                />
-              ))}
+            <div className="relative">
+              <div
+                className={cn(
+                  "grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 transition-opacity",
+                  !hasOpenSlot && "opacity-50"
+                )}
+              >
+                {exercises.map((ex) => (
+                  <SvelteVideoCard
+                    key={ex.id}
+                    id={String(ex.id)}
+                    hashedId={ex.hashed_id}
+                    title={ex.name}
+                    description={ex.description.replace(/<[^>]+>/g, "")}
+                    duration={`${Math.round(ex.duration)}s`}
+                    assets={ex.assets}
+                    isSelected={selectedVideos.includes(String(ex.id))}
+                    onSelect={handleVideoSelect}
+                    tags={videoTags[ex.hashed_id] || []}
+                    isFavorite={Boolean(ex.hashed_id && favoriteHashes.has(ex.hashed_id))}
+                    onFavoriteToggle={handleFavoriteToggle}
+                    disabled={
+                      (selectedVideos.length >= maxSelections &&
+                        !selectedVideos.includes(String(ex.id))) ||
+                      remainingToday <= 0
+                    }
+                    scriptReady={svelteReady}
+                  />
+                ))}
+              </div>
+              {!hasOpenSlot && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="w-[85%] max-w-3xl rounded-3xl border border-red-100 bg-white/55 px-10 py-8 text-center shadow-xl backdrop-blur-md">
+                    <p className="text-base sm:text-lg font-semibold text-gray-800">
+                      Vuelve cuando sea hora de una pausa activa
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Los ejercicios se habilitan durante el horario asignado.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -778,7 +797,9 @@ export default function NotificationPage() {
                       remainingToday > 0 &&
                       hasOpenSlot &&
                       "hover:scale-105 active:scale-95",
-                    isStarting && "cursor-wait"
+                    isStarting && "cursor-wait",
+                    !hasOpenSlot &&
+                      "bg-red-100 text-red-700 hover:bg-red-100 hover:text-red-700 border border-red-200"
                   )}
                   size="lg"
                 >

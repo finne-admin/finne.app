@@ -12,6 +12,8 @@ import SvelteFlipCounter from './SvelteFlipCounter.svelte'
 import SvelteParallaxStack from './SvelteParallaxStack.svelte'
 import SvelteVideoCard from './SvelteVideoCard.svelte'
 import SvelteSeasonPopup from './SvelteSeasonPopup.svelte'
+import SvelteQuotaToken from './SvelteQuotaToken.svelte'
+import SvelteUserStatsPanel from './SvelteUserStatsPanel.svelte'
 
 const defineElement = (tag: string, ctor: unknown) => {
   const elementCtor = (ctor as { element?: CustomElementConstructor }).element
@@ -34,3 +36,5 @@ defineElement('svelte-flip-counter', SvelteFlipCounter)
 defineElement('svelte-parallax-stack', SvelteParallaxStack)
 defineElement('svelte-video-card', SvelteVideoCard)
 defineElement('svelte-season-popup', SvelteSeasonPopup)
+defineElement('svelte-quota-token', SvelteQuotaToken)
+defineElement('svelte-user-stats-panel', SvelteUserStatsPanel)

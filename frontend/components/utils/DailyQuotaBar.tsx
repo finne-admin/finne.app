@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DateTime } from "luxon";
 import { apiGet } from "@/lib/apiClient"; // ya lo usas en notifications
+import { SvelteQuotaToken } from "@/components/svelte/SvelteQuotaToken";
 
 type QuotaState = {
   usedToday: number;
@@ -145,14 +146,15 @@ function QuotaToken({
         "h-10 w-16 sm:h-12 sm:w-20 rounded-md border",
         "flex flex-col items-center justify-center text-center leading-tight select-none",
         isCompleted
-          ? "bg-emerald-400 text-white border-emerald-500"
+          ? "text-white border-emerald-500"
           : isOpen
           ? "bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm"
           : isExpired
-          ? "bg-gray-200 text-gray-500 border-gray-300"
+          ? "bg-red-100 text-red-500 border-red-300"
           : "bg-gray-100 text-gray-500 border-gray-200",
         "mx-0.01",
       ].join(" ")}
+      style={isCompleted ? { backgroundColor: "#8ACC9F" } : undefined}
     >
       {timeLabel ? (
         <>
@@ -203,6 +205,24 @@ export function DailyQuotaBar({
   const lostFromSlots = renderSlots
     ? renderSlots.filter((slot) => slot.status === "expired").length
     : 0;
+  const [svelteReady, setSvelteReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.customElements?.get("svelte-quota-token")) {
+      setSvelteReady(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = "/svelte/svelte-lab.js";
+    script.onload = () => setSvelteReady(true);
+    script.onerror = () => setSvelteReady(false);
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, []);
 
   return (
     <div className={["mt-4 flex flex-col items-center gap-3", className || ""].join(" ")}>
@@ -213,14 +233,18 @@ export function DailyQuotaBar({
           <span className="text-red-600">No se pudo cargar el cupo</span>
         ) : remainingFromSlots > 0 ? (
           <span className="text-gray-700">
-            Te quedan <strong>{remainingFromSlots}</strong> pausa
+            Te quedan{" "}
+            <strong className={remainingFromSlots > 0 ? "text-emerald-600" : "text-gray-900"}>
+              {remainingFromSlots}
+            </strong>{" "}
+            pausa
             {remainingFromSlots === 1 ? "" : "s"} con recompensa hoy
           </span>
         ) : (
           <span className="text-gray-700">Has alcanzado el límite diario con recompensa</span>
         )}
         {lostFromSlots > 0 && (
-          <span className="text-gray-500 text-xs">
+          <span className="text-red-500 text-xs">
             Has perdido <strong>{lostFromSlots}</strong> pausa
             {lostFromSlots === 1 ? "" : "s"} de hoy
           </span>
@@ -230,22 +254,44 @@ export function DailyQuotaBar({
       <div className="flex gap-3 flex-wrap justify-center">
         {renderSlots
           ? renderSlots.map((slot) => (
-              <QuotaToken
-                key={slot.time}
-                status={slot.status}
-                timeLabel={slot.time}
-                points={pointsPerPause}
-                unit={unitLabel}
-              />
+              svelteReady ? (
+                <SvelteQuotaToken
+                  key={slot.time}
+                  status={slot.status}
+                  timeLabel={slot.time}
+                  points={pointsPerPause}
+                  unit={unitLabel}
+                  scriptReady={svelteReady}
+                />
+              ) : (
+                <QuotaToken
+                  key={slot.time}
+                  status={slot.status}
+                  timeLabel={slot.time}
+                  points={pointsPerPause}
+                  unit={unitLabel}
+                />
+              )
             ))
           : segments.map((isFilled, idx) => (
-              <QuotaToken
-                key={idx}
-                status={isFilled ? "completed" : "upcoming"}
-                timeLabel=""
-                points={pointsPerPause}
-                unit={unitLabel}
-              />
+              svelteReady ? (
+                <SvelteQuotaToken
+                  key={idx}
+                  status={isFilled ? "completed" : "upcoming"}
+                  timeLabel=""
+                  points={pointsPerPause}
+                  unit={unitLabel}
+                  scriptReady={svelteReady}
+                />
+              ) : (
+                <QuotaToken
+                  key={idx}
+                  status={isFilled ? "completed" : "upcoming"}
+                  timeLabel=""
+                  points={pointsPerPause}
+                  unit={unitLabel}
+                />
+              )
             ))}
       </div>
 

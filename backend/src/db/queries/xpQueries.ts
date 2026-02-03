@@ -75,3 +75,55 @@ export const getUserXpHistory = async (userId: string, limit: number, offset: nu
 
   return rows
 }
+
+type XpHistoryFilters = {
+  from?: string | Date | null
+  to?: string | Date | null
+}
+
+export const getUserXpHistoryWithFilters = async (
+  userId: string,
+  limit: number,
+  offset: number,
+  filters?: XpHistoryFilters
+) => {
+  const pool = await getPool()
+  const safeLimit = Math.min(Math.max(limit, 1), 100)
+  const safeOffset = Math.max(offset, 0)
+  const params: any[] = [userId]
+  const conditions: string[] = ["user_id = $1", "action_type = 'xp_gain'"]
+
+  if (filters?.from) {
+    params.push(filters.from)
+    conditions.push(`created_at >= $${params.length}`)
+  }
+
+  if (filters?.to) {
+    params.push(filters.to)
+    conditions.push(`created_at <= $${params.length}`)
+  }
+
+  const whereClause = `WHERE ${conditions.join(" AND ")}`
+
+  const { rows } = await pool.query(
+    `
+    SELECT id, action_type, points, metadata, created_at
+    FROM activity_points
+    ${whereClause}
+    ORDER BY created_at DESC
+    LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    `,
+    [...params, safeLimit, safeOffset]
+  )
+
+  const { rows: countRows } = await pool.query<{ total: number }>(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM activity_points
+    ${whereClause}
+    `,
+    params
+  )
+
+  return { rows, total: Number(countRows[0]?.total ?? 0) }
+}
