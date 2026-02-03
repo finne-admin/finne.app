@@ -54,7 +54,7 @@ export default function HuchaPanel({ goal, deadline, pigHeight = 520, className 
         <GoalBadge current={totalExp} goal={goal} />
       </div> */}
       <div ref={topBlockRef} className="space-y-3 mb-2">
-        <CountdownCircles target={deadline} />
+        <CountdownCircles target={deadline} /> 
         
       </div>
 
