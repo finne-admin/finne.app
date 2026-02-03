@@ -1,21 +1,76 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { DateTime } from "luxon";
 import { apiGet } from "@/lib/apiClient"; // ya lo usas en notifications
 
 type QuotaState = {
   usedToday: number;
   remainingToday: number;
   limit: number;
+  times: string[];
+  timezone: string;
+  pausesToday: string[];
+  slots: QuotaSlot[];
+  hasOpenSlot: boolean;
   loadingQuota: boolean;
   quotaError: string | null;
   refetchQuota: () => Promise<void>;
+};
+
+type SlotStatus = "completed" | "open" | "upcoming" | "expired";
+
+export type QuotaSlot = {
+  time: string;
+  status: SlotStatus;
+  windowStart: string;
+  windowEnd: string;
+};
+
+const DEFAULT_TIMEZONE = "Europe/Madrid";
+const WINDOW_BEFORE_MINUTES = 20;
+const WINDOW_AFTER_MINUTES = 25;
+
+const buildSlots = (times: string[], pauses: string[], timezone: string): QuotaSlot[] => {
+  const now = DateTime.now().setZone(timezone);
+  return times.map((time) => {
+    const [hRaw, mRaw] = time.split(":");
+    const hour = Number(hRaw);
+    const minute = Number(mRaw);
+    const slotTime = now.startOf("day").set({ hour, minute, second: 0, millisecond: 0 });
+    const windowStart = slotTime.minus({ minutes: WINDOW_BEFORE_MINUTES });
+    const windowEnd = slotTime.plus({ minutes: WINDOW_AFTER_MINUTES });
+
+    const completed = pauses.some((timestamp) => {
+      const pauseTime = DateTime.fromISO(timestamp, { zone: timezone });
+      return pauseTime >= windowStart && pauseTime <= windowEnd;
+    });
+
+    let status: SlotStatus = "upcoming";
+    if (completed) {
+      status = "completed";
+    } else if (now >= windowStart && now <= windowEnd) {
+      status = "open";
+    } else if (now > windowEnd) {
+      status = "expired";
+    }
+
+    return {
+      time,
+      status,
+      windowStart: windowStart.toISO(),
+      windowEnd: windowEnd.toISO(),
+    };
+  });
 };
 
 export function useDailyQuota(limit = 3): QuotaState {
   const [usedToday, setUsedToday] = useState(0);
   const [remainingToday, setRemainingToday] = useState(limit);
   const [dailyLimit, setDailyLimit] = useState(limit);
+  const [times, setTimes] = useState<string[]>([]);
+  const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
+  const [pausesToday, setPausesToday] = useState<string[]>([]);
   const [loadingQuota, setLoadingQuota] = useState(true);
   const [quotaError, setQuotaError] = useState<string | null>(null);
 
@@ -32,6 +87,9 @@ export function useDailyQuota(limit = 3): QuotaState {
       setDailyLimit(apiLimit);
       setUsedToday(data.usedToday ?? 0);
       setRemainingToday(data.remainingToday ?? apiLimit);
+      setTimes(Array.isArray(data.times) ? data.times : []);
+      setTimezone(typeof data.timezone === "string" ? data.timezone : DEFAULT_TIMEZONE);
+      setPausesToday(Array.isArray(data.pausesToday) ? data.pausesToday : []);
     } catch (err: any) {
       setQuotaError(err.message || "Error al cargar el cupo");
     } finally {
@@ -43,10 +101,21 @@ export function useDailyQuota(limit = 3): QuotaState {
     void fetchDailyQuota();
   }, [fetchDailyQuota]);
 
+  const slots = useMemo(
+    () => buildSlots(times, pausesToday, timezone),
+    [times, pausesToday, timezone]
+  );
+  const hasOpenSlot = slots.some((slot) => slot.status === "open");
+
   return {
     usedToday,
     remainingToday,
     limit: dailyLimit,
+    times,
+    timezone,
+    pausesToday,
+    slots,
+    hasOpenSlot,
     loadingQuota,
     quotaError,
     refetchQuota: fetchDailyQuota,
@@ -57,29 +126,51 @@ export function useDailyQuota(limit = 3): QuotaState {
    Barra visual del cupo
    ========================= */
 function QuotaToken({
-  filled,
+  status,
+  timeLabel,
   points,
   unit,
 }: {
-  filled: boolean;
+  status: SlotStatus;
+  timeLabel: string;
   points: number;
   unit: string;
 }) {
+  const isCompleted = status === "completed";
+  const isOpen = status === "open";
+  const isExpired = status === "expired";
   return (
     <div
       className={[
         "h-10 w-16 sm:h-12 sm:w-20 rounded-md border",
         "flex flex-col items-center justify-center text-center leading-tight select-none",
-        filled
+        isCompleted
           ? "bg-emerald-400 text-white border-emerald-500"
-          : "bg-indigo-50 text-indigo-700 border-indigo-200",
+          : isOpen
+          ? "bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm"
+          : isExpired
+          ? "bg-gray-200 text-gray-500 border-gray-300"
+          : "bg-gray-100 text-gray-500 border-gray-200",
         "mx-0.01",
       ].join(" ")}
     >
-      <div className="font-semibold text-[11px] sm:text-[12px]">
-        +{points}
-        <div className="text-[10px] opacity-80 -mt-0.5">{unit}</div>
-      </div>
+      {timeLabel ? (
+        <>
+          <div className="font-semibold text-[14px] sm:text-[15px]">{timeLabel}</div>
+          <div
+            className={[
+              "text-[10px] opacity-80 -mt-0.5",
+              isExpired ? "line-through" : "",
+            ].join(" ")}
+          >
+            +{points} {unit}
+          </div>
+        </>
+      ) : (
+        <div className="font-semibold text-[12px] sm:text-[13px]">
+          +{points} {unit}
+        </div>
+      )}
     </div>
   );
 }
@@ -87,6 +178,7 @@ function QuotaToken({
 export function DailyQuotaBar({
   limit = 3,
   usedToday,
+  slots = [],
   loading,
   error,
   pointsPerPause = 20,
@@ -95,6 +187,7 @@ export function DailyQuotaBar({
 }: {
   limit?: number;
   usedToday: number;
+  slots?: QuotaSlot[];
   loading?: boolean;
   error?: string | null;
   pointsPerPause?: number;
@@ -103,6 +196,13 @@ export function DailyQuotaBar({
 }) {
   const remaining = Math.max(0, limit - usedToday);
   const segments = Array.from({ length: limit }, (_, i) => i < usedToday);
+  const renderSlots = slots.length > 0 ? slots : null;
+  const remainingFromSlots = renderSlots
+    ? renderSlots.filter((slot) => slot.status === "open" || slot.status === "upcoming").length
+    : remaining;
+  const lostFromSlots = renderSlots
+    ? renderSlots.filter((slot) => slot.status === "expired").length
+    : 0;
 
   return (
     <div className={["mt-4 flex flex-col items-center gap-3", className || ""].join(" ")}>
@@ -111,19 +211,42 @@ export function DailyQuotaBar({
           <span className="text-gray-500">Cargando cupo diario…</span>
         ) : error ? (
           <span className="text-red-600">No se pudo cargar el cupo</span>
-        ) : remaining > 0 ? (
+        ) : remainingFromSlots > 0 ? (
           <span className="text-gray-700">
-            Te quedan <strong>{remaining}</strong> pausa{remaining === 1 ? "" : "s"} con recompensa hoy
+            Te quedan <strong>{remainingFromSlots}</strong> pausa
+            {remainingFromSlots === 1 ? "" : "s"} con recompensa hoy
           </span>
         ) : (
           <span className="text-gray-700">Has alcanzado el límite diario con recompensa</span>
         )}
+        {lostFromSlots > 0 && (
+          <span className="text-gray-500 text-xs">
+            Has perdido <strong>{lostFromSlots}</strong> pausa
+            {lostFromSlots === 1 ? "" : "s"} de hoy
+          </span>
+        )}
       </div>
 
-      <div className="flex gap-3">
-        {segments.map((isFilled, idx) => (
-          <QuotaToken key={idx} filled={isFilled} points={pointsPerPause} unit={unitLabel} />
-        ))}
+      <div className="flex gap-3 flex-wrap justify-center">
+        {renderSlots
+          ? renderSlots.map((slot) => (
+              <QuotaToken
+                key={slot.time}
+                status={slot.status}
+                timeLabel={slot.time}
+                points={pointsPerPause}
+                unit={unitLabel}
+              />
+            ))
+          : segments.map((isFilled, idx) => (
+              <QuotaToken
+                key={idx}
+                status={isFilled ? "completed" : "upcoming"}
+                timeLabel=""
+                points={pointsPerPause}
+                unit={unitLabel}
+              />
+            ))}
       </div>
 
       <div className="text-[11px] text-gray-500">

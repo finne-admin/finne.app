@@ -127,8 +127,16 @@ export default function NotificationPage() {
   }
   const POINTS_PER_PAUSE = 20 // 2 vídeos x 10 PA
 
-  const { usedToday, remainingToday, loadingQuota, quotaError, refetchQuota, limit: dailyLimit } =
-    useDailyQuota()
+  const {
+    usedToday,
+    remainingToday,
+    loadingQuota,
+    quotaError,
+    refetchQuota,
+    limit: dailyLimit,
+    slots: pauseSlots,
+    hasOpenSlot,
+  } = useDailyQuota()
 
   const maxSelections = 2
   const selectedExerciseData = exercises.filter((ex) =>
@@ -690,6 +698,7 @@ export default function NotificationPage() {
             <DailyQuotaBar
               limit={dailyLimit}
               usedToday={usedToday}
+              slots={pauseSlots}
               loading={loadingQuota}
               error={quotaError}
               pointsPerPause={POINTS_PER_PAUSE}
@@ -760,12 +769,14 @@ export default function NotificationPage() {
                     selectedVideos.length !== maxSelections ||
                     isStarting ||
                     remainingToday <= 0 ||
-                    waitingOnInvite
+                    waitingOnInvite ||
+                    !hasOpenSlot
                   }
                   className={cn(
                     "px-8 py-3 text-lg transition-transform",
                     selectedVideos.length === maxSelections &&
                       remainingToday > 0 &&
+                      hasOpenSlot &&
                       "hover:scale-105 active:scale-95",
                     isStarting && "cursor-wait"
                   )}
@@ -775,6 +786,8 @@ export default function NotificationPage() {
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : remainingToday <= 0 ? (
                     "Límite diario alcanzado"
+                  ) : !hasOpenSlot ? (
+                    "Fuera de horario"
                   ) : (
                     "Iniciar Ejercicios"
                   )}
@@ -812,6 +825,11 @@ export default function NotificationPage() {
           {!isLoading && !error && remainingToday <= 0 && (
             <p className="mt-2 text-center text-xs text-gray-500">
               Has llegado al maximo de {dailyLimit} pausas por hoy.
+            </p>
+          )}
+          {!isLoading && !error && remainingToday > 0 && !hasOpenSlot && (
+            <p className="mt-2 text-center text-xs text-gray-500">
+              La pausa activa solo esta disponible dentro de los horarios configurados.
             </p>
           )}
         </div>

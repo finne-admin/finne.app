@@ -10,9 +10,51 @@ import {
   getVideoIdsByHashes,
   updateActivePauseSatisfactionRecord,
 } from "../db/queries/activePauseQueries"
-import { getDailyActivePauseLimitForUser } from "../db/queries/userMembershipQueries"
+import { listDailyActivePausesByUserId } from "../db/queries/quotaQueries"
+import { getMembershipForUser, getDailyActivePauseLimitForUser } from "../db/queries/userMembershipQueries"
+import { getOrganizationNotificationDefaults } from "../db/queries/notificationQueries"
 
 const FALLBACK_DAILY_LIMIT = Number(process.env.ACTIVE_PAUSE_DAILY_LIMIT || "3")
+const DEFAULT_TIMEZONE = "Europe/Madrid"
+const FALLBACK_TIMES = ["10:30", "12:00", "15:45"]
+const WINDOW_BEFORE_MINUTES = 20
+const WINDOW_AFTER_MINUTES = 25
+
+const toTimesArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return (value as unknown[]).map((item) => String(item))
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      return trimmed
+        .slice(1, -1)
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+    }
+    return [trimmed]
+  }
+  return []
+}
+
+const buildWindowsForDay = (times: string[], now: DateTime) => {
+  const day = now.startOf("day")
+  return times
+    .map((time) => {
+      const [hRaw, mRaw] = time.split(":")
+      const hour = Number(hRaw)
+      const minute = Number(mRaw)
+      if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+      const slot = day.set({ hour, minute, second: 0, millisecond: 0 })
+      return {
+        label: time,
+        start: slot.minus({ minutes: WINDOW_BEFORE_MINUTES }),
+        end: slot.plus({ minutes: WINDOW_AFTER_MINUTES }),
+      }
+    })
+    .filter(Boolean) as { label: string; start: DateTime; end: DateTime }[]
+}
 
 // Resuelve IDs internos a partir de hashes de Wistia y responde con los dos videos solicitados.
 export const resolveVideoIds = async (req: Request, res: Response) => {
@@ -58,7 +100,7 @@ export const insertActivePause = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Datos incompletos" })
   }
 
-  const now = DateTime.now().setZone("Europe/Madrid")
+  const now = DateTime.now().setZone(DEFAULT_TIMEZONE)
   if (now.weekday === 6 || now.weekday === 7) {
     return res
       .status(403)
@@ -66,7 +108,44 @@ export const insertActivePause = async (req: Request, res: Response) => {
   }
 
   try {
+    const membership = await getMembershipForUser(user_id)
+    let times = [...FALLBACK_TIMES]
+    if (membership?.organization_id) {
+      const orgDefaults = await getOrganizationNotificationDefaults(membership.organization_id)
+      if (orgDefaults) {
+        const orgTimes = toTimesArray(orgDefaults.default_notification_times)
+        if (orgTimes.length) {
+          times = orgTimes
+        }
+      }
+    }
+    const sortedTimes = times
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .sort()
     const dailyLimit = await getDailyActivePauseLimitForUser(user_id, FALLBACK_DAILY_LIMIT)
+    const windowTimes = sortedTimes.length > dailyLimit ? sortedTimes.slice(0, dailyLimit) : sortedTimes
+    const windows = buildWindowsForDay(windowTimes, now)
+    const activeWindow = windows.find(
+      (window) => now >= window.start && now <= window.end
+    )
+    if (!activeWindow) {
+      return res.status(403).json({
+        error: "Estas fuera del horario permitido para realizar la pausa activa.",
+      })
+    }
+
+    const pausesToday = await listDailyActivePausesByUserId(user_id, DEFAULT_TIMEZONE)
+    const alreadyCompleted = pausesToday.some((timestamp) => {
+      const pauseTime = DateTime.fromISO(timestamp, { zone: DEFAULT_TIMEZONE })
+      return pauseTime >= activeWindow.start && pauseTime <= activeWindow.end
+    })
+    if (alreadyCompleted) {
+      return res.status(403).json({
+        error: "Ya completaste la pausa correspondiente a este horario.",
+      })
+    }
+
     const { id, reused } = await createActivePause(
       user_id,
       video1_id,
