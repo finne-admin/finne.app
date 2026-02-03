@@ -58,8 +58,8 @@ const buildSlots = (times: string[], pauses: string[], timezone: string): QuotaS
     return {
       time,
       status,
-      windowStart: windowStart.toISO(),
-      windowEnd: windowEnd.toISO(),
+      windowStart: windowStart.toISO() || "",
+      windowEnd: windowEnd.toISO() || "",
     };
   });
 };
