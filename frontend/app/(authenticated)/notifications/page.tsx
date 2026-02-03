@@ -756,7 +756,7 @@ export default function NotificationPage() {
                       Los ejercicios se habilitan durante el horario asignado.
                     </p>
                   </div>
-                </div>
+                </div> 
               )}
             </div>
           )}
