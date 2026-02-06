@@ -17,6 +17,7 @@ interface SvelteThermometerProps {
   min: number
   max: number
   subtitle?: string
+  frameless?: boolean
   scriptReady?: boolean
 }
 
