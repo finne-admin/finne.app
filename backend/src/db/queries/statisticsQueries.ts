@@ -12,6 +12,7 @@ export const getUserStatistics = async (userId: string) => {
         (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1) AS total_exercises,
         (SELECT COUNT(DISTINCT DATE(created_at)) FROM active_pauses WHERE user_id = $1) AS distinct_days,
         (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '7 days') AS weekly_sessions,
+        (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '15 days') AS last_15_days,
         (
           SELECT COALESCE(ROUND(AVG(satisfaction_level), 1), 0)
           FROM exercise_satisfaction
@@ -25,6 +26,7 @@ export const getUserStatistics = async (userId: string) => {
       total_exercises: 0,
       distinct_days: 0,
       weekly_sessions: 0,
+      last_15_days: 0,
       avg_satisfaction: 0,
     }
 

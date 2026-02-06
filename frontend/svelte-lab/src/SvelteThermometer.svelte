@@ -1,8 +1,10 @@
 <script>
-  export let label = 'Temperatura'
+  export let label = "Temperatura"
   export let value = 22
   export let min = 0
   export let max = 40
+  export let subtitle = ""
+  export let frameless = false
 
   const clamp = (val, low, high) => Math.min(high, Math.max(low, val))
   $: safeValue = clamp(value, min, max)
@@ -19,15 +21,18 @@
   }
   $: fillColor = toRgb(mix.r, mix.g, mix.b)
   $: glowColor = `rgba(${mix.r}, ${mix.g}, ${mix.b}, 0.45)`
+  $: subtitleText = subtitle || `${safeValue}C - ${percent}%`
 </script>
 
-<div class="thermo" style={`--level:${percent}%; --fill:${fillColor}; --glow:${glowColor};`}>
+<div
+  class={`thermo ${frameless ? "frameless" : ""}`}
+  style={`--level:${percent}%; --fill:${fillColor}; --glow:${glowColor};`}
+>
   <div class="header">
     <div>
       <p class="title">{label}</p>
-      <p class="subtitle">{safeValue}°C · {percent}%</p>
+      <p class="subtitle">{subtitleText}</p>
     </div>
-    <div class="chip">{min}° – {max}°</div>
   </div>
   <div class="meter">
     <div class="tube">
@@ -47,10 +52,27 @@
     padding: 16px;
     background: #ffffff;
   }
+  .thermo.frameless {
+    border: none;
+    background: transparent;
+    padding: 0;
+    gap: 6px;
+    grid-template-columns: 1fr;
+    align-items: center;
+    text-align: center;
+  }
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+  }
+  .thermo.frameless .header {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    text-align: center;
   }
   .title {
     margin: 0;
@@ -63,19 +85,19 @@
     font-size: 12px;
     color: #64748b;
   }
-  .chip {
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #ecfdf5;
-    color: #065f46;
-    border: 1px solid rgba(16, 185, 129, 0.2);
-  }
   .meter {
     position: relative;
     height: 160px;
     display: grid;
     place-items: center;
+  }
+  .thermo.frameless .meter {
+    align-self: start;
+    width: 52px;
+    justify-self: center;
+  }
+  .thermo.frameless .meter {
+    height: 120px;
   }
   .tube {
     position: relative;
@@ -86,6 +108,9 @@
     border: 1px solid #e2e8f0;
     overflow: hidden;
     box-shadow: inset 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+  .thermo.frameless .tube {
+    height: 110px;
   }
   .fill {
     position: absolute;
@@ -116,6 +141,10 @@
     border: 2px solid rgba(226, 232, 240, 0.9);
     box-shadow: 0 10px 24px var(--glow);
     animation: pulse 2.2s ease-in-out infinite;
+  }
+  .thermo.frameless .bulb {
+    width: 36px;
+    height: 36px;
   }
   @keyframes shimmer {
     0%, 100% {

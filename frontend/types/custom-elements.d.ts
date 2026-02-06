@@ -32,6 +32,8 @@ declare global {
         value?: number
         min?: number
         max?: number
+        subtitle?: string
+        frameless?: boolean
       }
       'svelte-podium': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
         first?: number
@@ -118,6 +120,12 @@ declare global {
         xpOffset?: number
         xpFrom?: string
         xpTo?: string
+      }
+      'svelte-rewards-podium': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        users?: unknown[]
+        rewards?: Record<string, unknown>
+        scopeLabel?: string
+        loading?: boolean
       }
     }
   }

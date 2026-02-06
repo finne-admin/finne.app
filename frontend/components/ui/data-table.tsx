@@ -714,8 +714,8 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="relative w-full md:flex-1">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+        <div className="relative w-full md:flex-1 md:min-w-[260px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Buscar por nombre o email..."
@@ -864,7 +864,7 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
                   <TableHead className="min-w-[160px]">Departamento</TableHead>
                 </>
               )}
-              <TableHead className="min-w-[130px] text-center">Estado</TableHead>
+              <TableHead className="min-w-[80px] pr-2 text-center">Estado</TableHead>
               <TableHead className="min-w-[140px] text-center">Acción</TableHead>
             </TableRow>
           </TableHeader>
@@ -1012,7 +1012,7 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
                           </TableCell>
                         </>
                       )}
-                      <TableCell className="max-w-[80px] text-center">
+                      <TableCell className="max-w-[70px] pr-2 text-center">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${ACCOUNT_STATUS_META[employee.account_status].badgeClass}`}
                         >

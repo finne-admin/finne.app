@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiGet } from '@/lib/apiClient'
-import { RewardsPodium, type PodiumReward } from '@/components/milestones/RewardsPodium'
+import type { PodiumReward } from '@/components/milestones/RewardsPodium'
+import { SvelteRewardsPodium } from '@/components/svelte/SvelteRewardsPodium'
 import type { RankingUser } from '@/components/milestones/UserRanking'
 import {
   Select,
@@ -246,7 +247,12 @@ export default function RecompensasPage() {
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-600">{error}</div>
         ) : (
-          <RewardsPodium users={podiumUsers} rewards={ranking?.rewards} scopeLabel={scopeLabel} loading={loading} />
+          <SvelteRewardsPodium
+            users={podiumUsers}
+            rewards={ranking?.rewards}
+            scopeLabel={scopeLabel}
+            loading={loading}
+          />
         )}
       </div>
     </div>

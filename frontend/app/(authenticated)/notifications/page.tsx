@@ -16,6 +16,7 @@ import { getVideoExp } from "@/lib/experience"
 import { apiGet, apiPost, apiDelete, apiFetch, API_BASE_URL } from "@/lib/apiClient"
 import { useDailyQuota, DailyQuotaBar } from "@/components/utils/DailyQuotaBar"
 import { SvelteVideoCard } from "@/components/svelte/SvelteVideoCard"
+import { SvelteThermometer } from "@/components/svelte/SvelteThermometer"
 
 interface Asset {
   url: string
@@ -119,6 +120,9 @@ export default function NotificationPage() {
   const [videoTags, setVideoTags] = useState<Record<string, string[]>>({})
   const [favoriteHashes, setFavoriteHashes] = useState<Set<string>>(new Set())
   const [svelteReady, setSvelteReady] = useState(false)
+  const [pauses15Days, setPauses15Days] = useState<number | null>(null)
+  const [pauses15Loading, setPauses15Loading] = useState(false)
+  const [pauses15Error, setPauses15Error] = useState<string | null>(null)
 
   const closeStreakCelebration = () => {
     setShowStreakCelebration(false)
@@ -137,6 +141,25 @@ export default function NotificationPage() {
     slots: pauseSlots,
     hasOpenSlot,
   } = useDailyQuota()
+
+  const activityLimit = Math.max(1, dailyLimit || 0)
+  const activityMax = activityLimit * 15
+  const activityCount = Math.max(0, Math.min(pauses15Days ?? 0, activityMax))
+  const activityHeat = Math.max(activityMax - activityCount, 0)
+  const activityStatus = pauses15Error
+    ? "No se pudo cargar actividad"
+    : pauses15Loading
+    ? "Cargando actividad..."
+    : activityCount >= activityMax * 0.6
+    ? "Nivel de actividad bueno"
+    : activityCount >= activityMax * 0.3
+    ? "Actividad media"
+    : "Necesitas hacer mas pausas"
+  const activitySubtitle = pauses15Error
+    ? "No se pudo cargar actividad"
+    : pauses15Loading
+    ? "Cargando actividad..."
+    : `${activityCount} pausas en 15 dias - ${activityStatus}`
 
   const maxSelections = 2
   const selectedExerciseData = exercises.filter((ex) =>
@@ -290,6 +313,28 @@ export default function NotificationPage() {
       clearInterval(sentInterval)
     }
   }, [currentStep])
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      setPauses15Loading(true)
+      setPauses15Error(null)
+      try {
+        const res = await apiGet("/api/statistics")
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data?.error || "No se pudo cargar actividad")
+        }
+        const count = Number(data?.summary?.last_15_days ?? 0)
+        setPauses15Days(Number.isFinite(count) ? count : 0)
+      } catch (err: any) {
+        setPauses15Error(err.message || "No se pudo cargar actividad")
+        setPauses15Days(0)
+      } finally {
+        setPauses15Loading(false)
+      }
+    }
+    fetchActivity()
+  }, [])
 
   useEffect(() => {
     if (!sharedPauseEnabled) return
@@ -688,7 +733,18 @@ export default function NotificationPage() {
 
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
-          <div className="text-center">
+          <div className="relative text-center">
+            <div className="hidden lg:block absolute left-0 top-0 -translate-y-6 w-[230px]">
+              <SvelteThermometer
+                label="Frecuencia de actividad"
+                subtitle={activityStatus}
+                value={activityHeat}
+                min={0}
+                max={activityMax}
+                frameless
+                scriptReady={svelteReady}
+              />
+            </div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
               Elige tus Ejercicios
             </h1>
