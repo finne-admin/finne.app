@@ -3,7 +3,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 
 type Props = {
-  target: Date | number | string
+  target?: Date | number | string
+  timeZone?: string
   className?: string
   /** Tamaño fijo opcional (px). Si no se pasa, se calcula para que quepan 4 sin solaparse. */
   sizePx?: number
@@ -14,19 +15,86 @@ function pad2(n: number) {
 }
 
 export default forwardRef<HTMLDivElement, Props>(function CountdownCircles(
-  { target, className, sizePx },
+  { target, timeZone = 'Europe/Madrid', className, sizePx },
   ref
 ) {
   const hostRef = useRef<HTMLDivElement>(null)
   useImperativeHandle(ref, () => hostRef.current as HTMLDivElement)
 
   const targetMs = useMemo(() => {
-    return target instanceof Date
-      ? target.getTime()
-      : typeof target === 'string'
-      ? Date.parse(target)
-      : target
-  }, [target])
+    if (target) {
+      return target instanceof Date
+        ? target.getTime()
+        : typeof target === 'string'
+        ? Date.parse(target)
+        : target
+    }
+
+    // Default: next Sunday 23:59:59 in the given time zone (client-side).
+    const now = new Date()
+    const partsFor = (tz: string) =>
+      new Intl.DateTimeFormat('en', {
+        timeZone: tz,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: false,
+      })
+        .formatToParts(now)
+        .reduce((acc: Record<string, number>, p) => {
+          if (p.type !== 'literal') acc[p.type] = Number(p.value)
+          return acc
+        }, {})
+
+    const utc = partsFor('UTC')
+    const tzParts = partsFor(timeZone)
+
+    // offset (ms) between tz and UTC at "now"
+    const tzAsIfUTC = Date.UTC(
+      tzParts.year,
+      tzParts.month - 1,
+      tzParts.day,
+      tzParts.hour,
+      tzParts.minute,
+      tzParts.second
+    )
+    const utcAsUTC = Date.UTC(
+      utc.year,
+      utc.month - 1,
+      utc.day,
+      utc.hour,
+      utc.minute,
+      utc.second
+    )
+    const offsetMs = tzAsIfUTC - utcAsUTC
+
+    // weekday in tz (0 = Sunday)
+    const weekday = new Date(
+      Date.UTC(
+        tzParts.year,
+        tzParts.month - 1,
+        tzParts.day,
+        tzParts.hour,
+        tzParts.minute,
+        tzParts.second
+      )
+    ).getUTCDay()
+    const daysToAdd = (0 - weekday + 7) % 7
+
+    // target as if the wall-clock date is UTC, then subtract offset to get real UTC timestamp
+    const targetAsIfUTC = Date.UTC(
+      tzParts.year,
+      tzParts.month - 1,
+      tzParts.day + daysToAdd,
+      23,
+      59,
+      59
+    )
+    return targetAsIfUTC - offsetMs
+  }, [target, timeZone])
 
   // ---- tiempo ----
   const [now, setNow] = useState<number>(() => Date.now())
