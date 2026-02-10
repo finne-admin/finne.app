@@ -6,6 +6,7 @@ import {
   fetchTokensForUsers,
 } from "../db/queries/notificationJobQueries"
 import { sendReminderToTokens, sendTipToTokens } from "./pushNotificationService"
+import { resolveOrgTimesForDate } from "../utils/notificationTimes"
 
 const DEFAULT_TIMEZONE = "Europe/Madrid"
 
@@ -121,9 +122,17 @@ async function dispatchTips(
 ): Promise<{ processedUsers: number; sent: number; invalidTokens: number }> {
   const tipTargets = await fetchTipNotificationTargets()
   const dueTips = tipTargets.filter((target) => {
-    if (!target.times?.length) return false
+    const resolved = resolveOrgTimesForDate(
+      {
+        default_notification_times: target.times,
+        default_notification_times_by_day: target.times_by_day,
+      },
+      slotDate,
+      target.times || []
+    )
+    if (!resolved?.length) return false
     if (!target.allow_weekend_notifications && isWeekend) return false
-    const tipSlots = buildTipSlots(slotDate, target.times)
+    const tipSlots = buildTipSlots(slotDate, resolved)
     return tipSlots.has(slotLabel)
   })
 

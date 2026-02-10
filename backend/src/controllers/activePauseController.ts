@@ -13,30 +13,13 @@ import {
 import { listDailyActivePausesByUserId } from "../db/queries/quotaQueries"
 import { getMembershipForUser, getDailyActivePauseLimitForUser } from "../db/queries/userMembershipQueries"
 import { getOrganizationNotificationDefaults } from "../db/queries/notificationQueries"
+import { resolveOrgTimesForDate } from "../utils/notificationTimes"
 
 const FALLBACK_DAILY_LIMIT = Number(process.env.ACTIVE_PAUSE_DAILY_LIMIT || "3")
 const DEFAULT_TIMEZONE = "Europe/Madrid"
 const FALLBACK_TIMES = ["10:30", "12:00", "15:45"]
 const WINDOW_BEFORE_MINUTES = 20
 const WINDOW_AFTER_MINUTES = 25
-
-const toTimesArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) {
-    return (value as unknown[]).map((item) => String(item))
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim()
-    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-      return trimmed
-        .slice(1, -1)
-        .split(",")
-        .map((part) => part.trim())
-        .filter(Boolean)
-    }
-    return [trimmed]
-  }
-  return []
-}
 
 const buildWindowsForDay = (times: string[], now: DateTime) => {
   const day = now.startOf("day")
@@ -113,10 +96,7 @@ export const insertActivePause = async (req: Request, res: Response) => {
     if (membership?.organization_id) {
       const orgDefaults = await getOrganizationNotificationDefaults(membership.organization_id)
       if (orgDefaults) {
-        const orgTimes = toTimesArray(orgDefaults.default_notification_times)
-        if (orgTimes.length) {
-          times = orgTimes
-        }
+        times = resolveOrgTimesForDate(orgDefaults, now, times)
       }
     }
     const sortedTimes = times

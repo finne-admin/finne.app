@@ -290,6 +290,7 @@ export const listOrganizationNotificationDefaults = async () => {
       name,
       slug,
       default_notification_times,
+      default_notification_times_by_day,
       default_notification_active,
       default_allow_weekend_notifications
     FROM organizations
@@ -303,6 +304,8 @@ export const listOrganizationNotificationDefaults = async () => {
 export const updateOrganizationNotificationDefaultsById = async (
   organizationId: string,
   times: string[],
+  timesByDay: Record<string, string[]> | null,
+  hasTimesByDay: boolean,
   active?: boolean,
   allowWeekend?: boolean
 ) => {
@@ -312,18 +315,23 @@ export const updateOrganizationNotificationDefaultsById = async (
     UPDATE organizations
     SET
       default_notification_times = $2::text[],
-      default_notification_active = COALESCE($3, default_notification_active),
-      default_allow_weekend_notifications = COALESCE($4, default_allow_weekend_notifications)
+      default_notification_times_by_day = CASE
+        WHEN $4 THEN $3::jsonb
+        ELSE default_notification_times_by_day
+      END,
+      default_notification_active = COALESCE($5, default_notification_active),
+      default_allow_weekend_notifications = COALESCE($6, default_allow_weekend_notifications)
     WHERE id = $1
     RETURNING
       id,
       name,
       slug,
       default_notification_times,
+      default_notification_times_by_day,
       default_notification_active,
       default_allow_weekend_notifications
     `,
-    [organizationId, times, active, allowWeekend]
+    [organizationId, times, timesByDay, hasTimesByDay, active, allowWeekend]
   );
 
   return rows[0];

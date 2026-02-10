@@ -26,6 +26,7 @@ export const getOrganizationNotificationDefaults = async (organizationId: string
     `
     SELECT
       default_notification_times,
+      default_notification_times_by_day,
       default_notification_active,
       default_allow_weekend_notifications
     FROM organizations

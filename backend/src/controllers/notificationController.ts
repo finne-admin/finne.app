@@ -1,4 +1,5 @@
 import { Request, Response } from "express"
+import { DateTime } from "luxon"
 import {
   deleteNotificationPreferencesByUser,
   findNotificationPreferences,
@@ -7,26 +8,10 @@ import {
   upsertNotificationPreferencesQuery,
 } from "../db/queries/notificationQueries"
 import { getMembershipForUser } from "../db/queries/userMembershipQueries"
-
-const toTimesArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) {
-    return (value as unknown[]).map((item) => String(item))
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim()
-    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-      return trimmed
-        .slice(1, -1)
-        .split(",")
-        .map((part) => part.trim())
-        .filter(Boolean)
-    }
-    return [trimmed]
-  }
-  return []
-}
+import { resolveOrgTimesForDate } from "../utils/notificationTimes"
 
 const FALLBACK_TIMES = ["10:30", "12:00", "15:45"]
+const DEFAULT_TIMEZONE = "Europe/Madrid"
 
 // Obtiene preferencias de notificaciones; crea registro con defaults si no existe.
 export const getNotificationPreferences = async (req: Request, res: Response) => {
@@ -50,10 +35,8 @@ export const getNotificationPreferences = async (req: Request, res: Response) =>
     if (membership?.organization_id) {
       const orgDefaults = await getOrganizationNotificationDefaults(membership.organization_id)
       if (orgDefaults) {
-        const orgTimes = toTimesArray(orgDefaults.default_notification_times)
-        if (orgTimes.length) {
-          defaultTimes = orgTimes
-        }
+        const now = DateTime.now().setZone(process.env.NOTIFICATION_TIMEZONE || DEFAULT_TIMEZONE)
+        defaultTimes = resolveOrgTimesForDate(orgDefaults, now, defaultTimes)
         if (typeof orgDefaults.default_notification_active === "boolean") {
           defaultActive = orgDefaults.default_notification_active
         }

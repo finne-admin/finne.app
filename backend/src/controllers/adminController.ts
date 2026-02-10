@@ -73,6 +73,30 @@ const normalizeTimesInput = (value: unknown): string[] => {
   return unique
 }
 
+const normalizeTimesByDay = (value: unknown): Record<string, string[]> | null | undefined => {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("El formato de horarios por dia es invalido")
+  }
+
+  const input = value as Record<string, unknown>
+  const normalized: Record<string, string[]> = {}
+  Object.entries(input).forEach(([key, rawTimes]) => {
+    if (rawTimes === null || rawTimes === undefined) return
+    if (!Array.isArray(rawTimes)) {
+      throw new Error(`Horarios invalidos para ${key}`)
+    }
+    if (rawTimes.length === 0) {
+      normalized[key] = []
+      return
+    }
+    normalized[key] = normalizeTimesInput(rawTimes)
+  })
+
+  return normalized
+}
+
 const mapUserRows = (rows: any[]) =>
   rows.map((row) => ({
     ...row,
@@ -693,6 +717,7 @@ export const listOrganizationNotificationDefaults = async (_req: Request, res: R
       name: org.name,
       slug: org.slug,
       times: parsePgArray(org.default_notification_times),
+      times_by_day: org.default_notification_times_by_day ?? null,
       active: org.default_notification_active ?? true,
       allow_weekend_notifications: org.default_allow_weekend_notifications ?? true,
     }))
@@ -707,15 +732,17 @@ export const listOrganizationNotificationDefaults = async (_req: Request, res: R
 // Actualiza los horarios y flags por defecto de notificaciones de una organizacion.
 export const updateOrganizationNotificationDefaults = async (req: Request, res: Response) => {
   const { organizationId } = req.params
-  const { times, active, allow_weekend_notifications } = req.body || {}
+  const { times, times_by_day, active, allow_weekend_notifications } = req.body || {}
 
   if (!organizationId) {
     return res.status(400).json({ error: "Falta el identificador de la organizacion" })
   }
 
   let normalizedTimes: string[]
+  let normalizedTimesByDay: Record<string, string[]> | null | undefined = undefined
   try {
     normalizedTimes = normalizeTimesInput(times)
+    normalizedTimesByDay = normalizeTimesByDay(times_by_day)
   } catch (err) {
     return res.status(400).json({
       error: err instanceof Error ? err.message : "Horarios invalidos",
@@ -727,9 +754,12 @@ export const updateOrganizationNotificationDefaults = async (req: Request, res: 
     typeof allow_weekend_notifications === "boolean" ? allow_weekend_notifications : undefined
 
   try {
+    const hasTimesByDay = normalizedTimesByDay !== undefined
     const organization = await updateOrganizationNotificationDefaultsById(
       organizationId,
       normalizedTimes,
+      normalizedTimesByDay ?? null,
+      hasTimesByDay,
       activeValue,
       allowWeekendValue
     )
@@ -745,6 +775,7 @@ export const updateOrganizationNotificationDefaults = async (req: Request, res: 
         name: organization.name,
         slug: organization.slug,
         times: parsePgArray(organization.default_notification_times),
+        times_by_day: organization.default_notification_times_by_day ?? null,
         active: organization.default_notification_active ?? true,
         allow_weekend_notifications: organization.default_allow_weekend_notifications ?? true,
       },

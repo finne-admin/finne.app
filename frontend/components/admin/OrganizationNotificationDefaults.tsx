@@ -14,12 +14,23 @@ interface OrganizationDefaults {
   name: string
   slug: string
   times: string[]
+  times_by_day?: Record<string, string[]> | null
   active: boolean
   allowWeekend: boolean
 }
 
 const MINUTES_GAP = 15
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/
+const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const
+const DAY_LABELS: Record<(typeof DAY_KEYS)[number], string> = {
+  mon: "Lunes",
+  tue: "Martes",
+  wed: "Miercoles",
+  thu: "Jueves",
+  fri: "Viernes",
+  sat: "Sabado",
+  sun: "Domingo",
+}
 
 const toMinutes = (value: string) => {
   const [h, m] = value.split(":").map(Number)
@@ -34,13 +45,26 @@ const hasRequiredGap = (times: string[], candidate: string) => {
 const sortTimes = (times: string[]) =>
   [...times].sort((a, b) => toMinutes(a) - toMinutes(b))
 
+const buildDayDefaults = (times: string[]) =>
+  DAY_KEYS.reduce((acc, key) => {
+    acc[key] = [...times]
+    return acc
+  }, {} as Record<(typeof DAY_KEYS)[number], string[]>)
+
 export function OrganizationNotificationDefaults() {
   const [organizations, setOrganizations] = React.useState<OrganizationDefaults[]>([])
   const [selectedOrgId, setSelectedOrgId] = React.useState<string>("")
   const [formTimes, setFormTimes] = React.useState<string[]>([])
+  const [useTimesByDay, setUseTimesByDay] = React.useState(false)
+  const [formTimesByDay, setFormTimesByDay] = React.useState<
+    Record<(typeof DAY_KEYS)[number], string[]>
+  >(buildDayDefaults([]))
   const [formActive, setFormActive] = React.useState(true)
   const [formAllowWeekend, setFormAllowWeekend] = React.useState(true)
   const [newTime, setNewTime] = React.useState("09:00")
+  const [newTimeByDay, setNewTimeByDay] = React.useState<
+    Record<(typeof DAY_KEYS)[number], string>
+  >(DAY_KEYS.reduce((acc, key) => ({ ...acc, [key]: "09:00" }), {} as Record<(typeof DAY_KEYS)[number], string>))
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState("")
@@ -62,6 +86,7 @@ export function OrganizationNotificationDefaults() {
               name: org.name,
               slug: org.slug,
               times: sortTimes(Array.isArray(org.times) ? org.times : []),
+              times_by_day: org.times_by_day ?? null,
               active: org.active ?? true,
               allowWeekend: org.allow_weekend_notifications ?? true,
             }))
@@ -70,6 +95,15 @@ export function OrganizationNotificationDefaults() {
         if (normalized.length) {
           setSelectedOrgId(normalized[0].id)
           setFormTimes(normalized[0].times)
+          setUseTimesByDay(Boolean(normalized[0].times_by_day))
+          setFormTimesByDay(
+            normalized[0].times_by_day
+              ? DAY_KEYS.reduce((acc, key) => {
+                  acc[key] = sortTimes(normalized[0].times_by_day?.[key] ?? [])
+                  return acc
+                }, {} as Record<(typeof DAY_KEYS)[number], string[]>)
+              : buildDayDefaults(normalized[0].times)
+          )
           setFormActive(normalized[0].active)
           setFormAllowWeekend(normalized[0].allowWeekend)
         }
@@ -87,6 +121,15 @@ export function OrganizationNotificationDefaults() {
     const selected = organizations.find((org) => org.id === selectedOrgId)
     if (selected) {
       setFormTimes(selected.times)
+      setUseTimesByDay(Boolean(selected.times_by_day))
+      setFormTimesByDay(
+        selected.times_by_day
+          ? DAY_KEYS.reduce((acc, key) => {
+              acc[key] = sortTimes(selected.times_by_day?.[key] ?? [])
+              return acc
+            }, {} as Record<(typeof DAY_KEYS)[number], string[]>)
+          : buildDayDefaults(selected.times)
+      )
       setFormActive(selected.active)
       setFormAllowWeekend(selected.allowWeekend)
     }
@@ -109,6 +152,35 @@ export function OrganizationNotificationDefaults() {
     setFormTimes((prev) => sortTimes([...prev, newTime]))
   }
 
+  const handleAddTimeForDay = (day: (typeof DAY_KEYS)[number]) => {
+    const candidate = newTimeByDay[day]
+    if (!timeRegex.test(candidate)) {
+      setError("El formato debe ser HH:MM")
+      return
+    }
+    const current = formTimesByDay[day] ?? []
+    if (current.includes(candidate)) {
+      setError("El horario ya esta incluido")
+      return
+    }
+    if (!hasRequiredGap(current, candidate)) {
+      setError("Los horarios deben estar separados al menos 15 minutos")
+      return
+    }
+    setError("")
+    setFormTimesByDay((prev) => ({
+      ...prev,
+      [day]: sortTimes([...(prev[day] ?? []), candidate]),
+    }))
+  }
+
+  const handleRemoveTimeForDay = (day: (typeof DAY_KEYS)[number], time: string) => {
+    setFormTimesByDay((prev) => ({
+      ...prev,
+      [day]: (prev[day] ?? []).filter((item) => item !== time),
+    }))
+  }
+
   const handleRemoveTime = (time: string) => {
     setFormTimes((prev) => prev.filter((item) => item !== time))
   }
@@ -119,12 +191,20 @@ export function OrganizationNotificationDefaults() {
       setError("La organizacion debe tener al menos un horario")
       return
     }
+    if (useTimesByDay) {
+      const total = DAY_KEYS.reduce((acc, key) => acc + (formTimesByDay[key]?.length ?? 0), 0)
+      if (total === 0) {
+        setError("Debes configurar al menos un horario en la semana")
+        return
+      }
+    }
     try {
       setSaving(true)
       setError("")
       setStatus("")
       const res = await apiPut(`/api/admin/notification-defaults/${selectedOrgId}`, {
         times: formTimes,
+        times_by_day: useTimesByDay ? formTimesByDay : null,
         active: formActive,
         allow_weekend_notifications: formAllowWeekend,
       })
@@ -141,6 +221,7 @@ export function OrganizationNotificationDefaults() {
                 name: updated.name,
                 slug: updated.slug,
                 times: sortTimes(Array.isArray(updated.times) ? updated.times : []),
+                times_by_day: updated.times_by_day ?? null,
                 active: updated.active ?? true,
                 allowWeekend: updated.allow_weekend_notifications ?? true,
               }
@@ -216,56 +297,136 @@ export function OrganizationNotificationDefaults() {
                     </div>
                   </div>
 
+                <div className="flex items-center gap-3">
+                  <Switch checked={formAllowWeekend} onCheckedChange={setFormAllowWeekend} />
+                  <div>
+                    <p className="font-medium text-sm text-gray-900">Permitir fines de semana</p>
+                    <p className="text-xs text-gray-500">
+                      Desactivalo si la organizacion solo quiere recordatorios de lunes a viernes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+                <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <Switch checked={formAllowWeekend} onCheckedChange={setFormAllowWeekend} />
+                    <Switch
+                      checked={useTimesByDay}
+                      onCheckedChange={(value) => {
+                        setUseTimesByDay(value)
+                        if (value) {
+                          setFormTimesByDay(buildDayDefaults(formTimes))
+                        }
+                      }}
+                    />
                     <div>
-                      <p className="font-medium text-sm text-gray-900">Permitir fines de semana</p>
+                      <p className="font-medium text-sm text-gray-900">Horarios por dia</p>
                       <p className="text-xs text-gray-500">
-                        Desactivalo si la organizacion solo quiere recordatorios de lunes a viernes.
+                        Define un horario distinto para cada dia de la semana.
                       </p>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-gray-700">Horarios por defecto</p>
-                  {formTimes.length === 0 ? (
-                    <p className="text-xs text-gray-500">Aun no hay horarios configurados.</p>
+                  {!useTimesByDay ? (
+                    <>
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium text-gray-700">Horarios por defecto</p>
+                        {formTimes.length === 0 ? (
+                          <p className="text-xs text-gray-500">Aun no hay horarios configurados.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {formTimes.map((time) => (
+                              <span
+                                key={time}
+                                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm text-emerald-700"
+                              >
+                                {time}
+                                <button
+                                  type="button"
+                                  className="text-emerald-700 hover:text-emerald-900"
+                                  onClick={() => handleRemoveTime(time)}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-sm font-medium text-gray-700">Nuevo horario</label>
+                          <Input
+                            type="time"
+                            step={900}
+                            value={newTime}
+                            onChange={(event) => setNewTime(event.target.value)}
+                          />
+                        </div>
+                        <Button type="button" variant="secondary" onClick={handleAddTime} className="sm:w-auto">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Anadir horario
+                        </Button>
+                      </div>
+                    </>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {formTimes.map((time) => (
-                        <span
-                          key={time}
-                          className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm text-emerald-700"
-                        >
-                          {time}
-                          <button
-                            type="button"
-                            className="text-emerald-700 hover:text-emerald-900"
-                            onClick={() => handleRemoveTime(time)}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {DAY_KEYS.map((day) => (
+                        <div key={day} className="rounded-xl border border-gray-200 p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-gray-800">{DAY_LABELS[day]}</p>
+                            <span className="text-xs text-gray-400">
+                              {formTimesByDay[day]?.length ?? 0} horarios
+                            </span>
+                          </div>
+                          {formTimesByDay[day]?.length ? (
+                            <div className="flex flex-wrap gap-2">
+                              {formTimesByDay[day].map((time) => (
+                                <span
+                                  key={`${day}-${time}`}
+                                  className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700"
+                                >
+                                  {time}
+                                  <button
+                                    type="button"
+                                    className="text-emerald-700 hover:text-emerald-900"
+                                    onClick={() => handleRemoveTimeForDay(day, time)}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500">Sin horarios para este dia.</p>
+                          )}
+                          <div className="flex items-end gap-2">
+                            <div className="flex-1 space-y-1">
+                              <label className="text-xs font-medium text-gray-600">Nuevo horario</label>
+                              <Input
+                                type="time"
+                                step={900}
+                                value={newTimeByDay[day]}
+                                onChange={(event) =>
+                                  setNewTimeByDay((prev) => ({ ...prev, [day]: event.target.value }))
+                                }
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleAddTimeForDay(day)}
+                            >
+                              <Plus className="mr-1 h-3.5 w-3.5" />
+                              Anadir
+                            </Button>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                  <div className="flex-1 space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Nuevo horario</label>
-                    <Input
-                      type="time"
-                      step={900}
-                      value={newTime}
-                      onChange={(event) => setNewTime(event.target.value)}
-                    />
-                  </div>
-                  <Button type="button" variant="secondary" onClick={handleAddTime} className="sm:w-auto">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Anadir horario
-                  </Button>
                 </div>
 
                 <div className="flex justify-end">
