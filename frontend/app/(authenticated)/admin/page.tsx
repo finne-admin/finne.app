@@ -15,6 +15,11 @@ export default function AdminDashboard() {
 
             {/* Content Section */}
             <div className="space-y-6 text-gray-900">
+                {/* Charts Section */}
+                <section className="mt-12 space-y-8">
+                    <OrganizationStatsPanel />
+                </section>
+
                 {/* Employee Table */}
                 <Card>
                     <CardHeader>
@@ -24,11 +29,6 @@ export default function AdminDashboard() {
                         <EmployeeTable mode="organization" />
                     </CardContent>
                 </Card>
-
-                {/* Charts Section */}
-                <section className="mt-12 space-y-8">
-                    <OrganizationStatsPanel />
-                </section>
             </div>
         </div>
     )

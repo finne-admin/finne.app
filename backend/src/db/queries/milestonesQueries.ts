@@ -48,6 +48,10 @@ export type RankingRow = {
   periodical_exp: number
 }
 
+export type RankingMatchRow = RankingRow & {
+  rank: number
+}
+
 export type RankingPositionRow = {
   total_users: number
   rank: number
@@ -372,6 +376,84 @@ export const getRankingTop = async (limit = 10, filters?: RankingFilter): Promis
     params
   )
   return rows as RankingRow[]
+}
+
+export const getRankingPage = async (
+  limit = 10,
+  offset = 0,
+  filters?: RankingFilter
+): Promise<RankingRow[]> => {
+  const pool = await getPool()
+  const { whereClause, params } = buildRankingFilterClause(filters)
+  params.push(limit)
+  params.push(offset)
+
+  const { rows } = await pool.query(
+    `
+    SELECT u.id, u.first_name, u.last_name, u.avatar_url, COALESCE(u.periodical_exp, 0) AS periodical_exp
+    FROM users u
+    LEFT JOIN user_membership um ON um.user_id = u.id
+    ${whereClause}
+    ORDER BY COALESCE(u.periodical_exp, 0) DESC, u.first_name ASC
+    LIMIT $${params.length - 1}
+    OFFSET $${params.length}
+    `,
+    params
+  )
+  return rows as RankingRow[]
+}
+
+export const searchRankingUsers = async (
+  query: string,
+  limit = 5,
+  filters?: RankingFilter
+): Promise<RankingMatchRow[]> => {
+  const pool = await getPool()
+  const { whereClause, params } = buildRankingFilterClause(filters)
+  const searchParam = `${query}%`
+  params.push(searchParam)
+  params.push(limit)
+
+  const { rows } = await pool.query(
+    `
+    WITH filtered AS (
+      SELECT
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.avatar_url,
+        COALESCE(u.periodical_exp, 0) AS periodical_exp
+      FROM users u
+      LEFT JOIN user_membership um ON um.user_id = u.id
+      ${whereClause}
+    ),
+    ranked AS (
+      SELECT
+        *,
+        RANK() OVER (ORDER BY periodical_exp DESC) AS rank
+      FROM filtered
+    )
+    SELECT id, first_name, last_name, avatar_url, periodical_exp, rank
+    FROM ranked
+    WHERE (first_name || ' ' || last_name) ILIKE $${params.length - 1}
+       OR first_name ILIKE $${params.length - 1}
+       OR last_name ILIKE $${params.length - 1}
+    ORDER BY rank ASC
+    LIMIT $${params.length}
+    `,
+    params
+  )
+
+  return rows as RankingMatchRow[]
+}
+
+export const getUserPeriodicalExp = async (userId: string): Promise<number> => {
+  const pool = await getPool()
+  const { rows } = await pool.query(
+    `SELECT COALESCE(periodical_exp, 0) AS periodical_exp FROM users WHERE id = $1`,
+    [userId]
+  )
+  return Number(rows[0]?.periodical_exp ?? 0)
 }
 
 export const getUserRankingPosition = async (

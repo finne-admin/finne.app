@@ -17,6 +17,9 @@ import {
   getUnclaimedCounts,
   getDepartmentTotalExp,
   getRankingTop,
+  getRankingPage,
+  searchRankingUsers,
+  getUserPeriodicalExp,
   getUserRankingPosition,
   countActiveParticipants,
   RankingFilter,
@@ -516,22 +519,34 @@ export const getRankingController = async (req: Request, res: Response) => {
       }
     }
 
-    const [top, position, rewards] = await Promise.all([
-      getRankingTop(10, filters),
+    const limitRaw = typeof req.query.limit === "string" ? Number(req.query.limit) : 10
+    const offsetRaw = typeof req.query.offset === "string" ? Number(req.query.offset) : 0
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(limitRaw, 50)) : 10
+    const offset = Number.isFinite(offsetRaw) ? Math.max(0, offsetRaw) : 0
+    const searchQuery = typeof req.query.search === "string" ? req.query.search.trim() : ""
+
+    const [top, position, rewards, userExp, searchResults] = await Promise.all([
+      getRankingPage(limit, offset, filters),
       getUserRankingPosition(userId, filters),
       resolveRewardsForScope(scopeInfo as any),
+      getUserPeriodicalExp(userId),
+      searchQuery ? searchRankingUsers(searchQuery, 5, filters) : Promise.resolve([]),
     ])
 
     return res.json({
       top,
       userPosition: position?.rank ?? null,
       totalUsers: position?.total_users ?? null,
+      userExp,
       scope: scopeInfo,
       membership: membershipInfo,
       canSelectOrganization: isSuperAdmin,
       seasonDeadline,
       seasonTimezone,
       rewards,
+      limit,
+      offset,
+      searchResults,
     })
   } catch (error) {
     console.error("Error en getRankingController:", error)

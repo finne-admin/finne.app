@@ -29,6 +29,11 @@ export default function GlobalAdminPage() {
         </TabsList>
 
         <TabsContent value="management" className="flex flex-col gap-6">
+          <OrganizationManager />
+          <OrganizationSeasonTimers />
+          <OrganizationNotificationDefaults />
+          <JoinCodeManager />
+          <RewardsManager />
           <Card>
             <CardHeader>
               <CardTitle>Usuarios de todas las organizaciones</CardTitle>
@@ -37,11 +42,6 @@ export default function GlobalAdminPage() {
               <EmployeeTable mode="global" />
             </CardContent>
           </Card>
-          <OrganizationManager />
-          <OrganizationSeasonTimers />
-          <OrganizationNotificationDefaults />
-          <JoinCodeManager />
-          <RewardsManager />
         </TabsContent>
 
         <TabsContent value="stats" className="flex flex-col gap-6">

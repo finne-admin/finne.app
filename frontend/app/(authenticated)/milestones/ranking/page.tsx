@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 type RankingScope =
   | { mode: 'global' }
@@ -34,6 +35,7 @@ type RankingResponse = {
   top: RankingUser[]
   userPosition: number | null
   totalUsers: number | null
+  userExp?: number | null
   scope: RankingScope
   seasonDeadline?: string | null
   seasonTimezone?: string | null
@@ -45,6 +47,9 @@ type RankingResponse = {
   } | null
   canSelectOrganization: boolean
   rewards?: Record<number, PodiumReward>
+  limit?: number
+  offset?: number
+  searchResults?: RankingUser[]
 }
 
 type OrgOption = {
@@ -62,6 +67,13 @@ export default function RankingPage() {
 
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loadingRanking, setLoadingRanking] = useState(true)
+  const [pageOffset, setPageOffset] = useState(0)
+  const pageSize = 10
+  const [searching, setSearching] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<
+    { name: string; score: number; rank?: number }[]
+  >([])
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userOrgId, setUserOrgId] = useState<string | null>(null)
   const [filter, setFilter] = useState<RankingFilter>({ scope: 'global' })
@@ -127,6 +139,8 @@ export default function RankingPage() {
           params.set('departmentId', filter.departmentId)
         }
       }
+      params.set('limit', String(pageSize))
+      params.set('offset', String(pageOffset))
       const query = params.toString()
       const res = await apiGet(`/api/milestones/ranking${query ? `?${query}` : ''}`)
       const data = await res.json()
@@ -143,11 +157,17 @@ export default function RankingPage() {
     } finally {
       setLoadingRanking(false)
     }
-  }, [filter])
+  }, [filter, pageOffset])
 
   useEffect(() => {
     loadRanking()
   }, [loadRanking])
+
+  useEffect(() => {
+    setPageOffset(0)
+    setSearchQuery("")
+    setSearchResults([])
+  }, [filter])
 
   useEffect(() => {
     if (!isSuperAdmin) return
@@ -221,6 +241,52 @@ export default function RankingPage() {
     }`
   }, [ranking])
 
+  useEffect(() => {
+    const trimmed = searchQuery.trim()
+    if (!trimmed) {
+      setSearchResults([])
+      setSearching(false)
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        setSearching(true)
+        const params = new URLSearchParams()
+        if (filter.scope === 'global') {
+          params.set('scope', 'global')
+        } else if (filter.scope === 'organization') {
+          params.set('organizationId', filter.organizationId)
+          if (filter.departmentId) {
+            params.set('departmentId', filter.departmentId)
+          }
+        }
+        params.set('limit', String(pageSize))
+        params.set('offset', String(pageOffset))
+        params.set('search', trimmed)
+        const res = await apiGet(`/api/milestones/ranking?${params}`)
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data.error || 'No se pudo buscar en el ranking')
+        }
+        const matches = Array.isArray(data.searchResults) ? data.searchResults : []
+        setSearchResults(
+          matches.map((match: any) => ({
+            name: `${match.first_name ?? ''} ${match.last_name ?? ''}`.trim() || 'Usuario',
+            score: Number(match.periodical_exp ?? 0),
+            rank: Number(match.rank ?? 0) || undefined,
+          }))
+        )
+      } catch (error) {
+        console.error('Error buscando ranking:', error)
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 250)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, filter, pageOffset])
+
   return (
     <div className="px-6 py-8">
       <div className="mx-auto grid max-w-7xl grid-cols-1 md:grid-cols-[1fr_auto] gap-10">
@@ -230,6 +296,11 @@ export default function RankingPage() {
               Ranking de temporada
             </h2>
             <p className="text-sm text-gray-500">{scopeDescription}</p>
+            {typeof ranking?.userExp === 'number' && (
+              <p className="mt-1 text-sm text-emerald-600 font-semibold">
+                Tu EXP: {ranking.userExp} PA
+              </p>
+            )}
           </div>
 
           {isSuperAdmin && ranking?.canSelectOrganization && orgOptions.length > 0 && (
@@ -275,13 +346,44 @@ export default function RankingPage() {
               </p>
             )}
 
-          <RankingUsuarios
-            usuarios={ranking?.top ?? []}
-            userPosition={ranking?.userPosition ?? null}
-            totalUsuarios={ranking?.totalUsers ?? null}
-            loading={loadingRanking}
-            rewards={ranking?.rewards}
-          />
+          <div className="relative">
+            <button
+              type="button"
+              className="hidden md:flex absolute -left-14 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 items-center justify-center"
+              onClick={() => setPageOffset(Math.max(0, pageOffset - pageSize))}
+              disabled={pageOffset <= 0}
+              aria-label="Página anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className="hidden md:flex absolute -right-14 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 items-center justify-center"
+              onClick={() =>
+                setPageOffset(
+                  ranking?.totalUsers
+                    ? Math.min(ranking.totalUsers - 1, pageOffset + pageSize)
+                    : pageOffset + pageSize
+                )
+              }
+              disabled={Boolean(ranking?.totalUsers && pageOffset + pageSize >= ranking.totalUsers)}
+              aria-label="Página siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <RankingUsuarios
+              usuarios={ranking?.top ?? []}
+              userPosition={ranking?.userPosition ?? null}
+              totalUsuarios={ranking?.totalUsers ?? null}
+              loading={loadingRanking}
+              rewards={ranking?.rewards}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              searching={searching}
+              searchResults={searchResults}
+              pageOffset={pageOffset}
+            />
+          </div>
         </section>
 
         <aside className="block w-[clamp(240px,28vw,520px)]">
