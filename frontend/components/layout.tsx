@@ -2,14 +2,15 @@
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, Menu, PlayCircle, Loader2, Flame } from 'lucide-react';
+import { Menu, PlayCircle, Loader2, Flame, TriangleAlert } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTutorialState } from '@/components/tutorial/useTutorial';
 import { Tutorial } from '@/components/tutorial/Tutorial';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { apiGet } from "@/lib/apiClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 import { useAdminMenuItems } from '@/components/hooks/useAdminMenuItems';
 import { MobileNav } from '@/components/navigation/MobileNav';
@@ -17,8 +18,10 @@ import { Sidebar } from '@/components/navigation/Sidebar';
 import FireCounter from '@/components/animations/FireCounter';
 import { motion, AnimatePresence } from "framer-motion";
 import { SvelteSeasonPopup } from '@/components/svelte/SvelteSeasonPopup';
+import { SvelteErrorReportModal } from '@/components/svelte/SvelteErrorReportModal';
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const menuItems = useAdminMenuItems();
   const { isOpen, startTutorial, stopTutorial } = useTutorialState();
 
@@ -26,8 +29,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRoleScope, setUserRoleScope] = useState<string | null>(null);
   const [seasonPopupOpen, setSeasonPopupOpen] = useState(false);
   const [svelteReady, setSvelteReady] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [reportSuccess, setReportSuccess] = useState(false);
 
   // --- Estado para racha (overlay con Rive) ---
   const [streakOpen, setStreakOpen] = useState(false);
@@ -77,6 +86,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         const avatar = data?.user?.avatarUrl;
         const slug = data?.user?.organizationSlug;
         const id = data?.user?.id;
+        const roleName = data?.user?.roleName || data?.user?.role || null;
+        const roleScope = data?.user?.roleScope || null;
         if (!active) return;
         if (typeof avatar === "string" && avatar.length) {
           setAvatarUrl(avatar);
@@ -86,6 +97,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         }
         if (typeof id === "string" && id.length) {
           setUserId(id);
+        }
+        if (typeof roleName === "string" && roleName.length) {
+          setUserRole(roleName);
+        }
+        if (typeof roleScope === "string" && roleScope.length) {
+          setUserRoleScope(roleScope);
         }
       } catch {
         // ignore missing logo
@@ -120,6 +137,55 @@ export function Layout({ children }: { children: React.ReactNode }) {
       script.remove();
     };
   }, []);
+
+  const reportCategories = useMemo(
+    () => [
+      "Notificaciones",
+      "Pausas activas",
+      "Ranking",
+      "Cuenta",
+      "Videos",
+      "Otro",
+    ],
+    []
+  );
+
+  const canViewReportInbox = useMemo(() => {
+    const normalizedRole = (userRole ?? "").toLowerCase()
+    return normalizedRole === "superadmin" || userRoleScope === "global"
+  }, [userRole, userRoleScope])
+
+  const handleSubmitReport = useCallback(
+    async ({ category, message }: { category: string; message: string }) => {
+      if (!category || !message.trim()) {
+        setReportError("Completa categoria y mensaje");
+        return;
+      }
+      try {
+        setReportSubmitting(true);
+        setReportError("");
+        const res = await apiPost("/api/reports", {
+          category,
+          message,
+          page_path: typeof window !== "undefined" ? window.location.pathname : "",
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "No se pudo enviar el reporte");
+        }
+        setReportSuccess(true);
+        window.setTimeout(() => {
+          setReportOpen(false);
+          setReportSuccess(false);
+        }, 1400);
+      } catch (err: any) {
+        setReportError(err.message || "No se pudo enviar el reporte");
+      } finally {
+        setReportSubmitting(false);
+      }
+    },
+    []
+  );
 
   const triggerStreak = useCallback(async () => {
     setCheckingStreak(true);
@@ -176,11 +242,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <PlayCircle className="h-6 w-6 text-green-600" />
           </Button>
 
-          <Link href="/help/notifications">
-            <Button variant="ghost" size="icon" className="hover:bg-gray-200">
-              <HelpCircle className="h-6 w-6 text-gray-600" />
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-red-50"
+            onClick={() => {
+              setReportOpen(true);
+              setReportError("");
+              setReportSuccess(false);
+            }}
+            title="Reportar problema"
+          >
+            <TriangleAlert className="h-6 w-6 text-red-500" />
+          </Button>
 
           <Link href="/settings">
             <Image
@@ -250,6 +324,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <SvelteSeasonPopup
           open={seasonPopupOpen}
           onClose={() => setSeasonPopupOpen(false)}
+          scriptReady={svelteReady}
+        />
+      )}
+
+      {svelteReady && (
+        <SvelteErrorReportModal
+          open={reportOpen}
+          categories={reportCategories}
+          submitting={reportSubmitting}
+          error={reportError}
+          success={reportSuccess}
+          canViewInbox={canViewReportInbox}
+          inboxLabel="Ir al buzón"
+          onClose={() => setReportOpen(false)}
+          onSubmit={handleSubmitReport}
+          onInboxClick={() => {
+            setReportOpen(false)
+            router.push('/admin/global?tab=reports')
+          }}
           scriptReady={svelteReady}
         />
       )}

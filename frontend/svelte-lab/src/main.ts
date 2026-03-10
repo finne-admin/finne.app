@@ -15,6 +15,7 @@ import SvelteSeasonPopup from './SvelteSeasonPopup.svelte'
 import SvelteQuotaToken from './SvelteQuotaToken.svelte'
 import SvelteUserStatsPanel from './SvelteUserStatsPanel.svelte'
 import SvelteRewardsPodium from './SvelteRewardsPodium.svelte'
+import SvelteErrorReportModal from './SvelteErrorReportModal.svelte'
 
 const defineElement = (tag: string, ctor: unknown) => {
   const elementCtor = (ctor as { element?: CustomElementConstructor }).element
@@ -40,3 +41,4 @@ defineElement('svelte-season-popup', SvelteSeasonPopup)
 defineElement('svelte-quota-token', SvelteQuotaToken)
 defineElement('svelte-user-stats-panel', SvelteUserStatsPanel)
 defineElement('svelte-rewards-podium', SvelteRewardsPodium)
+defineElement('svelte-error-report-modal', SvelteErrorReportModal)

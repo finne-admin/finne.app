@@ -25,6 +25,7 @@ import {
   getExerciseSatisfaction,
   resetOrganizationDataController,
 } from "../controllers/adminController";
+import { listErrorReportsController } from "../controllers/reportController";
 import {
   deleteRewardDefinitionController,
   listRewardDefinitionsController,
@@ -69,6 +70,7 @@ router.put(
 router.post("/reset", requireSuperAdmin, resetOrganizationDataController);
 router.get("/roles", requireSuperAdmin, listRolesController);
 router.get("/exercise-satisfaction", getExerciseSatisfaction);
+router.get("/reports", requireSuperAdmin, listErrorReportsController);
 router.get("/rewards", requireSuperAdmin, listRewardDefinitionsController);
 router.post("/rewards", requireSuperAdmin, upsertRewardDefinitionController);
 router.delete("/rewards/:id", requireSuperAdmin, deleteRewardDefinitionController);

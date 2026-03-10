@@ -1172,8 +1172,7 @@ const countSameCategoryPausesSince = async (
     for (const cat of cat2) {
       if (set.has(cat)) shared = true;
     }
-    const union = new Set([...set, ...cat2]);
-    if (shared && union.size === 1) {
+    if (shared) {
       count += 1;
     }
   }

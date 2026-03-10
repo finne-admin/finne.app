@@ -7,6 +7,7 @@ import {
 } from "../db/queries/notificationJobQueries"
 import { sendReminderToTokens, sendTipToTokens } from "./pushNotificationService"
 import { resolveOrgTimesForDate } from "../utils/notificationTimes"
+import { notifyTeamsBot } from "./teamsBotNotifier"
 
 const DEFAULT_TIMEZONE = "Europe/Madrid"
 
@@ -101,6 +102,12 @@ export async function dispatchPendingNotifications(
   if (invalidTokens.length) {
     await deleteTokens(invalidTokens)
   }
+
+  await notifyTeamsBot({
+    message: process.env.BOT_NOTIFY_MESSAGE || "Es hora de una pausa activa.",
+    slotLabel,
+    slotIso: slotDate.toISO() ?? new Date().toISOString(),
+  })
 
   const tipResult = await dispatchTips(slotDate, slotLabel, isWeekend)
 

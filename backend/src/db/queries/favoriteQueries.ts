@@ -38,7 +38,7 @@ export const insertFavorite = async (
     `,
     [userId, videoHashId]
   )
-  return rowCount > 0 ? rows[0] : null
+  return (rowCount ?? 0) > 0 ? rows[0] : null
 }
 
 // Elimina un favorito; devuelve true si se borro algo.
@@ -51,5 +51,5 @@ export const deleteFavorite = async (userId: string, videoHashId: string): Promi
     `,
     [userId, videoHashId]
   )
-  return rowCount > 0
+  return (rowCount ?? 0) > 0
 }

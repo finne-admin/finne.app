@@ -127,6 +127,17 @@ declare global {
         scopeLabel?: string
         loading?: boolean
       }
+      'svelte-error-report-modal': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        open?: boolean
+        categories?: string[]
+        submitting?: boolean
+        error?: string
+        success?: boolean
+        title?: string
+        hint?: string
+        canViewInbox?: boolean
+        inboxLabel?: string
+      }
     }
   }
 }
