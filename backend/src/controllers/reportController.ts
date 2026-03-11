@@ -1,5 +1,10 @@
 import { Request, Response } from "express"
-import { insertErrorReport, listErrorReports } from "../db/queries/reportQueries"
+import {
+  ErrorReportStatus,
+  insertErrorReport,
+  listErrorReports,
+  updateErrorReportStatus,
+} from "../db/queries/reportQueries"
 
 const MAX_MESSAGE_LENGTH = 1000
 const MAX_CATEGORY_LENGTH = 64
@@ -51,5 +56,35 @@ export const listErrorReportsController = async (req: Request, res: Response) =>
   } catch (error) {
     console.error("Error listando reportes:", error)
     return res.status(500).json({ error: "Error al obtener los reportes" })
+  }
+}
+
+export const updateErrorReportStatusController = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user
+    if (!user?.id) {
+      return res.status(401).json({ error: "No autenticado" })
+    }
+
+    const { id } = req.params
+    const rawStatus = typeof req.body?.status === "string" ? req.body.status.trim().toLowerCase() : ""
+    const allowedStatuses: ErrorReportStatus[] = ["pending", "resolved", "dismissed"]
+
+    if (!id) {
+      return res.status(400).json({ error: "Falta el id del reporte" })
+    }
+    if (!allowedStatuses.includes(rawStatus as ErrorReportStatus)) {
+      return res.status(400).json({ error: "Estado de reporte no valido" })
+    }
+
+    const updated = await updateErrorReportStatus(id, rawStatus as ErrorReportStatus, user.id)
+    if (!updated) {
+      return res.status(404).json({ error: "Reporte no encontrado" })
+    }
+
+    return res.json({ success: true, report: updated })
+  } catch (error) {
+    console.error("Error actualizando estado del reporte:", error)
+    return res.status(500).json({ error: "Error al actualizar el estado del reporte" })
   }
 }
