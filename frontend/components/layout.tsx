@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Menu, PlayCircle, Loader2, Flame, TriangleAlert } from 'lucide-react';
+import { Mailbox, Menu, PlayCircle, Loader2, Flame, TriangleAlert } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTutorialState } from '@/components/tutorial/useTutorial';
 import { Tutorial } from '@/components/tutorial/Tutorial';
@@ -19,6 +19,7 @@ import FireCounter from '@/components/animations/FireCounter';
 import { motion, AnimatePresence } from "framer-motion";
 import { SvelteSeasonPopup } from '@/components/svelte/SvelteSeasonPopup';
 import { SvelteErrorReportModal } from '@/components/svelte/SvelteErrorReportModal';
+import { UserReportsInboxDialog } from '@/components/reports/UserReportsInboxDialog';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -34,6 +35,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [seasonPopupOpen, setSeasonPopupOpen] = useState(false);
   const [svelteReady, setSvelteReady] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [userReportsOpen, setUserReportsOpen] = useState(false);
+  const [unreadReportReplies, setUnreadReportReplies] = useState(0);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportError, setReportError] = useState("");
   const [reportSuccess, setReportSuccess] = useState(false);
@@ -187,6 +190,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const refreshUnreadReportReplies = useCallback(async () => {
+    try {
+      const res = await apiGet("/api/reports");
+      if (!res.ok) return;
+      const data = await res.json();
+      const reports = Array.isArray(data?.reports) ? data.reports : [];
+      const unreadCount = reports.filter(
+        (report: any) => Boolean(report?.admin_reply) && !report?.reply_read_at
+      ).length;
+      setUnreadReportReplies(unreadCount);
+    } catch {
+      // ignore inbox refresh errors in header
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUnreadReportReplies().catch(() => {});
+  }, [refreshUnreadReportReplies]);
+
   const triggerStreak = useCallback(async () => {
     setCheckingStreak(true);
     try {
@@ -241,6 +263,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             <PlayCircle className="h-6 w-6 text-green-600" />
           </Button>
+
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-slate-100"
+              onClick={() => setUserReportsOpen(true)}
+              title="Buzón de reports"
+            >
+              <Mailbox className="h-6 w-6 text-slate-600" />
+            </Button>
+            {unreadReportReplies > 0 && (
+              <span className="pointer-events-none absolute -right-0.5 -top-0.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow-sm">
+                {unreadReportReplies > 9 ? "9+" : unreadReportReplies}
+              </span>
+            )}
+          </div>
 
           <Button
             variant="ghost"
@@ -346,6 +385,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
           scriptReady={svelteReady}
         />
       )}
+
+      <UserReportsInboxDialog
+        open={userReportsOpen}
+        onOpenChange={(next) => {
+          setUserReportsOpen(next)
+          if (!next) {
+            refreshUnreadReportReplies().catch(() => {})
+          }
+        }}
+        onUnreadChange={setUnreadReportReplies}
+      />
 
       {/* ===== OVERLAY RIVE ===== */}
       <AnimatePresence>

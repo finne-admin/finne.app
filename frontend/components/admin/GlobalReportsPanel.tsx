@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react"
 import { apiGet, apiPut } from "@/lib/apiClient"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   CheckCheck,
   Clock3,
   Loader2,
   MessageSquareWarning,
+  MessageSquareText,
   RefreshCw,
   RotateCcw,
   Search,
@@ -30,6 +32,10 @@ type ReportRow = {
   resolved_at: string | null
   resolved_by: string | null
   resolved_by_email: string | null
+  admin_reply: string | null
+  replied_at: string | null
+  replied_by: string | null
+  replied_by_email: string | null
   user_email: string | null
   user_name: string | null
   organization_name: string | null
@@ -52,6 +58,7 @@ export function GlobalReportsPanel() {
   const [category, setCategory] = useState("all")
   const [status, setStatus] = useState("pending")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
 
   const normalizeStatus = (value: unknown): ReportStatus => {
     return value === "resolved" || value === "dismissed" || value === "pending"
@@ -75,6 +82,15 @@ export function GlobalReportsPanel() {
           }))
         : []
       setReports(normalizedReports)
+      setReplyDrafts((current) => {
+        const next = { ...current }
+        normalizedReports.forEach((report: ReportRow) => {
+          if (typeof next[report.id] !== "string") {
+            next[report.id] = report.admin_reply ?? ""
+          }
+        })
+        return next
+      })
     } catch (err) {
       console.error("Error cargando reportes:", err)
       setReports([])
@@ -128,6 +144,27 @@ export function GlobalReportsPanel() {
     } catch (err) {
       console.error("Error actualizando estado del reporte:", err)
       setError(err instanceof Error ? err.message : "Error al actualizar el reporte")
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleReplySubmit = async (reportId: string, nextStatus: ReportStatus) => {
+    setUpdatingId(reportId)
+    setError("")
+    try {
+      const res = await apiPut(`/api/admin/reports/${reportId}/status`, {
+        status: nextStatus,
+        admin_reply: replyDrafts[reportId] ?? "",
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || "No se pudo guardar la respuesta")
+      }
+      await loadReports()
+    } catch (err) {
+      console.error("Error guardando respuesta del reporte:", err)
+      setError(err instanceof Error ? err.message : "Error al guardar la respuesta")
     } finally {
       setUpdatingId(null)
     }
@@ -271,6 +308,8 @@ export function GlobalReportsPanel() {
             {filteredReports.map((report) => (
               (() => {
                 const reportStatus = normalizeStatus(report.status)
+                const replyValue = replyDrafts[report.id] ?? ""
+                const canReply = replyValue.trim().length > 0
                 return (
               <article
                 key={report.id}
@@ -328,9 +367,47 @@ export function GlobalReportsPanel() {
                         {report.resolved_by_email ? ` por ${report.resolved_by_email}` : ""}
                       </p>
                     )}
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-slate-800">Respuesta al usuario</p>
+                        {report.replied_at && (
+                          <p className="text-xs text-slate-400">
+                            {formatDate(report.replied_at)}
+                            {report.replied_by_email ? ` · ${report.replied_by_email}` : ""}
+                          </p>
+                        )}
+                      </div>
+                      <Textarea
+                        value={replyDrafts[report.id] ?? ""}
+                        onChange={(event) =>
+                          setReplyDrafts((current) => ({
+                            ...current,
+                            [report.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="Ejemplo: ya está corregido o este comportamiento es el esperado por este motivo."
+                        className="min-h-[110px] resize-y bg-white"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex min-w-[220px] flex-col gap-2 lg:items-stretch">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      disabled={updatingId === report.id || !canReply}
+                      onClick={() => handleReplySubmit(report.id, "resolved")}
+                    >
+                      {updatingId === report.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <MessageSquareText className="h-4 w-4" />
+                      )}
+                      <span className="ml-2">Responder</span>
+                    </Button>
                     {reportStatus !== "resolved" && (
                       <Button
                         type="button"
