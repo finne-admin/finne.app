@@ -231,6 +231,15 @@ export const getGlobalStatistics = async (filters?: GlobalStatisticsFilters) => 
       COALESCE(
         (
           SELECT COUNT(*)
+          FROM user_achievements ua
+          JOIN scoped_users su ON su.id = ua.user_id
+          WHERE ua.unlocked_at >= DATE_TRUNC('month', NOW())
+        ),
+        0
+      )::int AS achievements_unlocked_month,
+      COALESCE(
+        (
+          SELECT COUNT(*)
           FROM active_pauses ap
           JOIN scoped_users su ON su.id = ap.user_id
         ),
@@ -252,6 +261,7 @@ export const getGlobalStatistics = async (filters?: GlobalStatisticsFilters) => 
       active_users_week: 0,
       total_pauses_week: 0,
       total_pauses_month: 0,
+      achievements_unlocked_month: 0,
       total_pauses_all: 0,
       avg_satisfaction: 0,
     }
@@ -260,6 +270,7 @@ export const getGlobalStatistics = async (filters?: GlobalStatisticsFilters) => 
     active_users_week: Number(rawSummary.active_users_week || 0),
     total_pauses_week: Number(rawSummary.total_pauses_week || 0),
     total_pauses_month: Number(rawSummary.total_pauses_month || 0),
+    achievements_unlocked_month: Number(rawSummary.achievements_unlocked_month || 0),
     total_pauses_all: Number(rawSummary.total_pauses_all || 0),
     avg_satisfaction: Number(rawSummary.avg_satisfaction || 0),
     week_minutes: Number(rawSummary.total_pauses_week || 0) * AVERAGE_PAUSE_MINUTES,

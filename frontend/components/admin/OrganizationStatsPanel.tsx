@@ -27,6 +27,7 @@ type Summary = {
   active_users_week: number
   total_pauses_week: number
   total_pauses_month: number
+  achievements_unlocked_month: number
   total_pauses_all: number
   avg_satisfaction: number
   week_minutes: number
@@ -72,6 +73,7 @@ const EMPTY_STATS: StatsResponse = {
     active_users_week: 0,
     total_pauses_week: 0,
     total_pauses_month: 0,
+    achievements_unlocked_month: 0,
     total_pauses_all: 0,
     avg_satisfaction: 0,
     week_minutes: 0,
@@ -86,7 +88,7 @@ const EMPTY_STATS: StatsResponse = {
 }
 
 const formatPercent = (value: number) => `${value.toFixed(1)}%`
-const formatNumber = (value: number) => value.toLocaleString("es-ES")
+const formatNumber = (value: number | null | undefined) => Number(value ?? 0).toLocaleString("es-ES")
 const formatHours = (minutes: number) => {
   if (minutes < 60) return `${minutes.toFixed(0)} min`
   const hours = minutes / 60
@@ -201,9 +203,6 @@ export function OrganizationStatsPanel() {
   const participation = summary.total_users > 0 ? (summary.active_users_week / summary.total_users) * 100 : 0
   const averageInterruptions =
     summary.active_users_week > 0 ? summary.total_pauses_week / summary.active_users_week : 0
-  const hourImpactMonth = summary.month_minutes / 60
-  const marathons = hourImpactMonth > 0 ? hourImpactMonth / 3.5 : 0
-  const workDays = hourImpactMonth > 0 ? hourImpactMonth / 8 : 0
   const weeklyRecommendation = 15
   const weeklyProgress = Math.min(averageInterruptions / weeklyRecommendation, 1)
 
@@ -623,11 +622,11 @@ export function OrganizationStatsPanel() {
                 <p className="text-xs text-gray-500">equivalente a {(summary.week_minutes / 30).toFixed(1)} sesiones express</p>
               </div>
               <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-gray-500">Impacto mensual acumulado</p>
-                <p className="text-2xl font-semibold text-gray-900">{formatHours(summary.month_minutes)}</p>
-                <p className="text-xs text-gray-500">
-                  ~ {marathons.toFixed(1)} maratones o {workDays.toFixed(1)} días de trabajo en movimiento
+                <p className="text-xs uppercase tracking-wide text-gray-500">Logros desbloqueados este mes</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {formatNumber(summary.achievements_unlocked_month)}
                 </p>
+                <p className="text-xs text-gray-500">Total de logros conseguidos por el equipo en el mes actual</p>
               </div>
             </div>
           </CardContent>
