@@ -191,28 +191,28 @@ export function PerfilResumen() {
     <>
       <div
         ref={ref}
-        className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 sm:p-7 lg:p-8 max-w-5xl mx-auto"
+        className="bg-white rounded-2xl shadow-md border border-gray-200 p-4 sm:p-7 lg:p-8 max-w-5xl mx-auto overflow-hidden"
       >
-        <div className="grid gap-6 lg:gap-8 lg:grid-cols-4 items-center">
+        <div className="grid gap-5 sm:gap-6 lg:gap-8 lg:grid-cols-4 items-start lg:items-center">
           {/* Col 1: avatar + nombre + titulo */}
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <Image
               src={perfil.avatarUrl || "/default-avatar.png"}
               alt="Avatar"
               width={64}
               height={64}
-              className="rounded-full border border-gray-200 shrink-0"
+              className="h-14 w-14 sm:h-16 sm:w-16 rounded-full border border-gray-200 shrink-0"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
                 target.src = "/default-avatar.png"
               }}
             />
             <div className="min-w-0">
-              <h2 className="text-xl font-semibold text-gray-900 break-words leading-tight">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 break-words leading-tight">
                 Hola, {perfil.name}
               </h2>
               <p className="text-sm text-gray-600">{perfil.puntos} PA</p>
-              <p className="text-sm text-gray-500 truncate">
+              <p className="text-sm text-gray-500 break-words">
                 {perfil.titulo}
               </p>
             </div>
@@ -223,24 +223,24 @@ export function PerfilResumen() {
             <div className="text-xs uppercase tracking-[0.14em] text-emerald-700 font-semibold">
               Nivel actual
             </div>
-            <div className="flex items-center justify-center w-20 h-14 rounded-2xl border border-emerald-200 bg-emerald-50 text-2xl font-bold text-emerald-700 shadow-sm">
+            <div className="flex items-center justify-center w-18 h-14 sm:w-20 rounded-2xl border border-emerald-200 bg-emerald-50 text-2xl font-bold text-emerald-700 shadow-sm">
               {perfil.nivel}
             </div>
-            <div className="w-full max-w-xs">
+            <div className="w-full max-w-full sm:max-w-xs">
               <div className="rounded-full bg-gray-200 h-6 sm:h-7 flex items-center overflow-hidden">
                 <div
                   className="h-full rounded-full bg-[#8ACC9F]"
                   style={{ width: `${perfil.progreso}%` }}
                 />
               </div>
-              <p className="text-sm text-gray-600 mt-2 text-center">
+              <p className="text-sm text-gray-600 mt-2 text-center break-words">
                 Progreso al siguiente nivel: {perfil.progreso}%
               </p>
             </div>
           </div>
 
           {/* Col 3: racha y logros */}
-          <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-gray-100 lg:px-4">
+          <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 text-center lg:border-r lg:border-gray-100 lg:px-4">
             <div className="text-sm text-gray-600">Racha</div>
             <div className="text-4xl font-bold text-emerald-600 leading-tight">
               {perfil.racha}
@@ -252,7 +252,7 @@ export function PerfilResumen() {
           </div>
 
           {/* Col 4: historial XP compacto */}
-          <div className="w-full">
+          <div className="w-full min-w-0">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-semibold text-gray-900">Historial XP</p>
               {xpHistory.length > 0 && (
@@ -270,13 +270,13 @@ export function PerfilResumen() {
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/90 px-3 py-2 shadow-sm"
+                    className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/90 px-3 py-2 shadow-sm min-w-0"
                   >
                     <div className="text-lg">{info.icon}</div>
                     <div className="flex-1 min-w-0 text-xs">
                       <div className="flex items-center justify-between font-semibold text-gray-900">
-                        <span className="truncate">{info.title}</span>
-                        <span className="text-emerald-600">+{item.points} PA</span>
+                        <span className="truncate pr-2">{info.title}</span>
+                        <span className="shrink-0 text-emerald-600">+{item.points} PA</span>
                       </div>
                       {info.detail && (
                         <p className="mt-0.5 truncate text-[11px] text-gray-500">{info.detail}</p>

@@ -288,8 +288,8 @@ export default function RankingPage() {
   }, [searchQuery, filter, pageOffset])
 
   return (
-    <div className="px-6 py-8">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 md:grid-cols-[1fr_auto] gap-10">
+    <div className="px-3 sm:px-6 py-4 sm:py-8">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 sm:gap-10 md:grid-cols-[1fr_auto]">
         <section aria-labelledby="ranking-title" className="w-full max-w-3xl space-y-4">
           <div>
             <h2 id="ranking-title" className="text-xl font-semibold">
@@ -384,11 +384,38 @@ export default function RankingPage() {
               pageOffset={pageOffset}
             />
           </div>
+
+          <div className="flex items-center justify-center gap-3 md:hidden">
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              onClick={() => setPageOffset(Math.max(0, pageOffset - pageSize))}
+              disabled={pageOffset <= 0}
+              aria-label="Página anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              onClick={() =>
+                setPageOffset(
+                  ranking?.totalUsers
+                    ? Math.min(ranking.totalUsers - 1, pageOffset + pageSize)
+                    : pageOffset + pageSize
+                )
+              }
+              disabled={Boolean(ranking?.totalUsers && pageOffset + pageSize >= ranking.totalUsers)}
+              aria-label="Página siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </section>
 
-        <aside className="block w-[clamp(240px,28vw,520px)]">
+        <aside className="block w-full md:w-[clamp(240px,28vw,520px)]">
           <div
-            className="sticky"
+            className="md:sticky"
             style={{
               ['--pig' as any]: 'clamp(240px,28vw,520px)',
               top: 'calc(100vh - var(--pig) - 20px)',

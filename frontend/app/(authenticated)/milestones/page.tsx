@@ -7,7 +7,7 @@ import CountdownCircles from '@/components/milestones/WeeklyCountdownCircles'
 
 export default function MilestonesPage() {
   return (
-    <div className="w-full space-y-8 lg:space-y-10">
+    <div className="w-full space-y-6 lg:space-y-10">
       {/* Bloque 1: Perfil en ancho completo (sin contenedor extra) */}
       <div className="space-y-3">
         <div>
@@ -17,7 +17,7 @@ export default function MilestonesPage() {
       </div>
 
       {/* Bloque 2: Retos semanales + contador + columna derecha sin contenedores extra */}
-      <section className="grid gap-6 lg:grid-cols-[0.35fr_0.65fr] items-start">
+      <section className="grid gap-4 sm:gap-6 lg:grid-cols-[0.35fr_0.65fr] items-start">
         <div className="space-y-4 min-w-0">
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.12em] text-emerald-600 font-semibold">Retos semanales</p>

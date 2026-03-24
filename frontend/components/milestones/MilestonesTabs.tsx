@@ -15,8 +15,9 @@ export function MilestonesTabs() {
   const pathname = usePathname()
 
   return (
-    <nav className="w-full border-b border-gray-300 mb-6">
-      <div className="flex w-full justify-between text-center">
+    <nav className="mb-4 sm:mb-6">
+      <div className="-mx-1 overflow-x-auto border-b border-gray-300 pb-1">
+      <div className="flex min-w-max text-center">
         {tabs.map(({ label, href }) => {
           const isActive =
             pathname === href || (href !== '/milestones' && pathname.startsWith(href))
@@ -26,7 +27,7 @@ export function MilestonesTabs() {
               key={href}
               href={href}
               className={cn(
-                'flex-1 py-2 text-sm font-medium transition-colors rounded-t-md relative',
+                'shrink-0 px-4 sm:px-5 py-2 text-sm font-medium transition-colors rounded-t-md relative whitespace-nowrap',
                 isActive
                   ? 'bg-white text-emerald-600 border border-b-transparent shadow-sm'
                   : 'text-gray-600 hover:text-emerald-700'
@@ -38,6 +39,7 @@ export function MilestonesTabs() {
             </Link>
           )
         })}
+      </div>
       </div>
     </nav>
   )

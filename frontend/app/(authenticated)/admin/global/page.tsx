@@ -23,10 +23,10 @@ export default function GlobalAdminPage() {
   }, [searchParams])
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-0 flex flex-col gap-6">
+    <div className="px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-0 flex flex-col gap-4 sm:gap-6">
       <header className="space-y-2">
         <h1 className="text-2xl lg:text-3xl font-semibold text-gray-900">Administración global</h1>
-        <p className="text-sm text-gray-500">
+        <p className="max-w-3xl text-sm text-gray-500">
           Gestiona todas las organizaciones, departamentos y códigos de registro desde un único lugar.
         </p>
       </header>
@@ -36,14 +36,16 @@ export default function GlobalAdminPage() {
         onValueChange={(value) => router.replace(`/admin/global?tab=${value}`)}
         className="flex flex-col gap-6"
       >
-        <TabsList className="bg-white shadow-sm rounded-lg">
+        <div className="-mx-1 overflow-x-auto pb-1 sm:mx-0">
+        <TabsList className="inline-flex min-w-max bg-white shadow-sm rounded-lg">
           <TabsTrigger value="management">Gestión</TabsTrigger>
           <TabsTrigger value="stats">Estadísticas</TabsTrigger>
           <TabsTrigger value="reset">Reinicio</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
+        </div>
 
-        <TabsContent value="management" className="flex flex-col gap-6">
+        <TabsContent value="management" className="flex flex-col gap-4 sm:gap-6">
           <OrganizationManager />
           <OrganizationSeasonTimers />
           <OrganizationNotificationDefaults />
@@ -59,16 +61,16 @@ export default function GlobalAdminPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="stats" className="flex flex-col gap-6">
+        <TabsContent value="stats" className="flex flex-col gap-4 sm:gap-6">
           <GlobalStatsPanel />
           
         </TabsContent>
 
-        <TabsContent value="reset" className="flex flex-col gap-6">
+        <TabsContent value="reset" className="flex flex-col gap-4 sm:gap-6">
           <GlobalResetPanel />
         </TabsContent>
 
-        <TabsContent value="reports" className="flex flex-col gap-6">
+        <TabsContent value="reports" className="flex flex-col gap-4 sm:gap-6">
           <GlobalReportsPanel />
         </TabsContent>
       </Tabs>

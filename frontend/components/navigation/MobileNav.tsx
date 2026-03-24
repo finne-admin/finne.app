@@ -31,21 +31,22 @@ export function MobileNav({ menuItems }: { menuItems: MenuItem[] }) {
           {menuItems.map((item, idx) => {
             const isLogros = item.href === '/milestones'
             return (
-              <Link
-                key={`${item.href}-${idx}`}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                  'text-white/90 hover:bg-white/10 hover:text-white',
-                  pathname === item.href && 'bg-white/20 text-white'
-                )}
-              >
-                <item.icon className="h-5 w-5" aria-hidden="true" />
-                <span className="relative inline-flex items-center gap-2">
-                  {item.label}
-                  {isLogros && show && <BadgeDot show className="static ml-1" />}
-                </span>
-              </Link>
+              <SheetClose asChild key={`${item.href}-${idx}`}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                    'text-white/90 hover:bg-white/10 hover:text-white',
+                    pathname === item.href && 'bg-white/20 text-white'
+                  )}
+                >
+                  <item.icon className="h-5 w-5" aria-hidden="true" />
+                  <span className="relative inline-flex items-center gap-2">
+                    {item.label}
+                    {isLogros && show && <BadgeDot show className="static ml-1" />}
+                  </span>
+                </Link>
+              </SheetClose>
             )
           })}
         </nav>

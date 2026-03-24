@@ -49,13 +49,13 @@ export function RewardsPodium({ users, rewards, scopeLabel, loading = false }: R
   while (podiumUsers.length < 3) podiumUsers.push(placeholderUser)
 
   return (
-    <section className="rounded-[32px] bg-gradient-to-br from-white via-emerald-50 to-emerald-100/30 p-8 shadow-xl border border-emerald-100">
+    <section className="rounded-[28px] bg-gradient-to-br from-white via-emerald-50 to-emerald-100/30 p-4 sm:p-8 shadow-xl border border-emerald-100">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-emerald-100 pb-4">
         <div className="space-y-1">
           <p className="text-[10px] tracking-[0.4em] uppercase text-emerald-500 font-semibold">
             Podio temporada
           </p>
-          <h2 className="text-2xl font-bold text-gray-900">Top Activos</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Top Activos</h2>
           {scopeLabel && <p className="text-sm text-gray-500">{scopeLabel}</p>}
         </div>
         <div className="flex items-center gap-2 text-emerald-600 text-sm font-semibold">
@@ -64,7 +64,7 @@ export function RewardsPodium({ users, rewards, scopeLabel, loading = false }: R
         </div>
       </div>
 
-      <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3 md:items-end">
+      <div className="mt-6 sm:mt-12 grid grid-cols-1 gap-4 md:grid-cols-3 md:items-end">
         {podiumLayout.map(({ place, colors, height }, index) => {
           const podiumIndex = place - 1
           const user = podiumUsers[podiumIndex]
@@ -73,7 +73,7 @@ export function RewardsPodium({ users, rewards, scopeLabel, loading = false }: R
 
           return (
             <div key={`${user.id}-${place}`} className={cn("flex flex-col justify-end", index === 1 && "md:translate-y-[-20px]")}>
-              <div className={cn("rounded-3xl border p-4 shadow-sm", colors.card, colors.border, height, "flex flex-col justify-between")}>
+              <div className={cn("rounded-3xl border p-4 shadow-sm min-h-[220px] md:min-h-0", colors.card, colors.border, height, "flex flex-col justify-between")}>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500">
                     <span className={colors.accent}>{place}º lugar</span>
@@ -86,7 +86,7 @@ export function RewardsPodium({ users, rewards, scopeLabel, loading = false }: R
                           <img
                             src={reward.image_url}
                             alt={reward.title}
-                            className="h-28 w-full rounded-xl object-contain bg-white"
+                            className="h-24 sm:h-28 w-full rounded-xl object-contain bg-white"
                           />
                         </div>
                       )}

@@ -223,7 +223,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const headerContent = useMemo(
     () => (
-      <header className="h-16 border-b bg-white flex justify-between items-center px-4 lg:px-8">
+      <header className="h-16 border-b bg-white flex justify-between items-center pl-14 pr-4 lg:pl-8 lg:pr-8">
         <div className="flex items-center gap-3 max-w-xl">
           {orgLogoUrl && (
             <div className="h-14 w-14 squared-full bg-white overflow-hidden">
@@ -254,7 +254,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
           </Button>
 
-          <Button
+          {/* <Button
             variant="ghost"
             size="icon"
             className="hover:bg-gray-200"
@@ -262,7 +262,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             title="Iniciar Tutorial"
           >
             <PlayCircle className="h-6 w-6 text-green-600" />
-          </Button>
+          </Button> */}
 
           <div className="relative">
             <Button
@@ -327,7 +327,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden fixed left-2 top-2 z-50"
+            className="lg:hidden fixed left-2 top-3 z-50 bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white"
           >
             <Menu className="h-6 w-6" />
           </Button>
@@ -335,14 +335,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <SheetContent
           side="left"
-          className="w-80 p-0 bg-gradient-to-b from-[#8BC5B5] to-[#5B9B8B] border-none z-[9999]"
+          className="w-[88vw] max-w-[360px] p-0 bg-gradient-to-b from-[#8BC5B5] to-[#5B9B8B] border-none z-[9999] [&>button]:hidden"
         >
           <MobileNav menuItems={[...menuItems.primary, ...menuItems.footer]} />
         </SheetContent>
       </Sheet>
 
       {/* ===== SIDEBAR DESKTOP ===== */}
-      <div className="flex w-64 h-full flex-shrink-0 bg-[#8BC5B5] text-white">
+      <div className="hidden lg:flex w-64 h-full flex-shrink-0 bg-[#8BC5B5] text-white">
         <Sidebar primaryItems={menuItems.primary} footerItems={menuItems.footer} />
       </div>
 

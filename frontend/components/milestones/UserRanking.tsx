@@ -52,8 +52,8 @@ export function RankingUsuarios({
   }
 
   return (
-    <div id="ranking-card" className="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-6">
-      <h2 className="text-xl font-bold mb-4">Ranking de temporada</h2>
+    <div id="ranking-card" className="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-4 sm:p-6 overflow-hidden">
+      <h2 className="text-lg sm:text-xl font-bold mb-4">Ranking de temporada</h2>
       <div className="divide-y">
         {usuarios.map((usuario, index) => {
           const rankNumber = index + 1 + pageOffset
@@ -93,14 +93,14 @@ export function RankingUsuarios({
               key={usuario.id}
               {...props}
               className={cn(
-                "flex justify-between items-center py-3 px-2 transition-all",
+                "flex items-center gap-3 py-3 px-2 transition-all",
                 rankNumber === 1 && "bg-yellow-50 ring-2 ring-yellow-400 shadow-md",
                 rankNumber === 2 && "bg-gray-100",
                 rankNumber === 3 && "bg-orange-50"
               )}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold w-6 text-right">{rankNumber}</span>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <span className="text-sm font-semibold w-6 shrink-0 text-right">{rankNumber}</span>
                 {isTop3 && <Trophy className="h-4 w-4 text-yellow-500" />}
 
                 {usuario.avatar_url ? (
@@ -115,14 +115,14 @@ export function RankingUsuarios({
                   </div>
                 )}
 
-                <span className="text-sm text-gray-800">
+                <span className="truncate text-sm text-gray-800">
                   {usuario.first_name} {usuario.last_name}
                 </span>
               </div>
 
-              <div className="text-sm font-medium text-emerald-600">{usuario.periodical_exp} PA</div>
+              <div className="shrink-0 text-sm font-medium text-emerald-600">{usuario.periodical_exp} PA</div>
               {rewardInfo && (
-                <div className="ml-4 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                <div className="ml-2 hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 sm:block">
                   {rewardInfo.title}
                 </div>
               )}
@@ -167,18 +167,18 @@ function RankingSearch({
   const showResults = value.trim().length > 0
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm min-w-[240px]">
+    <div className="flex w-full flex-col items-center gap-1">
+      <div className="flex w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm min-w-0 sm:min-w-[240px]">
         <Search className="h-4 w-4 text-gray-400" />
         <input
-          className="w-full bg-transparent outline-none"
+          className="w-full min-w-0 bg-transparent outline-none"
           placeholder="Buscar en el top..."
           value={value}
           onChange={(event) => onChange?.(event.target.value)}
         />
       </div>
       {showResults && (
-        <div className="w-full max-w-[320px] rounded-xl border border-gray-200 bg-white shadow-sm p-2 text-xs text-gray-600">
+        <div className="w-full max-w-full sm:max-w-[320px] rounded-xl border border-gray-200 bg-white shadow-sm p-2 text-xs text-gray-600">
           {searching ? (
             <div className="py-2 text-center text-gray-500">Buscando...</div>
           ) : results.length ? (
