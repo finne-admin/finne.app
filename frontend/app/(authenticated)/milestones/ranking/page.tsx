@@ -65,6 +65,7 @@ export default function RankingPage() {
   const [goal, setGoal] = useState<number | null>(null)
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loadingRanking, setLoadingRanking] = useState(true)
+  const [authResolved, setAuthResolved] = useState(false)
   const [pageOffset, setPageOffset] = useState(0)
   const pageSize = 10
   const [searching, setSearching] = useState(false)
@@ -117,6 +118,8 @@ export default function RankingPage() {
         setUserRole(null)
         setUserOrgId(null)
         setUserOrgSlug(null)
+      } finally {
+        setAuthResolved(true)
       }
     })()
   }, [])
@@ -249,6 +252,9 @@ export default function RankingPage() {
     return (scopeSlug ?? ranking?.membership?.organizationSlug ?? '').toLowerCase() === 'stn'
   }, [ranking])
 
+  const isStnUser = (userOrgSlug ?? '').toLowerCase() === 'stn'
+  const shouldHoldStnView = isStnUser && (!authResolved || filter.scope === 'global' || loadingRanking || !isClassicTop3)
+
   const currentThreshold = useMemo(() => {
     if (isClassicTop3) return null
     const userExp = Number(ranking?.userExp ?? 0)
@@ -321,6 +327,24 @@ export default function RankingPage() {
   return (
     <div className="px-3 sm:px-6 py-4 sm:py-8">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 sm:gap-10 md:grid-cols-[minmax(280px,360px)_1fr]">
+        {shouldHoldStnView ? (
+          <div className="md:col-span-2">
+            <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 w-64 rounded bg-gray-100" />
+                <div className="h-4 w-48 rounded bg-gray-100" />
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(280px,360px)_1fr]">
+                  <div className="space-y-4">
+                    <div className="h-40 rounded-3xl bg-gray-100" />
+                    <div className="h-32 rounded-3xl bg-gray-100" />
+                  </div>
+                  <div className="h-[520px] rounded-3xl bg-gray-100" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
         <aside className="order-2 md:order-1 block w-full">
           <div className="space-y-4 md:sticky" style={{ top: '24px' }}>
             <HuchaPanel goal={goal ?? 5000} deadline={deadline} pigHeight={420} showBalloon={false} />
@@ -513,6 +537,8 @@ export default function RankingPage() {
             </button>
           </div>
         </section>
+          </>
+        )}
       </div>
     </div>
   )

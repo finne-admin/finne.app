@@ -53,6 +53,7 @@ type RankingFilter =
 export default function RecompensasPage() {
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authResolved, setAuthResolved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userOrgId, setUserOrgId] = useState<string | null>(null)
@@ -87,6 +88,8 @@ export default function RecompensasPage() {
         setUserRole(null)
         setUserOrgId(null)
         setUserOrgSlug(null)
+      } finally {
+        setAuthResolved(true)
       }
     })()
   }, [])
@@ -214,9 +217,23 @@ export default function RecompensasPage() {
     return (scopeSlug ?? '').toLowerCase() === 'stn'
   }, [ranking])
 
+  const isStnUser = (userOrgSlug ?? '').toLowerCase() === 'stn'
+  const shouldHoldStnView = isStnUser && (!authResolved || filter.scope === 'global' || loading || !isClassicTop3)
+
   return (
     <div className="px-6 py-12">
       <div className="mx-auto max-w-6xl space-y-10">
+        {shouldHoldStnView ? (
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div className="animate-pulse space-y-5">
+              <div className="mx-auto h-8 w-96 rounded bg-gray-100" />
+              <div className="mx-auto h-4 w-72 rounded bg-gray-100" />
+              <div className="mx-auto h-16 max-w-4xl rounded-3xl bg-gray-100" />
+              <div className="h-[640px] rounded-3xl bg-gray-100" />
+            </div>
+          </div>
+        ) : (
+          <>
         <div className="text-center space-y-3">
           <p className="text-xs uppercase tracking-[0.4em] text-emerald-500 font-semibold">Centro de recompensas</p>
           <h1 className="text-3xl font-bold text-gray-900">Reconocemos a quienes mantienen viva la actitud activa</h1>
@@ -271,6 +288,8 @@ export default function RecompensasPage() {
             scopeLabel={scopeLabel}
             loading={loading}
           />
+        )}
+          </>
         )}
       </div>
     </div>
