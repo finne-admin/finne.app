@@ -18,6 +18,7 @@ import milestonesRoutes from "./routes/milestonesRoutes"
 import userRoutes from "./routes/userRoutes"
 import notificationRoutes from "./routes/notificationRoutes"
 import reportRoutes from "./routes/reportRoutes"
+import announcementRoutes from "./routes/announcementRoutes"
 import adminRoutes from "./routes/adminRoutes"
 import achievementRoutes from "./routes/achievementRoutes"
 import socialRoutes from "./routes/socialRoutes"
@@ -53,6 +54,7 @@ app.use("/api/questionnaires", questionnairesRoutes)
 app.use("/api/user", userRoutes)
 app.use("/api/notifications", notificationRoutes)
 app.use("/api/reports", reportRoutes)
+app.use("/api/announcements", announcementRoutes)
 app.use("/api/milestones", milestonesRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/achievements", achievementRoutes)

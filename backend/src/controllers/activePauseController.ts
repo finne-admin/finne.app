@@ -1,8 +1,8 @@
 import { Request, Response } from "express"
-import { DateTime } from "luxon"
 import { getPool } from "../config/dbManager"
 import {
   ActivePauseNotFoundError,
+  ActivePauseForbiddenError,
   DailyActivePauseLimitError,
   DailySatisfactionLimitError,
   InvalidVideosError,
@@ -10,49 +10,28 @@ import {
   getVideoIdsByHashes,
   updateActivePauseSatisfactionRecord,
 } from "../db/queries/activePauseQueries"
-import { listDailyActivePausesByUserId } from "../db/queries/quotaQueries"
-import { getMembershipForUser, getDailyActivePauseLimitForUser } from "../db/queries/userMembershipQueries"
-import { getOrganizationNotificationDefaults } from "../db/queries/notificationQueries"
-import { resolveOrgTimesForDate } from "../utils/notificationTimes"
+import {
+  ActivePauseOutsideAllowedWindowError,
+  ActivePauseWeekendError,
+  ActivePauseWindowAlreadyCompletedError,
+  resolveActivePauseCreationContext,
+} from "../services/activePauseService"
 
-const FALLBACK_DAILY_LIMIT = Number(process.env.ACTIVE_PAUSE_DAILY_LIMIT || "3")
-const DEFAULT_TIMEZONE = "Europe/Madrid"
-const FALLBACK_TIMES = ["10:30", "12:00", "15:45"]
-const WINDOW_BEFORE_MINUTES = 20
-const WINDOW_AFTER_MINUTES = 25
-
-const buildWindowsForDay = (times: string[], now: DateTime) => {
-  const day = now.startOf("day")
-  return times
-    .map((time) => {
-      const [hRaw, mRaw] = time.split(":")
-      const hour = Number(hRaw)
-      const minute = Number(mRaw)
-      if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
-      const slot = day.set({ hour, minute, second: 0, millisecond: 0 })
-      return {
-        label: time,
-        start: slot.minus({ minutes: WINDOW_BEFORE_MINUTES }),
-        end: slot.plus({ minutes: WINDOW_AFTER_MINUTES }),
-      }
-    })
-    .filter(Boolean) as { label: string; start: DateTime; end: DateTime }[]
-}
-
-// Resuelve IDs internos a partir de hashes de Wistia y responde con los dos videos solicitados.
+// Convierte dos hashes de Wistia en los IDs internos de los videos.
+// Se usa antes de crear la pausa activa para que el frontend no tenga que conocer IDs de base de datos.
 export const resolveVideoIds = async (req: Request, res: Response) => {
   try {
     const { hashes, video_hashes } = req.body
     const finalHashes = hashes || video_hashes
-    if (!Array.isArray(finalHashes) || finalHashes.length < 2) {
-      return res.status(400).json({ error: "Se requieren al menos 2 hashes de video" })
+    if (!Array.isArray(finalHashes) || finalHashes.length !== 2) {
+      return res.status(400).json({ error: "Se requieren exactamente 2 hashes de video" })
     }
 
     const pool = await getPool()
     const client = await pool.connect()
 
     try {
-      const rows = await getVideoIdsByHashes(client, finalHashes.map((h) => h.trim()))
+      const rows = await getVideoIdsByHashes(client, finalHashes.map((hash: unknown) => String(hash).trim()))
       if (rows.length < 2) {
         return res.status(400).json({ error: "No se encontraron ambos videos" })
       }
@@ -76,58 +55,25 @@ export const resolveVideoIds = async (req: Request, res: Response) => {
   }
 }
 
-// Crea una pausa activa evitando duplicados y respetando limites diarios.
+// Registra una pausa activa para el usuario autenticado.
+// El controller solo coordina validacion HTTP y delega las reglas horarias al servicio.
 export const insertActivePause = async (req: Request, res: Response) => {
-  const { user_id, video1_id, video2_id } = req.body
-  if (!user_id || !video1_id || !video2_id) {
+  const userId = (req as any).user?.id
+  const { video1_id, video2_id } = req.body
+
+  if (!userId) {
+    return res.status(401).json({ error: "No autenticado" })
+  }
+
+  if (!video1_id || !video2_id) {
     return res.status(400).json({ error: "Datos incompletos" })
   }
 
-  const now = DateTime.now().setZone(DEFAULT_TIMEZONE)
-  if (now.weekday === 6 || now.weekday === 7) {
-    return res
-      .status(403)
-      .json({ error: "Las pausas activas solo estan disponibles de lunes a viernes." })
-  }
-
   try {
-    const membership = await getMembershipForUser(user_id)
-    let times = [...FALLBACK_TIMES]
-    if (membership?.organization_id) {
-      const orgDefaults = await getOrganizationNotificationDefaults(membership.organization_id)
-      if (orgDefaults) {
-        times = resolveOrgTimesForDate(orgDefaults, now, times)
-      }
-    }
-    const sortedTimes = times
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .sort()
-    const dailyLimit = await getDailyActivePauseLimitForUser(user_id, FALLBACK_DAILY_LIMIT)
-    const windowTimes = sortedTimes.length > dailyLimit ? sortedTimes.slice(0, dailyLimit) : sortedTimes
-    const windows = buildWindowsForDay(windowTimes, now)
-    const activeWindow = windows.find(
-      (window) => now >= window.start && now <= window.end
-    )
-    if (!activeWindow) {
-      return res.status(403).json({
-        error: "Estas fuera del horario permitido para realizar la pausa activa.",
-      })
-    }
-
-    const pausesToday = await listDailyActivePausesByUserId(user_id, DEFAULT_TIMEZONE)
-    const alreadyCompleted = pausesToday.some((timestamp) => {
-      const pauseTime = DateTime.fromISO(timestamp, { zone: DEFAULT_TIMEZONE })
-      return pauseTime >= activeWindow.start && pauseTime <= activeWindow.end
-    })
-    if (alreadyCompleted) {
-      return res.status(403).json({
-        error: "Ya completaste la pausa correspondiente a este horario.",
-      })
-    }
+    const { dailyLimit } = await resolveActivePauseCreationContext(userId)
 
     const { id, reused } = await createActivePause(
-      user_id,
+      userId,
       video1_id,
       video2_id,
       dailyLimit
@@ -135,6 +81,15 @@ export const insertActivePause = async (req: Request, res: Response) => {
     return res.json(reused ? { pause: { id }, reused: true } : { pause: { id } })
   } catch (error) {
     console.error("Error en insertActivePause:", error)
+    if (error instanceof ActivePauseWeekendError) {
+      return res.status(403).json({ error: error.message })
+    }
+    if (error instanceof ActivePauseOutsideAllowedWindowError) {
+      return res.status(403).json({ error: error.message })
+    }
+    if (error instanceof ActivePauseWindowAlreadyCompletedError) {
+      return res.status(403).json({ error: error.message })
+    }
     if (error instanceof DailyActivePauseLimitError) {
       return res.status(429).json({ error: error.message })
     }
@@ -145,10 +100,17 @@ export const insertActivePause = async (req: Request, res: Response) => {
   }
 }
 
-// Actualiza satisfaccion y etiquetas de una pausa activa y persiste la valoracion de ejercicio.
+// Actualiza la valoracion de una pausa ya realizada.
+// Solo puede modificarla el usuario propietario de esa pausa.
 export const updateActivePauseSatisfaction = async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id
   const { id } = req.params
   const { satisfaction_level, tags, video_hash_ids } = req.body
+
+  if (!userId) {
+    return res.status(401).json({ error: "No autenticado" })
+  }
+
   if (!id) {
     return res.status(400).json({ error: "Falta ID de la pausa activa" })
   }
@@ -159,12 +121,15 @@ export const updateActivePauseSatisfaction = async (req: Request, res: Response)
     : []
 
   try {
-    await updateActivePauseSatisfactionRecord(id, satisfaction_level, normalizedTags, videoHashes)
+    await updateActivePauseSatisfactionRecord(id, userId, satisfaction_level, normalizedTags, videoHashes)
     return res.json({ success: true, id, satisfaction_level, tags: normalizedTags })
   } catch (error) {
     console.error("Error en updateActivePauseSatisfaction:", error)
     if (error instanceof ActivePauseNotFoundError) {
       return res.status(404).json({ error: error.message })
+    }
+    if (error instanceof ActivePauseForbiddenError) {
+      return res.status(403).json({ error: error.message })
     }
     if (error instanceof DailySatisfactionLimitError) {
       return res.status(429).json({ error: error.message })

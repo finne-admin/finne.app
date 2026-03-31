@@ -11,9 +11,16 @@ type Props = {
   deadline: Date | string | number
   pigHeight?: number
   className?: string
+  showBalloon?: boolean
 }
 
-export default function HuchaPanel({ goal, deadline, pigHeight = 520, className }: Props) {
+export default function HuchaPanel({
+  goal,
+  deadline,
+  pigHeight = 520,
+  className,
+  showBalloon = true,
+}: Props) {
   const [totalExp, setTotalExp] = useState(0)
 
   const topBlockRef = useRef<HTMLDivElement>(null)
@@ -58,14 +65,16 @@ export default function HuchaPanel({ goal, deadline, pigHeight = 520, className 
         
       </div>
 
-      <CerditoGlobo
-        goal={goal}
-        current={totalExp}
-        height={pigHeight}
-        className="w-[var(--pig)]"
-        ceilingPx={ceilingPx}
-        showInlineCount={false}
-      />
+      {showBalloon && (
+        <CerditoGlobo
+          goal={goal}
+          current={totalExp}
+          height={pigHeight}
+          className="w-[var(--pig)]"
+          ceilingPx={ceilingPx}
+          showInlineCount={false}
+        />
+      )}
     </div>
   )
 }

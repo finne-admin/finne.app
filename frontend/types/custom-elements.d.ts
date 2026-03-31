@@ -124,6 +124,7 @@ declare global {
       'svelte-rewards-podium': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
         users?: unknown[]
         rewards?: Record<string, unknown>
+        rewardMode?: string
         scopeLabel?: string
         loading?: boolean
       }
@@ -137,6 +138,12 @@ declare global {
         hint?: string
         canViewInbox?: boolean
         inboxLabel?: string
+      }
+      'svelte-announcement-popup': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        open?: boolean
+        title?: string
+        message?: string
+        cta?: string
       }
     }
   }

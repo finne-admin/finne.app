@@ -13,13 +13,14 @@ import { GlobalStatsPanel } from '@/components/admin/GlobalStatsPanel'
 import { OrganizationSeasonTimers } from '@/components/admin/OrganizationSeasonTimers'
 import { GlobalResetPanel } from '@/components/admin/GlobalResetPanel'
 import { GlobalReportsPanel } from '@/components/admin/GlobalReportsPanel'
+import { GlobalAnnouncementsPanel } from '@/components/admin/GlobalAnnouncementsPanel'
 
 export default function GlobalAdminPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentTab = useMemo(() => {
     const tab = searchParams.get('tab')
-    return tab === 'stats' || tab === 'reset' || tab === 'reports' ? tab : 'management'
+    return tab === 'stats' || tab === 'reset' || tab === 'reports' || tab === 'announcements' ? tab : 'management'
   }, [searchParams])
 
   return (
@@ -42,6 +43,7 @@ export default function GlobalAdminPage() {
           <TabsTrigger value="stats">Estadísticas</TabsTrigger>
           <TabsTrigger value="reset">Reinicio</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="announcements">Avisos</TabsTrigger>
         </TabsList>
         </div>
 
@@ -72,6 +74,10 @@ export default function GlobalAdminPage() {
 
         <TabsContent value="reports" className="flex flex-col gap-4 sm:gap-6">
           <GlobalReportsPanel />
+        </TabsContent>
+
+        <TabsContent value="announcements" className="flex flex-col gap-4 sm:gap-6">
+          <GlobalAnnouncementsPanel />
         </TabsContent>
       </Tabs>
     </div>

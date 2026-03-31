@@ -1,9 +1,12 @@
 import { Request, Response } from "express"
 import fs from "fs"
 import {
+  RewardKey,
   RewardScopeType,
   deleteRewardDefinition,
   getRewardDefinitionsForScope,
+  getRaffleThresholdsByOrganization,
+  replaceRaffleThresholdsByOrganization,
   upsertRewardDefinition,
 } from "../db/queries/rewardQueries"
 import { uploadRewardImage } from "../services/rewardStorage"
@@ -21,11 +24,25 @@ const ensureScopeId = (scopeType: RewardScopeType, scopeId?: string | null) => {
   return scopeId
 }
 
+const parseRewardKey = (value: any): RewardKey => {
+  if (value === "guaranteed_winner" || value === "raffle_a" || value === "raffle_b") {
+    return value
+  }
+  throw new Error("rewardKey inválido")
+}
+
+const rewardKeyFromPosition = (position: number): RewardKey => {
+  if (position === 1) return "guaranteed_winner"
+  if (position === 2) return "raffle_a"
+  return "raffle_b"
+}
+
 const mapRow = (row: any) => ({
   id: row.id,
   scope_type: row.scope_type,
   scope_id: row.scope_id,
   position: row.position,
+  reward_key: row.reward_key,
   title: row.title,
   description: row.description,
   image_url: row.image_url,
@@ -57,15 +74,24 @@ export const listRewardDefinitionsController = async (req: Request, res: Respons
 
 export const upsertRewardDefinitionController = async (req: Request, res: Response) => {
   try {
-    const { scopeType: rawScopeType, scopeId, position, title, description, imageUrl, ctaUrl } =
+    const { scopeType: rawScopeType, scopeId, position, rewardKey, title, description, imageUrl, ctaUrl } =
       req.body || {}
 
     const scopeType = parseScopeType(rawScopeType)
     const normalizedScopeId = ensureScopeId(scopeType, scopeId)
     const numericPosition = Number(position)
-    if (![1, 2, 3].includes(numericPosition)) {
-      return res.status(400).json({ error: "La posición debe ser 1, 2 o 3" })
-    }
+    const normalizedRewardKey =
+      typeof rewardKey === "string"
+        ? parseRewardKey(rewardKey)
+        : rewardKeyFromPosition(Number.isFinite(numericPosition) ? numericPosition : 3)
+
+    const finalPosition =
+      normalizedRewardKey === "guaranteed_winner"
+        ? 1
+        : normalizedRewardKey === "raffle_a"
+          ? 2
+          : 3
+
     if (!title || typeof title !== "string") {
       return res.status(400).json({ error: "El título es obligatorio" })
     }
@@ -73,18 +99,90 @@ export const upsertRewardDefinitionController = async (req: Request, res: Respon
     const updated = await upsertRewardDefinition(
       scopeType,
       normalizedScopeId,
-      numericPosition,
+      normalizedRewardKey,
       title,
       typeof description === "string" ? description : null,
       typeof imageUrl === "string" ? imageUrl : null,
       typeof ctaUrl === "string" ? ctaUrl : null,
-      (req as any).user?.id
+      (req as any).user?.id,
+      finalPosition
     )
 
     return res.json({ success: true, reward: mapRow(updated) })
   } catch (error) {
     console.error("Error guardando recompensa:", error)
     return res.status(500).json({ error: "No se pudo guardar la recompensa" })
+  }
+}
+
+export const listRaffleThresholdsController = async (req: Request, res: Response) => {
+  try {
+    const organizationId =
+      typeof req.params.organizationId === "string" && req.params.organizationId.trim().length
+        ? req.params.organizationId.trim()
+        : null
+
+    if (!organizationId) {
+      return res.status(400).json({ error: "Falta organizationId" })
+    }
+
+    const thresholds = await getRaffleThresholdsByOrganization(organizationId)
+    return res.json({ thresholds })
+  } catch (error) {
+    console.error("Error listando umbrales de sorteo:", error)
+    return res.status(500).json({ error: "No se pudieron cargar los umbrales" })
+  }
+}
+
+export const replaceRaffleThresholdsController = async (req: Request, res: Response) => {
+  try {
+    const organizationId =
+      typeof req.params.organizationId === "string" && req.params.organizationId.trim().length
+        ? req.params.organizationId.trim()
+        : null
+
+    if (!organizationId) {
+      return res.status(400).json({ error: "Falta organizationId" })
+    }
+
+    const rawThresholds = Array.isArray(req.body?.thresholds) ? req.body.thresholds : null
+    if (!rawThresholds) {
+      return res.status(400).json({ error: "Debes enviar una lista de umbrales" })
+    }
+
+    const normalized = rawThresholds.map((item: any) => ({
+      min_points: Number(item?.min_points),
+      entries_count: Number(item?.entries_count),
+      active: item?.active !== false,
+    }))
+
+    if (
+      normalized.some(
+        (item) =>
+          !Number.isFinite(item.min_points) ||
+          item.min_points <= 0 ||
+          !Number.isFinite(item.entries_count) ||
+          item.entries_count <= 0
+      )
+    ) {
+      return res.status(400).json({ error: "Todos los umbrales deben tener puntos y participaciones válidos" })
+    }
+
+    const uniqueMinPoints = new Set(normalized.map((item) => item.min_points))
+    if (uniqueMinPoints.size !== normalized.length) {
+      return res.status(400).json({ error: "No puede haber umbrales duplicados" })
+    }
+
+    const thresholds = await replaceRaffleThresholdsByOrganization(
+      organizationId,
+      normalized.sort((a, b) => a.min_points - b.min_points),
+      (req as any).user?.id ?? null
+    )
+
+    return res.json({ success: true, thresholds })
+  } catch (error) {
+    console.error("Error guardando umbrales de sorteo:", error)
+    return res.status(500).json({ error: "No se pudieron guardar los umbrales" })
   }
 }
 

@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from "react"
 type SvelteRewardsPodiumElement = HTMLElement & {
   users?: unknown[]
   rewards?: Record<string, unknown>
+  rewardMode?: string
+  raffleThresholds?: unknown[]
+  userRaffleEntries?: number
   scopeLabel?: string
   loading?: boolean
 }
@@ -12,6 +15,9 @@ type SvelteRewardsPodiumElement = HTMLElement & {
 interface SvelteRewardsPodiumProps {
   users: unknown[]
   rewards?: Record<string, unknown>
+  rewardMode?: string
+  raffleThresholds?: unknown[]
+  userRaffleEntries?: number
   scopeLabel?: string
   loading?: boolean
 }
@@ -19,6 +25,9 @@ interface SvelteRewardsPodiumProps {
 export function SvelteRewardsPodium({
   users,
   rewards,
+  rewardMode,
+  raffleThresholds,
+  userRaffleEntries = 0,
   scopeLabel,
   loading = false,
 }: Readonly<SvelteRewardsPodiumProps>) {
@@ -48,9 +57,12 @@ export function SvelteRewardsPodium({
     if (!el) return
     el.users = users
     el.rewards = rewards ?? {}
+    el.rewardMode = rewardMode ?? "raffle_thresholds"
+    el.raffleThresholds = raffleThresholds ?? []
+    el.userRaffleEntries = userRaffleEntries
     el.scopeLabel = scopeLabel ?? ""
     el.loading = loading
-  }, [users, rewards, scopeLabel, loading, scriptReady])
+  }, [users, rewards, rewardMode, raffleThresholds, userRaffleEntries, scopeLabel, loading, scriptReady])
 
   return <svelte-rewards-podium ref={podiumRef} />
 }

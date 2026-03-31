@@ -33,6 +33,13 @@ export class ActivePauseNotFoundError extends Error {
   }
 }
 
+export class ActivePauseForbiddenError extends Error {
+  constructor() {
+    super("No puedes modificar una pausa activa de otro usuario")
+    this.name = "ActivePauseForbiddenError"
+  }
+}
+
 export class InvalidVideosError extends Error {
   constructor() {
     super("Los videos seleccionados no son validos.")
@@ -343,6 +350,7 @@ export const insertExerciseSatisfaction = async (
 
 export const updateActivePauseSatisfactionRecord = async (
   activePauseId: string,
+  requesterUserId: string,
   satisfactionLevel: unknown,
   tags: string[],
   videoHashes: string[]
@@ -355,6 +363,25 @@ export const updateActivePauseSatisfactionRecord = async (
 
     const normalizedLevel = (satisfactionLevel as any) ?? null
 
+    const ownership = await client.query<{ user_id: string }>(
+      `
+      SELECT user_id
+      FROM active_pauses
+      WHERE id = $1
+      FOR UPDATE
+      `,
+      [activePauseId]
+    )
+
+    if (ownership.rowCount === 0) {
+      throw new ActivePauseNotFoundError()
+    }
+
+    const ownerUserId = ownership.rows[0].user_id
+    if (ownerUserId !== requesterUserId) {
+      throw new ActivePauseForbiddenError()
+    }
+
     const result = await client.query<{ user_id: string }>(
       `
       UPDATE active_pauses
@@ -366,10 +393,6 @@ export const updateActivePauseSatisfactionRecord = async (
       `,
       [normalizedLevel, tags, activePauseId]
     )
-
-    if (result.rowCount === 0) {
-      throw new ActivePauseNotFoundError()
-    }
 
     const { user_id: userId } = result.rows[0]
 

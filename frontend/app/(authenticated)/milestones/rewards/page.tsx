@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiGet } from '@/lib/apiClient'
-import type { PodiumReward } from '@/components/milestones/RewardsPodium'
+import type { RaffleThreshold, RewardMode, RewardsMap } from '@/components/milestones/RewardsPodium'
 import { SvelteRewardsPodium } from '@/components/svelte/SvelteRewardsPodium'
 import type { RankingUser } from '@/components/milestones/UserRanking'
 import {
@@ -19,6 +19,7 @@ type RankingScope =
       mode: 'organization' | 'department'
       organizationId: string | null
       organizationName: string | null
+      organizationSlug?: string | null
       departmentId: string | null
       departmentName: string | null
     }
@@ -26,7 +27,10 @@ type RankingScope =
 type RankingResponse = {
   top: RankingUser[]
   scope: RankingScope
-  rewards?: Record<number, PodiumReward>
+  rewards?: RewardsMap
+  rewardMode?: RewardMode
+  raffleThresholds?: RaffleThreshold[]
+  userRaffleEntries?: number
   canSelectOrganization: boolean
   membership: {
     organizationId: string | null
@@ -52,6 +56,7 @@ export default function RecompensasPage() {
   const [error, setError] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userOrgId, setUserOrgId] = useState<string | null>(null)
+  const [userOrgSlug, setUserOrgSlug] = useState<string | null>(null)
   const [orgOptions, setOrgOptions] = useState<OrgOption[]>([])
   const [filter, setFilter] = useState<RankingFilter>({ scope: 'global' })
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
@@ -71,14 +76,17 @@ export default function RecompensasPage() {
         if (res.ok) {
           setUserRole(data?.user?.roleName || data?.user?.role || null)
           setUserOrgId(data?.user?.organizationId || null)
+          setUserOrgSlug(data?.user?.organizationSlug || null)
         } else {
           setUserRole(null)
           setUserOrgId(null)
+          setUserOrgSlug(null)
         }
       } catch (err) {
         console.error('Error obteniendo usuario:', err)
         setUserRole(null)
         setUserOrgId(null)
+        setUserOrgSlug(null)
       }
     })()
   }, [])
@@ -104,6 +112,9 @@ export default function RecompensasPage() {
         top: Array.isArray(data.top) ? data.top : [],
         scope: data.scope,
         rewards: data.rewards ?? {},
+        rewardMode: data.rewardMode ?? 'raffle_thresholds',
+        raffleThresholds: Array.isArray(data.raffleThresholds) ? data.raffleThresholds : [],
+        userRaffleEntries: Number(data.userRaffleEntries ?? 0),
         canSelectOrganization: Boolean(data.canSelectOrganization),
         membership: data.membership ?? null,
       })
@@ -128,15 +139,12 @@ export default function RecompensasPage() {
         const data = await res.json()
         if (res.ok && Array.isArray(data.organizations)) {
           setOrgOptions(data.organizations)
-          if (data.organizations.length && selectedOrg === 'global') {
-            setSelectedOrg(data.organizations[0].id)
-          }
         }
       } catch (err) {
         console.error('Error cargando estructura organizativa:', err)
       }
     })()
-  }, [isSuperAdmin, ranking?.canSelectOrganization, orgOptions.length, selectedOrg])
+  }, [isSuperAdmin, ranking?.canSelectOrganization, orgOptions.length])
 
   useEffect(() => {
     if (!isSuperAdmin || !ranking?.canSelectOrganization) return
@@ -150,11 +158,10 @@ export default function RecompensasPage() {
   }, [filter, isSuperAdmin, ranking?.canSelectOrganization])
 
   useEffect(() => {
-    if (isSuperAdmin) return
-    if (!userOrgId) return
-    if (filter.scope !== 'global') return
+    if (!userOrgId || filter.scope !== 'global') return
+    if (isSuperAdmin && (userOrgSlug ?? '').toLowerCase() !== 'stn') return
     setFilter({ scope: 'organization', organizationId: userOrgId })
-  }, [filter.scope, isSuperAdmin, userOrgId])
+  }, [filter.scope, isSuperAdmin, userOrgId, userOrgSlug])
 
   const handleOrgChange = (value: string) => {
     setSelectedOrg(value)
@@ -198,6 +205,14 @@ export default function RecompensasPage() {
   }, [ranking?.scope])
 
   const podiumUsers = ranking?.top ?? []
+  const isClassicTop3 = useMemo(() => {
+    if (ranking?.rewardMode === 'classic_top3') return true
+    const scopeSlug =
+      ranking?.scope?.mode === 'organization' || ranking?.scope?.mode === 'department'
+        ? (ranking.scope.organizationSlug ?? null)
+        : null
+    return (scopeSlug ?? '').toLowerCase() === 'stn'
+  }, [ranking])
 
   return (
     <div className="px-6 py-12">
@@ -250,6 +265,9 @@ export default function RecompensasPage() {
           <SvelteRewardsPodium
             users={podiumUsers}
             rewards={ranking?.rewards}
+            rewardMode={isClassicTop3 ? 'classic_top3' : ranking?.rewardMode}
+            raffleThresholds={ranking?.raffleThresholds}
+            userRaffleEntries={ranking?.userRaffleEntries}
             scopeLabel={scopeLabel}
             loading={loading}
           />

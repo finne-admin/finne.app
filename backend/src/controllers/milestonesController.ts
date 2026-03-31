@@ -33,7 +33,11 @@ import { calculateWorkdayStreak } from "../utils/streak"
 import { getZonedDateInfo, nextCalendarDay, shiftDateByDays } from "../utils/timezone"
 import { addUserXP } from "../db/queries/xpQueries"
 import { getAchievementsProgress } from "../services/achievementService"
-import { resolveRewardsForScope } from "../services/rewardService"
+import {
+  calculateRaffleEntriesForPoints,
+  getOrganizationRaffleThresholds,
+  resolveRewardsForScope,
+} from "../services/rewardService"
 
 const TIMEZONE = "Europe/Madrid"
 const SUPPORTED_WEEKLY_TYPES = new Set([
@@ -93,21 +97,26 @@ const seededShuffle = <T,>(items: T[], seed: string): T[] => {
 
 const fetchScopeNames = async (organizationId?: string | null, departmentId?: string | null) => {
   let organizationName: string | null = null
+  let organizationSlug: string | null = null
   let departmentName: string | null = null
   if (!organizationId && !departmentId) {
-    return { organizationName, departmentName }
+    return { organizationName, organizationSlug, departmentName }
   }
 
   if (organizationId) {
     const org = await findOrganizationById(organizationId)
     organizationName = org?.name ?? null
+    organizationSlug = org?.slug ?? null
   }
   if (departmentId) {
     const dept = await findDepartmentById(departmentId)
     departmentName = dept?.name ?? null
   }
-  return { organizationName, departmentName }
+  return { organizationName, organizationSlug, departmentName }
 }
+
+const getRewardModeForSlug = (organizationSlug?: string | null) =>
+  organizationSlug?.toLowerCase() === "stn" ? "classic_top3" : "raffle_thresholds"
 
 export const getMilestonesSummary = async (req: Request, res: Response) => {
   const userId = (req as any).user?.id
@@ -436,6 +445,7 @@ export const getRankingController = async (req: Request, res: Response) => {
   let scopeInfo: any = { mode: "global" as const }
   let seasonDeadline: string | null = null
   let seasonTimezone: string | null = null
+  let rewardMode: "classic_top3" | "raffle_thresholds" = "raffle_thresholds"
 
   const normalizeScopeId = (value?: string) => {
     if (!value) return undefined
@@ -447,6 +457,17 @@ export const getRankingController = async (req: Request, res: Response) => {
   }
 
   try {
+    const membership = await getMembershipForUser(userId)
+    membershipInfo = membership
+      ? {
+          organizationId: membership.organization_id,
+          organizationName: membership.organization_name,
+          organizationSlug: membership.organization_slug ?? null,
+          departmentId: membership.department_id,
+          departmentName: membership.department_name,
+        }
+      : null
+
     if (isSuperAdmin) {
       const scopeParamRaw =
         typeof req.query.scope === "string" ? req.query.scope.toLowerCase() : undefined
@@ -476,25 +497,52 @@ export const getRankingController = async (req: Request, res: Response) => {
             .json({ error: "Debes indicar una organizacion para ver su ranking" })
         }
         filters = { organizationId: requestedOrg, departmentId: requestedDept }
-        const { organizationName, departmentName } = await fetchScopeNames(
+        const { organizationName, organizationSlug, departmentName } = await fetchScopeNames(
           requestedOrg,
           requestedDept
         )
         const org = await findOrganizationById(requestedOrg)
         seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
         seasonTimezone = org?.season_timezone ?? null
+        rewardMode = getRewardModeForSlug(org?.slug ?? null)
         scopeInfo = {
           mode: requestedDept ? "department" : "organization",
           organizationId: requestedOrg,
           organizationName,
+          organizationSlug,
           departmentId: requestedDept ?? null,
           departmentName,
         }
+      } else if ((membershipInfo?.organizationSlug ?? "").toLowerCase() === "stn") {
+        // Para STN mantenemos siempre el modo clasico aunque el usuario sea superadmin.
+        // Si entra sin filtro explicito, arrancamos directamente en el alcance de su organizacion.
+        const requestedOrg = membershipInfo.organizationId
+        const requestedDept = membershipInfo.departmentId
+        if (!requestedOrg) {
+          return res
+            .status(400)
+            .json({ error: "Tu cuenta de STN no esta asociada a una organizacion valida" })
+        }
+
+        filters = { organizationId: requestedOrg }
+        const { organizationName, organizationSlug } = await fetchScopeNames(requestedOrg)
+        const org = await findOrganizationById(requestedOrg)
+        seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
+        seasonTimezone = org?.season_timezone ?? null
+        rewardMode = "classic_top3"
+        scopeInfo = {
+          mode: "organization",
+          organizationId: requestedOrg,
+          organizationName,
+          organizationSlug,
+          departmentId: requestedDept ?? null,
+          departmentName: null,
+        }
       } else {
         scopeInfo = { mode: "global" }
+        rewardMode = "raffle_thresholds"
       }
     } else {
-      const membership = await getMembershipForUser(userId)
       if (!membership?.organization_id || !membership?.department_id) {
         return res
           .status(400)
@@ -503,15 +551,10 @@ export const getRankingController = async (req: Request, res: Response) => {
       const org = await findOrganizationById(membership.organization_id)
       seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
       seasonTimezone = org?.season_timezone ?? null
+      rewardMode = getRewardModeForSlug(membership.organization_slug ?? org?.slug ?? null)
       filters = {
         organizationId: membership.organization_id,
         departmentId: membership.department_id,
-      }
-      membershipInfo = {
-        organizationId: membership.organization_id,
-        organizationName: membership.organization_name,
-        departmentId: membership.department_id,
-        departmentName: membership.department_name,
       }
       scopeInfo = {
         mode: "department",
@@ -525,13 +568,23 @@ export const getRankingController = async (req: Request, res: Response) => {
     const offset = Number.isFinite(offsetRaw) ? Math.max(0, offsetRaw) : 0
     const searchQuery = typeof req.query.search === "string" ? req.query.search.trim() : ""
 
-    const [top, position, rewards, userExp, searchResults] = await Promise.all([
+    const rewardOrganizationId =
+      scopeInfo.mode === "organization" || scopeInfo.mode === "department"
+        ? scopeInfo.organizationId ?? null
+        : membershipInfo?.organizationId ?? null
+
+    const [top, position, rewards, userExp, searchResults, raffleThresholds] = await Promise.all([
       getRankingPage(limit, offset, filters),
       getUserRankingPosition(userId, filters),
       resolveRewardsForScope(scopeInfo as any),
       getUserPeriodicalExp(userId),
       searchQuery ? searchRankingUsers(searchQuery, 5, filters) : Promise.resolve([]),
+      getOrganizationRaffleThresholds(rewardOrganizationId),
     ])
+
+    const effectiveThresholds = rewardMode === "classic_top3" ? [] : raffleThresholds
+    const userRaffleEntries =
+      rewardMode === "classic_top3" ? 0 : calculateRaffleEntriesForPoints(userExp, effectiveThresholds)
 
     return res.json({
       top,
@@ -544,6 +597,9 @@ export const getRankingController = async (req: Request, res: Response) => {
       seasonDeadline,
       seasonTimezone,
       rewards,
+      rewardMode,
+      raffleThresholds: effectiveThresholds,
+      userRaffleEntries,
       limit,
       offset,
       searchResults,

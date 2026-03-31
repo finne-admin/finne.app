@@ -516,7 +516,6 @@ export default function NotificationPage() {
 
       // Crear pausa activa y guardar ID
       const res = await apiPost("/api/active-pauses", {
-        user_id: user.id,
         video1_id,
         video2_id,
       })

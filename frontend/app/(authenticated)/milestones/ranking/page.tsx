@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RankingUsuarios, RankingUser } from '@/components/milestones/UserRanking'
+import type { RaffleThreshold, RewardMode, RewardsMap } from '@/components/milestones/RewardsPodium'
 import HuchaPanel from '@/components/milestones/DepartmentPanel'
 import { calcThreeMonthGoal } from '@/lib/calcThreeMonthGoal'
 import { apiGet } from '@/lib/apiClient'
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Gift, Sparkles } from 'lucide-react'
 
 type RankingScope =
   | { mode: 'global' }
@@ -20,16 +21,10 @@ type RankingScope =
       mode: 'organization' | 'department'
       organizationId: string | null
       organizationName: string | null
+      organizationSlug?: string | null
       departmentId: string | null
       departmentName: string | null
     }
-
-type PodiumReward = {
-  title: string
-  description?: string | null
-  image_url?: string | null
-  cta_url?: string | null
-}
 
 type RankingResponse = {
   top: RankingUser[]
@@ -42,11 +37,15 @@ type RankingResponse = {
   membership: {
     organizationId: string | null
     organizationName: string | null
+    organizationSlug?: string | null
     departmentId: string | null
     departmentName: string | null
   } | null
   canSelectOrganization: boolean
-  rewards?: Record<number, PodiumReward>
+  rewardMode?: RewardMode
+  rewards?: RewardsMap
+  raffleThresholds?: RaffleThreshold[]
+  userRaffleEntries?: number
   limit?: number
   offset?: number
   searchResults?: RankingUser[]
@@ -64,24 +63,23 @@ type RankingFilter =
 
 export default function RankingPage() {
   const [goal, setGoal] = useState<number | null>(null)
-
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loadingRanking, setLoadingRanking] = useState(true)
   const [pageOffset, setPageOffset] = useState(0)
   const pageSize = 10
   const [searching, setSearching] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<
-    { name: string; score: number; rank?: number }[]
-  >([])
+  const [searchResults, setSearchResults] = useState<{ name: string; score: number; rank?: number }[]>([])
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userOrgId, setUserOrgId] = useState<string | null>(null)
+  const [userOrgSlug, setUserOrgSlug] = useState<string | null>(null)
   const [filter, setFilter] = useState<RankingFilter>({ scope: 'global' })
   const [orgOptions, setOrgOptions] = useState<OrgOption[]>([])
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
   const [selectedDept, setSelectedDept] = useState<string>('all')
   const isSuperAdmin = (userRole ?? '').toLowerCase() === 'superadmin'
   const fallbackDeadline = new Date('2026-05-01T00:00:01')
+
   const deadline = useMemo(() => {
     if (ranking?.seasonDeadline) {
       const parsed = new Date(ranking.seasonDeadline)
@@ -108,24 +106,26 @@ export default function RankingPage() {
         if (res.ok) {
           setUserRole(data?.user?.roleName || data?.user?.role || null)
           setUserOrgId(data?.user?.organizationId || null)
+          setUserOrgSlug(data?.user?.organizationSlug || null)
         } else {
           setUserRole(null)
           setUserOrgId(null)
+          setUserOrgSlug(null)
         }
       } catch (error) {
         console.error('Error obteniendo usuario:', error)
         setUserRole(null)
         setUserOrgId(null)
+        setUserOrgSlug(null)
       }
     })()
   }, [])
 
   useEffect(() => {
-    if (isSuperAdmin) return
-    if (!userOrgId) return
-    if (filter.scope !== 'global') return
+    if (!userOrgId || filter.scope !== 'global') return
+    if (isSuperAdmin && (userOrgSlug ?? '').toLowerCase() !== 'stn') return
     setFilter({ scope: 'organization', organizationId: userOrgId })
-  }, [filter.scope, isSuperAdmin, userOrgId])
+  }, [filter.scope, isSuperAdmin, userOrgId, userOrgSlug])
 
   const loadRanking = useCallback(async () => {
     setLoadingRanking(true)
@@ -133,23 +133,21 @@ export default function RankingPage() {
       const params = new URLSearchParams()
       if (filter.scope === 'global') {
         params.set('scope', 'global')
-      } else if (filter.scope === 'organization') {
+      } else {
         params.set('organizationId', filter.organizationId)
-        if (filter.departmentId) {
-          params.set('departmentId', filter.departmentId)
-        }
+        if (filter.departmentId) params.set('departmentId', filter.departmentId)
       }
       params.set('limit', String(pageSize))
       params.set('offset', String(pageOffset))
       const query = params.toString()
       const res = await apiGet(`/api/milestones/ranking${query ? `?${query}` : ''}`)
       const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Error al obtener ranking')
-      }
+      if (!res.ok) throw new Error(data.error || 'Error al obtener ranking')
       setRanking({
         ...data,
         rewards: data.rewards ?? {},
+        rewardMode: data.rewardMode ?? 'raffle_thresholds',
+        raffleThresholds: Array.isArray(data.raffleThresholds) ? data.raffleThresholds : [],
       })
     } catch (error) {
       console.error('Error al obtener ranking:', error)
@@ -190,7 +188,7 @@ export default function RankingPage() {
     if (filter.scope === 'global') {
       setSelectedOrg('global')
       setSelectedDept('all')
-    } else if (filter.scope === 'organization') {
+    } else {
       setSelectedOrg(filter.organizationId)
       setSelectedDept(filter.departmentId ?? 'all')
     }
@@ -206,18 +204,16 @@ export default function RankingPage() {
     if (value === 'global') {
       setSelectedDept('all')
       setFilter({ scope: 'global' })
-    } else {
-      const firstDept = selectedOrgData?.departments?.[0]?.id ?? 'all'
-      const fallbackDept =
-        orgOptions.find((org) => org.id === value)?.departments?.[0]?.id ?? 'all'
-      const deptValue = value === selectedOrg ? selectedDept : fallbackDept
-      setSelectedDept(deptValue)
-      setFilter({
-        scope: 'organization',
-        organizationId: value,
-        departmentId: deptValue === 'all' ? undefined : deptValue,
-      })
+      return
     }
+    const firstDept = orgOptions.find((org) => org.id === value)?.departments?.[0]?.id ?? 'all'
+    const deptValue = value === selectedOrg ? selectedDept : firstDept
+    setSelectedDept(deptValue)
+    setFilter({
+      scope: 'organization',
+      organizationId: value,
+      departmentId: deptValue === 'all' ? undefined : deptValue,
+    })
   }
 
   const handleDeptChange = (value: string) => {
@@ -236,10 +232,49 @@ export default function RankingPage() {
     if (ranking.scope.mode === 'organization') {
       return `Ranking de ${ranking.scope.organizationName ?? 'la organización seleccionada'}`
     }
-    return `Ranking de ${ranking.scope.organizationName ?? 'tu organización'} / ${
-      ranking.scope.departmentName ?? 'tu departamento'
-    }`
+    return `Ranking de ${ranking.scope.organizationName ?? 'tu organización'} / ${ranking.scope.departmentName ?? 'tu departamento'}`
   }, [ranking])
+
+  const activeThresholds = useMemo(
+    () => (ranking?.raffleThresholds ?? []).filter((threshold) => threshold.active).sort((a, b) => a.min_points - b.min_points),
+    [ranking?.raffleThresholds]
+  )
+
+  const isClassicTop3 = useMemo(() => {
+    if (ranking?.rewardMode === 'classic_top3') return true
+    const scopeSlug =
+      ranking?.scope.mode === 'organization' || ranking?.scope.mode === 'department'
+        ? (ranking.scope.organizationSlug ?? null)
+        : null
+    return (scopeSlug ?? ranking?.membership?.organizationSlug ?? '').toLowerCase() === 'stn'
+  }, [ranking])
+
+  const currentThreshold = useMemo(() => {
+    if (isClassicTop3) return null
+    const userExp = Number(ranking?.userExp ?? 0)
+    let current: RaffleThreshold | null = null
+    for (const threshold of activeThresholds) {
+      if (userExp >= threshold.min_points) current = threshold
+    }
+    return current
+  }, [activeThresholds, isClassicTop3, ranking?.userExp])
+
+  const nextThreshold = useMemo(() => {
+    if (isClassicTop3) return null
+    const userExp = Number(ranking?.userExp ?? 0)
+    return activeThresholds.find((threshold) => userExp < threshold.min_points) ?? null
+  }, [activeThresholds, isClassicTop3, ranking?.userExp])
+
+  const progressToNext = useMemo(() => {
+    if (!ranking || isClassicTop3) return 0
+    const userExp = Number(ranking.userExp ?? 0)
+    if (!activeThresholds.length) return 0
+    if (!nextThreshold) return 100
+    const previousMin = currentThreshold?.min_points ?? 0
+    const span = Math.max(1, nextThreshold.min_points - previousMin)
+    const covered = Math.max(0, userExp - previousMin)
+    return Math.min(100, Math.max(0, (covered / span) * 100))
+  }, [activeThresholds, currentThreshold, nextThreshold, ranking, isClassicTop3])
 
   useEffect(() => {
     const trimmed = searchQuery.trim()
@@ -254,20 +289,16 @@ export default function RankingPage() {
         const params = new URLSearchParams()
         if (filter.scope === 'global') {
           params.set('scope', 'global')
-        } else if (filter.scope === 'organization') {
+        } else {
           params.set('organizationId', filter.organizationId)
-          if (filter.departmentId) {
-            params.set('departmentId', filter.departmentId)
-          }
+          if (filter.departmentId) params.set('departmentId', filter.departmentId)
         }
         params.set('limit', String(pageSize))
         params.set('offset', String(pageOffset))
         params.set('search', trimmed)
         const res = await apiGet(`/api/milestones/ranking?${params}`)
         const data = await res.json()
-        if (!res.ok) {
-          throw new Error(data.error || 'No se pudo buscar en el ranking')
-        }
+        if (!res.ok) throw new Error(data.error || 'No se pudo buscar en el ranking')
         const matches = Array.isArray(data.searchResults) ? data.searchResults : []
         setSearchResults(
           matches.map((match: any) => ({
@@ -289,18 +320,76 @@ export default function RankingPage() {
 
   return (
     <div className="px-3 sm:px-6 py-4 sm:py-8">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 sm:gap-10 md:grid-cols-[1fr_auto]">
-        <section aria-labelledby="ranking-title" className="w-full max-w-3xl space-y-4">
-          <div>
-            <h2 id="ranking-title" className="text-xl font-semibold">
-              Ranking de temporada
-            </h2>
-            <p className="text-sm text-gray-500">{scopeDescription}</p>
-            {typeof ranking?.userExp === 'number' && (
-              <p className="mt-1 text-sm text-emerald-600 font-semibold">
-                Tu EXP: {ranking.userExp} PA
-              </p>
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 sm:gap-10 md:grid-cols-[minmax(280px,360px)_1fr]">
+        <aside className="order-2 md:order-1 block w-full">
+          <div className="space-y-4 md:sticky" style={{ top: '24px' }}>
+            <HuchaPanel goal={goal ?? 5000} deadline={deadline} pigHeight={420} showBalloon={false} />
+
+            {!isClassicTop3 && (
+              <>
+                <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <Sparkles className="h-4 w-4" />
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em]">Tu progreso</p>
+                  </div>
+                  <p className="mt-3 text-3xl font-bold text-gray-900">
+                    {Number(ranking?.userExp ?? 0).toLocaleString('es-ES')} PA
+                  </p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Participaciones actuales:{" "}
+                    <span className="font-semibold text-emerald-700">
+                      {Number(ranking?.userRaffleEntries ?? 0).toLocaleString('es-ES')}
+                    </span>
+                  </p>
+                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
+                      style={{ width: `${progressToNext}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-sm text-gray-500">
+                    {nextThreshold
+                      ? `Te faltan ${Math.max(0, nextThreshold.min_points - Number(ranking?.userExp ?? 0)).toLocaleString('es-ES')} PA para llegar a ${nextThreshold.entries_count} participac${nextThreshold.entries_count === 1 ? 'ión' : 'iones'}.`
+                      : currentThreshold
+                        ? `Has alcanzado el umbral máximo y mantienes ${currentThreshold.entries_count.toLocaleString('es-ES')} participac${currentThreshold.entries_count === 1 ? 'ión' : 'iones'}.`
+                        : 'Aún no has alcanzado el primer umbral de participaciones.'}
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Gift className="h-4 w-4" />
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em]">Premio Top 1</p>
+                  </div>
+                  <p className="mt-3 text-base font-semibold text-gray-900">
+                    {ranking?.rewards?.guaranteed_winner?.title ?? 'Pendiente de configurar'}
+                  </p>
+                  {ranking?.rewards?.guaranteed_winner?.description && (
+                    <p className="mt-2 text-sm text-gray-500">{ranking.rewards.guaranteed_winner.description}</p>
+                  )}
+                </div>
+
+                <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Gift className="h-4 w-4" />
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em]">Premio sorteo</p>
+                  </div>
+                  <p className="mt-3 text-base font-semibold text-gray-900">
+                    {ranking?.rewards?.raffle_a?.title ?? 'Pendiente de configurar'}
+                  </p>
+                  {ranking?.rewards?.raffle_a?.description && (
+                    <p className="mt-2 text-sm text-gray-500">{ranking.rewards.raffle_a.description}</p>
+                  )}
+                </div>
+              </>
             )}
+          </div>
+        </aside>
+
+        <section aria-labelledby="ranking-title" className="order-1 md:order-2 w-full max-w-3xl space-y-4">
+          <div>
+            <h2 id="ranking-title" className="text-xl font-semibold">Ranking de temporada</h2>
+            <p className="text-sm text-gray-500">{scopeDescription}</p>
           </div>
 
           {isSuperAdmin && ranking?.canSelectOrganization && orgOptions.length > 0 && (
@@ -312,9 +401,7 @@ export default function RankingPage() {
                 <SelectContent>
                   <SelectItem value="global">Ranking global</SelectItem>
                   {orgOptions.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -327,9 +414,7 @@ export default function RankingPage() {
                   <SelectContent>
                     <SelectItem value="all">Todos los departamentos</SelectItem>
                     {(selectedOrgData?.departments ?? []).map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </SelectItem>
+                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -337,14 +422,11 @@ export default function RankingPage() {
             </div>
           )}
 
-          {!ranking?.canSelectOrganization &&
-            ranking?.scope.mode === 'department' &&
-            ranking.scope.organizationName && (
-              <p className="text-sm text-gray-500">
-                Mostrando sólo a compañeros de {ranking.scope.organizationName} /{' '}
-                {ranking.scope.departmentName ?? 'tu departamento'}.
-              </p>
-            )}
+          {!ranking?.canSelectOrganization && ranking?.scope.mode === 'department' && ranking.scope.organizationName && (
+            <p className="text-sm text-gray-500">
+              Mostrando sólo a compañeros de {ranking.scope.organizationName} / {ranking.scope.departmentName ?? 'tu departamento'}.
+            </p>
+          )}
 
           <div className="relative">
             <button
@@ -377,6 +459,7 @@ export default function RankingPage() {
               totalUsuarios={ranking?.totalUsers ?? null}
               loading={loadingRanking}
               rewards={ranking?.rewards}
+              rewardMode={isClassicTop3 ? 'classic_top3' : ranking?.rewardMode}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               searching={searching}
@@ -384,6 +467,24 @@ export default function RankingPage() {
               pageOffset={pageOffset}
             />
           </div>
+
+          {!isClassicTop3 && !!activeThresholds.length && (
+            <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
+                Umbrales de participaciones
+              </h3>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {activeThresholds.map((threshold) => (
+                  <div key={threshold.id} className="rounded-2xl border border-emerald-100 bg-emerald-50/40 px-4 py-3">
+                    <p className="text-sm text-gray-500">Desde {threshold.min_points.toLocaleString('es-ES')} PA</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {threshold.entries_count} participac{threshold.entries_count === 1 ? 'ión' : 'iones'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-3 md:hidden">
             <button
@@ -412,18 +513,6 @@ export default function RankingPage() {
             </button>
           </div>
         </section>
-
-        <aside className="block w-full md:w-[clamp(240px,28vw,520px)]">
-          <div
-            className="md:sticky"
-            style={{
-              ['--pig' as any]: 'clamp(240px,28vw,520px)',
-              top: 'calc(100vh - var(--pig) - 20px)',
-            }}
-          >
-            <HuchaPanel goal={goal ?? 5000} deadline={deadline} pigHeight={520} />
-          </div>
-        </aside>
       </div>
     </div>
   )

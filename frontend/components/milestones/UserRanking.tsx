@@ -4,7 +4,7 @@ import * as React from "react"
 import { Trophy, Search } from "lucide-react"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import type { PodiumReward } from "./RewardsPodium"
+import type { RewardMode, RewardsMap } from "./RewardsPodium"
 
 export type RankingUser = {
   id: string
@@ -19,7 +19,8 @@ type RankingUsuariosProps = {
   userPosition: number | null
   totalUsuarios: number | null
   loading?: boolean
-  rewards?: Record<number, PodiumReward | undefined>
+  rewards?: RewardsMap
+  rewardMode?: RewardMode
   searchQuery?: string
   onSearchChange?: (query: string) => void
   searchResults?: { name: string; score: number; rank?: number }[]
@@ -33,6 +34,7 @@ export function RankingUsuarios({
   totalUsuarios,
   loading = false,
   rewards,
+  rewardMode = "raffle_thresholds",
   searchQuery = "",
   onSearchChange,
   searchResults = [],
@@ -59,7 +61,18 @@ export function RankingUsuarios({
           const rankNumber = index + 1 + pageOffset
           const isTop3 = rankNumber <= 3
           const Wrapper: any = isTop3 ? motion.div : "div"
-          const rewardInfo = isTop3 ? rewards?.[rankNumber] : undefined
+          const rewardInfo =
+            rewardMode === "classic_top3"
+              ? rankNumber === 1
+                ? rewards?.guaranteed_winner
+                : rankNumber === 2
+                  ? rewards?.raffle_a
+                  : rankNumber === 3
+                    ? rewards?.raffle_b
+                    : undefined
+              : rankNumber === 1
+                ? rewards?.guaranteed_winner
+                : undefined
 
           const props = isTop3
             ? {

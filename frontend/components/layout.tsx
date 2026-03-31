@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTutorialState } from '@/components/tutorial/useTutorial';
 import { Tutorial } from '@/components/tutorial/Tutorial';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { apiGet, apiPost } from "@/lib/apiClient";
+import { apiGet, apiPost, apiPut } from "@/lib/apiClient";
 
 import { useAdminMenuItems } from '@/components/hooks/useAdminMenuItems';
 import { MobileNav } from '@/components/navigation/MobileNav';
@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SvelteSeasonPopup } from '@/components/svelte/SvelteSeasonPopup';
 import { SvelteErrorReportModal } from '@/components/svelte/SvelteErrorReportModal';
 import { UserReportsInboxDialog } from '@/components/reports/UserReportsInboxDialog';
+import { SvelteAnnouncementPopup } from '@/components/svelte/SvelteAnnouncementPopup';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -40,6 +41,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportError, setReportError] = useState("");
   const [reportSuccess, setReportSuccess] = useState(false);
+  const [announcementOpen, setAnnouncementOpen] = useState(false);
+  const [announcementData, setAnnouncementData] = useState<{ id: string; title?: string | null; message: string } | null>(null);
 
   // --- Estado para racha (overlay con Rive) ---
   const [streakOpen, setStreakOpen] = useState(false);
@@ -209,6 +212,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
     refreshUnreadReportReplies().catch(() => {});
   }, [refreshUnreadReportReplies]);
 
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const res = await apiGet("/api/announcements/current");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.announcement?.id) {
+          setAnnouncementData(data.announcement);
+          setAnnouncementOpen(true);
+        }
+      } catch {
+        // ignore announcement loading errors
+      }
+    })();
+  }, [userId]);
+
   const triggerStreak = useCallback(async () => {
     setCheckingStreak(true);
     try {
@@ -363,6 +383,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <SvelteSeasonPopup
           open={seasonPopupOpen}
           onClose={() => setSeasonPopupOpen(false)}
+          scriptReady={svelteReady}
+        />
+      )}
+
+      {svelteReady && announcementData && (
+        <SvelteAnnouncementPopup
+          open={announcementOpen}
+          title={announcementData.title ?? "Aviso"}
+          message={announcementData.message}
+          cta="Entendido"
+          onClose={async () => {
+            setAnnouncementOpen(false);
+            try {
+              await apiPut(`/api/announcements/${announcementData.id}/read`, {});
+            } catch {
+              // ignore read acknowledgement failures
+            } finally {
+              setAnnouncementData(null);
+            }
+          }}
           scriptReady={svelteReady}
         />
       )}
