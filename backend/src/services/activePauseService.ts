@@ -3,6 +3,7 @@ import { listDailyActivePausesByUserId } from "../db/queries/quotaQueries"
 import { getMembershipForUser, getDailyActivePauseLimitForUser } from "../db/queries/userMembershipQueries"
 import { getOrganizationNotificationDefaults } from "../db/queries/notificationQueries"
 import { resolveOrgTimesForDate } from "../utils/notificationTimes"
+import { getOrganizationBlockedDayInfoForDateTime } from "./organizationCalendarService"
 
 export const DEFAULT_ACTIVE_PAUSE_TIMEZONE = "Europe/Madrid"
 export const FALLBACK_ACTIVE_PAUSE_DAILY_LIMIT = Number(process.env.ACTIVE_PAUSE_DAILY_LIMIT || "3")
@@ -20,6 +21,13 @@ export class ActivePauseWeekendError extends Error {
   constructor() {
     super("Las pausas activas solo estan disponibles de lunes a viernes.")
     this.name = "ActivePauseWeekendError"
+  }
+}
+
+export class ActivePauseBlockedDayError extends Error {
+  constructor() {
+    super("Hoy no hay pausas activas porque la organizacion tiene el dia marcado como no laborable.")
+    this.name = "ActivePauseBlockedDayError"
   }
 }
 
@@ -83,9 +91,20 @@ const resolveScheduleTimesForUser = async (userId: string, now: DateTime) => {
 
 export const resolveActivePauseCreationContext = async (userId: string, now?: DateTime) => {
   const currentTime = now ?? DateTime.now().setZone(DEFAULT_ACTIVE_PAUSE_TIMEZONE)
+  const membership = await getMembershipForUser(userId)
+
+  const blockedDay = await getOrganizationBlockedDayInfoForDateTime(
+    membership?.organization_id,
+    currentTime
+  )
+  if (blockedDay.blocked) {
+    throw new ActivePauseBlockedDayError()
+  }
 
   if (currentTime.weekday === 6 || currentTime.weekday === 7) {
-    throw new ActivePauseWeekendError()
+    if (!membership?.organization_id) {
+      throw new ActivePauseWeekendError()
+    }
   }
 
   const [times, dailyLimit] = await Promise.all([

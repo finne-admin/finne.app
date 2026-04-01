@@ -14,13 +14,14 @@ import { OrganizationSeasonTimers } from '@/components/admin/OrganizationSeasonT
 import { GlobalResetPanel } from '@/components/admin/GlobalResetPanel'
 import { GlobalReportsPanel } from '@/components/admin/GlobalReportsPanel'
 import { GlobalAnnouncementsPanel } from '@/components/admin/GlobalAnnouncementsPanel'
+import { OrganizationCalendarPanel } from '@/components/admin/OrganizationCalendarPanel'
 
 export default function GlobalAdminPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentTab = useMemo(() => {
     const tab = searchParams.get('tab')
-    return tab === 'stats' || tab === 'reset' || tab === 'reports' || tab === 'announcements' ? tab : 'management'
+    return tab === 'stats' || tab === 'reset' || tab === 'reports' || tab === 'announcements' || tab === 'calendar' ? tab : 'management'
   }, [searchParams])
 
   return (
@@ -44,6 +45,7 @@ export default function GlobalAdminPage() {
           <TabsTrigger value="reset">Reinicio</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="announcements">Avisos</TabsTrigger>
+          <TabsTrigger value="calendar">Calendario</TabsTrigger>
         </TabsList>
         </div>
 
@@ -78,6 +80,10 @@ export default function GlobalAdminPage() {
 
         <TabsContent value="announcements" className="flex flex-col gap-4 sm:gap-6">
           <GlobalAnnouncementsPanel />
+        </TabsContent>
+
+        <TabsContent value="calendar" className="flex flex-col gap-4 sm:gap-6">
+          <OrganizationCalendarPanel />
         </TabsContent>
       </Tabs>
     </div>

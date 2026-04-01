@@ -5,9 +5,11 @@ import {
   fetchTipNotificationTargets,
   fetchTokensForUsers,
 } from "../db/queries/notificationJobQueries"
+import { findBlockedOrganizationIdsForDate } from "../db/queries/organizationCalendarQueries"
 import { sendReminderToTokens, sendTipToTokens } from "./pushNotificationService"
 import { resolveOrgTimesForDate } from "../utils/notificationTimes"
 import { notifyTeamsBot } from "./teamsBotNotifier"
+import { isWeekendBlockedByOrganizationRules } from "./organizationCalendarService"
 
 const DEFAULT_TIMEZONE = "Europe/Madrid"
 
@@ -57,10 +59,28 @@ export async function dispatchPendingNotifications(
   const slotDate = now.set({ second: 0, millisecond: 0 })
   const slotLabel = slotDate.toFormat("HH:mm")
   const isWeekend = slotDate.weekday === 6 || slotDate.weekday === 7
+  const isoDate = slotDate.toISODate() ?? ""
 
   const preferences = await fetchActiveNotificationPreferences()
+  const blockedOrganizations = await findBlockedOrganizationIdsForDate(
+    isoDate,
+    preferences
+      .map((pref) => pref.organization_id)
+      .filter((organizationId): organizationId is string => Boolean(organizationId))
+  )
   const dueUsers = preferences.filter((pref) => {
     if (!pref.times?.length) return false
+    if (pref.organization_id && blockedOrganizations.has(pref.organization_id)) return false
+    if (
+      isWeekend &&
+      isWeekendBlockedByOrganizationRules(
+        slotDate.weekday,
+        pref.disable_saturdays,
+        pref.disable_sundays
+      )
+    ) {
+      return false
+    }
     if (!pref.allow_weekend_notifications && isWeekend) return false
     return pref.times.some((time) => normalizeTime(time) === slotLabel)
   })
@@ -128,7 +148,24 @@ async function dispatchTips(
   isWeekend: boolean
 ): Promise<{ processedUsers: number; sent: number; invalidTokens: number }> {
   const tipTargets = await fetchTipNotificationTargets()
+  const blockedOrganizations = await findBlockedOrganizationIdsForDate(
+    slotDate.toISODate() ?? "",
+    tipTargets
+      .map((target) => target.organization_id)
+      .filter((organizationId): organizationId is string => Boolean(organizationId))
+  )
   const dueTips = tipTargets.filter((target) => {
+    if (target.organization_id && blockedOrganizations.has(target.organization_id)) return false
+    if (
+      isWeekend &&
+      isWeekendBlockedByOrganizationRules(
+        slotDate.weekday,
+        target.disable_saturdays,
+        target.disable_sundays
+      )
+    ) {
+      return false
+    }
     const resolved = resolveOrgTimesForDate(
       {
         default_notification_times: target.times,

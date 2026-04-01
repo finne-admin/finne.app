@@ -46,6 +46,11 @@ import {
   listAnnouncementsController,
   upsertAnnouncementController,
 } from "../controllers/announcementController"
+import {
+  getOrganizationCalendarController,
+  listOrganizationCalendarController,
+  updateOrganizationCalendarController,
+} from "../controllers/admin/adminCalendarController"
 import { requireAuth, requireOrganizationAdmin, requireSuperAdmin } from "../middlewares/verifyToken"
 
 const router = express.Router()
@@ -96,5 +101,8 @@ router.post(
 router.get("/announcements", requireSuperAdmin, listAnnouncementsController)
 router.post("/announcements", requireSuperAdmin, upsertAnnouncementController)
 router.put("/announcements/:id", requireSuperAdmin, upsertAnnouncementController)
+router.get("/calendar", requireSuperAdmin, listOrganizationCalendarController)
+router.get("/calendar/:organizationId", requireSuperAdmin, getOrganizationCalendarController)
+router.put("/calendar/:organizationId", requireSuperAdmin, updateOrganizationCalendarController)
 
 export default router

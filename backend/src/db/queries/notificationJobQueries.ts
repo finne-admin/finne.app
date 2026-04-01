@@ -2,23 +2,37 @@ import { getPool } from "../../config/dbManager"
 
 export interface NotificationPreferenceRow {
   user_id: string
+  organization_id: string | null
   times: string[]
   allow_weekend_notifications: boolean
+  disable_saturdays: boolean
+  disable_sundays: boolean
 }
 
 export interface TipNotificationTargetRow {
   user_id: string
+  organization_id: string | null
   times: string[]
   times_by_day?: Record<string, string[]> | null
   allow_weekend_notifications: boolean
+  disable_saturdays: boolean
+  disable_sundays: boolean
 }
 
 export async function fetchActiveNotificationPreferences(): Promise<NotificationPreferenceRow[]> {
   const pool = await getPool()
   const { rows } = await pool.query<NotificationPreferenceRow>(
     `
-      SELECT user_id, times, allow_weekend_notifications
-      FROM notification_preferences
+      SELECT
+        np.user_id,
+        um.organization_id,
+        np.times,
+        np.allow_weekend_notifications,
+        COALESCE(o.disable_saturdays, FALSE) AS disable_saturdays,
+        COALESCE(o.disable_sundays, FALSE) AS disable_sundays
+      FROM notification_preferences np
+      LEFT JOIN user_membership um ON um.user_id = np.user_id
+      LEFT JOIN organizations o ON o.id = um.organization_id
       WHERE active = TRUE
     `
   )
@@ -31,9 +45,12 @@ export async function fetchTipNotificationTargets(): Promise<TipNotificationTarg
     `
     SELECT
       np.user_id,
+      um.organization_id,
       o.default_notification_times AS times,
       o.default_notification_times_by_day AS times_by_day,
-      COALESCE(o.default_allow_weekend_notifications, np.allow_weekend_notifications) AS allow_weekend_notifications
+      COALESCE(o.default_allow_weekend_notifications, np.allow_weekend_notifications) AS allow_weekend_notifications,
+      COALESCE(o.disable_saturdays, FALSE) AS disable_saturdays,
+      COALESCE(o.disable_sundays, FALSE) AS disable_sundays
     FROM notification_preferences np
       JOIN user_membership um ON um.user_id = np.user_id
       JOIN organizations o ON o.id = um.organization_id

@@ -5,6 +5,7 @@ import { getDailyActivePauseLimitForUser, getMembershipForUser } from "../db/que
 import { getOrganizationNotificationDefaults } from "../db/queries/notificationQueries";
 import { DateTime } from "luxon";
 import { resolveOrgTimesForDate } from "../utils/notificationTimes";
+import { getOrganizationBlockedDayInfoForDateTime } from "../services/organizationCalendarService";
 
 const router = express.Router();
 const DEFAULT_TIMEZONE = "Europe/Madrid";
@@ -19,11 +20,30 @@ router.get("/daily", requireAuth, async (req, res) => {
     const limit = await getDailyActivePauseLimitForUser(userId);
 
     const membership = await getMembershipForUser(userId);
+    const currentTime = nowInZone();
+    const blockedDay = await getOrganizationBlockedDayInfoForDateTime(
+      membership?.organization_id,
+      currentTime
+    );
+
+    if (blockedDay.blocked) {
+      return res.json({
+        usedToday: 0,
+        remainingToday: 0,
+        limit,
+        times: [],
+        timezone: DEFAULT_TIMEZONE,
+        pausesToday: [],
+        blockedToday: true,
+        blockedReason: blockedDay.reason,
+      });
+    }
+
     let times = [...FALLBACK_TIMES];
     if (membership?.organization_id) {
       const orgDefaults = await getOrganizationNotificationDefaults(membership.organization_id);
       if (orgDefaults) {
-        times = resolveOrgTimesForDate(orgDefaults, nowInZone(), times);
+        times = resolveOrgTimesForDate(orgDefaults, currentTime, times);
       }
     }
     const sortedTimes = times
@@ -46,6 +66,8 @@ router.get("/daily", requireAuth, async (req, res) => {
       times: windowTimes,
       timezone: DEFAULT_TIMEZONE,
       pausesToday,
+      blockedToday: false,
+      blockedReason: null,
     });
   } catch (err) {
     console.error("Error al consultar cupo diario:", err);

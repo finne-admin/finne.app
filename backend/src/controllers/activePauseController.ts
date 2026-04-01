@@ -11,6 +11,7 @@ import {
   updateActivePauseSatisfactionRecord,
 } from "../db/queries/activePauseQueries"
 import {
+  ActivePauseBlockedDayError,
   ActivePauseOutsideAllowedWindowError,
   ActivePauseWeekendError,
   ActivePauseWindowAlreadyCompletedError,
@@ -82,6 +83,9 @@ export const insertActivePause = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error en insertActivePause:", error)
     if (error instanceof ActivePauseWeekendError) {
+      return res.status(403).json({ error: error.message })
+    }
+    if (error instanceof ActivePauseBlockedDayError) {
       return res.status(403).json({ error: error.message })
     }
     if (error instanceof ActivePauseOutsideAllowedWindowError) {
