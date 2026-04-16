@@ -4,9 +4,11 @@ import {
   getUserResponses,
   respondQuestionnaire,
   getPendingQuestionnaires,
-    insertQuestionnaireSubmission
-
+  insertQuestionnaireSubmission,
+  updateQuestionnaireActiveController,
+  resetQuestionnaireResponsesController
 } from "../controllers/questionnairesController"
+import { requireAuth, requireSuperAdmin } from "../middlewares/verifyToken"
 
 const router = express.Router()
 
@@ -15,6 +17,8 @@ router.get("/responses", getUserResponses)
 router.post("/respond", respondQuestionnaire)
 router.get("/pending", getPendingQuestionnaires)
 router.post("/submit", insertQuestionnaireSubmission)
+router.put("/:id/active", requireAuth, requireSuperAdmin, updateQuestionnaireActiveController)
+router.put("/:id/reset", requireAuth, requireSuperAdmin, resetQuestionnaireResponsesController)
 
 export default router
 

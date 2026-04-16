@@ -149,6 +149,87 @@ export const insertQuestionnaireSubmission = async (req, res) => {
   }
 };
 
+export const updateQuestionnaireActiveController = async (req: Request, res: Response) => {
+  const questionnaireId = req.params.id
+  const { active } = req.body ?? {}
+
+  if (!questionnaireId) {
+    return res.status(400).json({ error: "Falta el id del cuestionario" })
+  }
+
+  if (typeof active !== "boolean") {
+    return res.status(400).json({ error: "El campo active debe ser booleano" })
+  }
+
+  try {
+    const pool = await getPool()
+    const { rows } = await pool.query(
+      `
+      UPDATE questionnaires
+      SET active = $2
+      WHERE id = $1
+      RETURNING id, title, active
+      `,
+      [questionnaireId, active]
+    )
+
+    if (!rows[0]) {
+      return res.status(404).json({ error: "Cuestionario no encontrado" })
+    }
+
+    return res.json(rows[0])
+  } catch (err) {
+    console.error("❌ Error actualizando estado del cuestionario:", err)
+    return res.status(500).json({ error: "Error interno al actualizar el cuestionario." })
+  }
+}
+
+export const resetQuestionnaireResponsesController = async (req: Request, res: Response) => {
+  const questionnaireId = req.params.id
+
+  if (!questionnaireId) {
+    return res.status(400).json({ error: "Falta el id del cuestionario" })
+  }
+
+  try {
+    const pool = await getPool()
+
+    const questionnaireResult = await pool.query(
+      `
+      SELECT id, title
+      FROM questionnaires
+      WHERE id = $1
+      `,
+      [questionnaireId]
+    )
+
+    if (!questionnaireResult.rows[0]) {
+      return res.status(404).json({ error: "Cuestionario no encontrado" })
+    }
+
+    const resetResult = await pool.query(
+      `
+      UPDATE questionnaire_responses
+      SET answered = FALSE,
+          tally_submission_id = NULL,
+          submitted_at = NULL
+      WHERE questionnaire_id = $1
+        AND answered = TRUE
+      `,
+      [questionnaireId]
+    )
+
+    return res.json({
+      id: questionnaireResult.rows[0].id,
+      title: questionnaireResult.rows[0].title,
+      resetCount: resetResult.rowCount ?? 0,
+    })
+  } catch (err) {
+    console.error("❌ Error reabriendo el cuestionario:", err)
+    return res.status(500).json({ error: "Error interno al reabrir el cuestionario." })
+  }
+}
+
 
 
 

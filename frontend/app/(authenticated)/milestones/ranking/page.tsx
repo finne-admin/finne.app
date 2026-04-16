@@ -326,19 +326,19 @@ export default function RankingPage() {
 
   return (
     <div className="px-3 sm:px-6 py-4 sm:py-8">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 sm:gap-10 md:grid-cols-[minmax(280px,360px)_1fr]">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 sm:gap-10 md:grid-cols-[minmax(280px,360px)_1fr]">
         {shouldHoldStnView ? (
           <div className="md:col-span-2">
-            <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div className="py-4">
               <div className="animate-pulse space-y-4">
                 <div className="h-8 w-64 rounded bg-gray-100" />
                 <div className="h-4 w-48 rounded bg-gray-100" />
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(280px,360px)_1fr]">
                   <div className="space-y-4">
-                    <div className="h-40 rounded-3xl bg-gray-100" />
-                    <div className="h-32 rounded-3xl bg-gray-100" />
+                    <div className="h-40 rounded-[28px] bg-gray-100" />
+                    <div className="h-32 rounded-[28px] bg-gray-100" />
                   </div>
-                  <div className="h-[520px] rounded-3xl bg-gray-100" />
+                  <div className="h-[520px] rounded-[28px] bg-gray-100" />
                 </div>
               </div>
             </div>
@@ -351,7 +351,7 @@ export default function RankingPage() {
 
             {!isClassicTop3 && (
               <>
-                <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+                <div className="space-y-4 border-t border-gray-200/80 pt-4">
                   <div className="flex items-center gap-2 text-emerald-700">
                     <Sparkles className="h-4 w-4" />
                     <p className="text-xs font-semibold uppercase tracking-[0.2em]">Tu progreso</p>
@@ -380,7 +380,7 @@ export default function RankingPage() {
                   </p>
                 </div>
 
-                <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="space-y-2 border-t border-gray-200/80 pt-4">
                   <div className="flex items-center gap-2 text-gray-700">
                     <Gift className="h-4 w-4" />
                     <p className="text-xs font-semibold uppercase tracking-[0.2em]">Premio Top 1</p>
@@ -393,7 +393,7 @@ export default function RankingPage() {
                   )}
                 </div>
 
-                <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="space-y-2 border-t border-gray-200/80 pt-4">
                   <div className="flex items-center gap-2 text-gray-700">
                     <Gift className="h-4 w-4" />
                     <p className="text-xs font-semibold uppercase tracking-[0.2em]">Premio sorteo</p>
@@ -410,7 +410,7 @@ export default function RankingPage() {
           </div>
         </aside>
 
-        <section aria-labelledby="ranking-title" className="order-1 md:order-2 w-full max-w-3xl space-y-4">
+        <section aria-labelledby="ranking-title" className="order-1 md:order-2 w-full space-y-4">
           <div>
             <h2 id="ranking-title" className="text-xl font-semibold">Ranking de temporada</h2>
             <p className="text-sm text-gray-500">{scopeDescription}</p>
@@ -493,13 +493,13 @@ export default function RankingPage() {
           </div>
 
           {!isClassicTop3 && !!activeThresholds.length && (
-            <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="border-t border-gray-200/80 pt-4">
               <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
                 Umbrales de participaciones
               </h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {activeThresholds.map((threshold) => (
-                  <div key={threshold.id} className="rounded-2xl border border-emerald-100 bg-emerald-50/40 px-4 py-3">
+                  <div key={threshold.id} className="border-t border-emerald-100 bg-emerald-50/20 px-0 py-3">
                     <p className="text-sm text-gray-500">Desde {threshold.min_points.toLocaleString('es-ES')} PA</p>
                     <p className="text-lg font-semibold text-gray-900">
                       {threshold.entries_count} participac{threshold.entries_count === 1 ? 'ión' : 'iones'}

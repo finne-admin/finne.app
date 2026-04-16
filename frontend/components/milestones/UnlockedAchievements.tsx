@@ -32,8 +32,8 @@ export function LogrosDesbloqueados() {
   }, [])
 
   return (
-    <section className="max-w-5xl mx-auto bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Logros desbloqueados</h3>
+    <section className="px-1 py-1">
+      <h3 className="mb-4 text-lg font-semibold text-gray-900">Logros desbloqueados</h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {logros.map((logro) => (

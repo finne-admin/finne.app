@@ -43,7 +43,7 @@ export function RankingUsuarios({
 }: RankingUsuariosProps) {
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-6">
+      <div className="py-2">
         <div className="animate-pulse space-y-4">
           {[...Array(4)].map((_, idx) => (
             <div key={idx} className="h-12 bg-gray-100 rounded" />
@@ -54,9 +54,8 @@ export function RankingUsuarios({
   }
 
   return (
-    <div id="ranking-card" className="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-4 sm:p-6 overflow-hidden">
-      <h2 className="text-lg sm:text-xl font-bold mb-4">Ranking de temporada</h2>
-      <div className="divide-y">
+    <div id="ranking-card" className="overflow-hidden">
+      <div className="divide-y divide-gray-200/80 border-y border-gray-200/80">
         {usuarios.map((usuario, index) => {
           const rankNumber = index + 1 + pageOffset
           const isTop3 = rankNumber <= 3
@@ -107,9 +106,9 @@ export function RankingUsuarios({
               {...props}
               className={cn(
                 "flex items-center gap-3 py-3 px-2 transition-all",
-                rankNumber === 1 && "bg-yellow-50 ring-2 ring-yellow-400 shadow-md",
-                rankNumber === 2 && "bg-gray-100",
-                rankNumber === 3 && "bg-orange-50"
+                rankNumber === 1 && "bg-yellow-50/70",
+                rankNumber === 2 && "bg-slate-50",
+                rankNumber === 3 && "bg-orange-50/70"
               )}
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -191,7 +190,7 @@ function RankingSearch({
         />
       </div>
       {showResults && (
-        <div className="w-full max-w-full sm:max-w-[320px] rounded-xl border border-gray-200 bg-white shadow-sm p-2 text-xs text-gray-600">
+        <div className="w-full max-w-full sm:max-w-[320px] rounded-xl border border-gray-200 bg-white p-2 text-xs text-gray-600">
           {searching ? (
             <div className="py-2 text-center text-gray-500">Buscando...</div>
           ) : results.length ? (

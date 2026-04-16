@@ -521,18 +521,23 @@ const parseCategoryArray = (value: unknown): string[] => {
   return []
 }
 
-export const getVideoCategoriesSet = async (ids: string[]): Promise<Set<string>> => {
-  if (!ids.length) return new Set()
+export const getVideoCategoryCounts = async (ids: string[]): Promise<Map<string, number>> => {
+  if (!ids.length) return new Map()
   const pool = await getPool()
   const { rows } = await pool.query<{ id: string; categorias: unknown }>(
     `SELECT id, categorias FROM videos WHERE id = ANY($1::uuid[])`,
     [ids]
   )
-  const categories = new Set<string>()
+
+  const counts = new Map<string, number>()
   for (const row of rows) {
-    parseCategoryArray(row.categorias).forEach((cat) => categories.add(cat.toLowerCase()))
+    parseCategoryArray(row.categorias).forEach((cat) => {
+      const key = cat.toLowerCase()
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    })
   }
-  return categories
+
+  return counts
 }
 
 export const getAchievementInfo = async (

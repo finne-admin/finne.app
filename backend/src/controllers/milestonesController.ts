@@ -23,7 +23,7 @@ import {
   getUserRankingPosition,
   countActiveParticipants,
   RankingFilter,
-  getVideoCategoriesSet,
+  getVideoCategoryCounts,
   getAchievementInfo,
   calculateActivePauseTotals,
 } from "../db/queries/milestonesQueries"
@@ -329,7 +329,7 @@ export const postWeeklyChallengeProgressController = async (req: Request, res: R
     const videoIds = [payload?.video1_id, payload?.video2_id]
       .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
 
-    const categories = await getVideoCategoriesSet(videoIds)
+    const categoryCounts = await getVideoCategoryCounts(videoIds)
 
     const increments: { challengeId: string; inc: number; goal: number }[] = []
     const addIncrement = (type: string, amount: number) => {
@@ -345,10 +345,15 @@ export const postWeeklyChallengeProgressController = async (req: Request, res: R
 
     addIncrement("pausas_semana", 1)
 
-    if (categories.has("miembro superior")) addIncrement("ejercicios_brazos", 1)
-    if (categories.has("miembro inferior")) addIncrement("ejercicios_piernas", 1)
-    if (categories.has("core")) addIncrement("ejercicios_core", 1)
-    if (categories.has("movilidad")) addIncrement("ejercicios_movilidad", 1)
+    const brazoCount = categoryCounts.get("miembro superior") ?? 0
+    const piernaCount = categoryCounts.get("miembro inferior") ?? 0
+    const coreCount = categoryCounts.get("core") ?? 0
+    const movilidadCount = categoryCounts.get("movilidad") ?? 0
+
+    if (brazoCount > 0) addIncrement("ejercicios_brazos", brazoCount)
+    if (piernaCount > 0) addIncrement("ejercicios_piernas", piernaCount)
+    if (coreCount > 0) addIncrement("ejercicios_core", coreCount)
+    if (movilidadCount > 0) addIncrement("ejercicios_movilidad", movilidadCount)
 
     if (!increments.length) return res.json({ updated: 0 })
 

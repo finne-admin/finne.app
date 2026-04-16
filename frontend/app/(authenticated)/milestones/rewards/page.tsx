@@ -224,12 +224,12 @@ export default function RecompensasPage() {
     <div className="px-6 py-12">
       <div className="mx-auto max-w-6xl space-y-10">
         {shouldHoldStnView ? (
-          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+          <div className="py-4">
             <div className="animate-pulse space-y-5">
               <div className="mx-auto h-8 w-96 rounded bg-gray-100" />
               <div className="mx-auto h-4 w-72 rounded bg-gray-100" />
-              <div className="mx-auto h-16 max-w-4xl rounded-3xl bg-gray-100" />
-              <div className="h-[640px] rounded-3xl bg-gray-100" />
+              <div className="mx-auto h-14 max-w-4xl rounded-full bg-gray-100" />
+              <div className="h-[640px] rounded-[28px] bg-gray-100/80" />
             </div>
           </div>
         ) : (
@@ -243,7 +243,7 @@ export default function RecompensasPage() {
         </div>
 
         {isSuperAdmin && ranking?.canSelectOrganization && orgOptions.length > 0 && (
-          <div className="mx-auto flex max-w-4xl flex-col gap-3 rounded-3xl border border-emerald-100 bg-white/80 p-4 shadow-sm md:flex-row md:items-center">
+          <div className="mx-auto flex max-w-4xl flex-col gap-3 md:flex-row md:items-center">
             <Select value={selectedOrg} onValueChange={handleOrgChange}>
               <SelectTrigger className="w-full md:w-60">
                 <SelectValue placeholder="Ámbito" />

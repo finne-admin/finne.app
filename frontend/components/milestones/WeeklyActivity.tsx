@@ -35,8 +35,8 @@ export function ActividadSemanal() {
   }, [])
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 w-full max-w-5xl mx-auto">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad semanal</h3>
+    <div className="w-full px-1 py-1">
+      <h3 className="mb-4 text-lg font-semibold text-gray-900">Actividad semanal</h3>
 
       <div className="grid grid-cols-5 gap-3 text-center text-sm font-medium">
         {diasSemana.map((dia, i) => {
@@ -54,10 +54,9 @@ export function ActividadSemanal() {
         })}
       </div>
 
-      <p className="text-sm text-gray-600 mt-4 text-center">
+      <p className="mt-4 text-sm text-gray-600 text-center">
         {activos} / 5 días activos esta semana
       </p>
     </div>
   )
 }
-

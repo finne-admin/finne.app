@@ -17,6 +17,7 @@ import SvelteUserStatsPanel from './SvelteUserStatsPanel.svelte'
 import SvelteRewardsPodium from './SvelteRewardsPodium.svelte'
 import SvelteErrorReportModal from './SvelteErrorReportModal.svelte'
 import SvelteAnnouncementPopup from './SvelteAnnouncementPopup.svelte'
+import SvelteMilestonesTabs from './SvelteMilestonesTabs.svelte'
 
 const defineElement = (tag: string, ctor: unknown) => {
   const elementCtor = (ctor as { element?: CustomElementConstructor }).element
@@ -44,3 +45,4 @@ defineElement('svelte-user-stats-panel', SvelteUserStatsPanel)
 defineElement('svelte-rewards-podium', SvelteRewardsPodium)
 defineElement('svelte-error-report-modal', SvelteErrorReportModal)
 defineElement('svelte-announcement-popup', SvelteAnnouncementPopup)
+defineElement('svelte-milestones-tabs', SvelteMilestonesTabs)

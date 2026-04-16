@@ -191,9 +191,9 @@ export function PerfilResumen() {
     <>
       <div
         ref={ref}
-        className="bg-white rounded-2xl shadow-md border border-gray-200 p-4 sm:p-7 lg:p-8 max-w-5xl mx-auto overflow-hidden"
+        className="overflow-hidden px-1 py-2 sm:px-2 lg:px-4"
       >
-        <div className="grid gap-5 sm:gap-6 lg:gap-8 lg:grid-cols-4 items-start lg:items-center">
+        <div className="grid gap-6 sm:gap-7 lg:gap-8 lg:grid-cols-[1.15fr_1fr_0.85fr_1.1fr] items-start lg:items-center">
           {/* Col 1: avatar + nombre + titulo */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <Image
@@ -219,7 +219,7 @@ export function PerfilResumen() {
           </div>
 
           {/* Col 2: nivel + barra de experiencia */}
-          <div className="flex flex-col items-center gap-3 lg:border-x lg:border-gray-100 lg:px-4">
+          <div className="flex flex-col items-center gap-3 lg:border-x lg:border-gray-200 lg:px-5">
             <div className="text-xs uppercase tracking-[0.14em] text-emerald-700 font-semibold">
               Nivel actual
             </div>
@@ -240,7 +240,7 @@ export function PerfilResumen() {
           </div>
 
           {/* Col 3: racha y logros */}
-          <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 text-center lg:border-r lg:border-gray-100 lg:px-4">
+          <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 text-center lg:border-r lg:border-gray-200 lg:px-5">
             <div className="text-sm text-gray-600">Racha</div>
             <div className="text-4xl font-bold text-emerald-600 leading-tight">
               {perfil.racha}
@@ -253,7 +253,7 @@ export function PerfilResumen() {
 
           {/* Col 4: historial XP compacto */}
           <div className="w-full min-w-0">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-semibold text-gray-900">Historial XP</p>
               {xpHistory.length > 0 && (
                 <button
@@ -264,7 +264,7 @@ export function PerfilResumen() {
                 </button>
               )}
             </div>
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+            <div className="space-y-2 rounded-[1.75rem] border border-gray-200 bg-gray-50/70 p-3">
               {xpHistory.slice(0, 3).map((item) => {
                 const info = resolveXpEntryInfo(item)
                 return (

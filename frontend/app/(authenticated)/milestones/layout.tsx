@@ -2,13 +2,11 @@
 import { ReactNode } from "react"
 import { MilestonesTabs } from "@/components/milestones/MilestonesTabs"
 
-// app/milestones/layout.tsx
-export default function MilestonesLayout({ children }: { children: React.ReactNode }) {
+export default function MilestonesLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh w-full px-6 py-6">   {/* ← w-full, sin max-w */}
-      <MilestonesTabs />                                        {/* asegúrate de que este no tenga max-w */}
-      <div className="mt-6 w-full">{children}</div>
+    <div className="h-full w-full bg-[linear-gradient(180deg,_#f7faf8_0%,_#ffffff_22%,_#ffffff_100%)] px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <MilestonesTabs />
+      <div className="w-full">{children}</div>
     </div>
   )
 }
-

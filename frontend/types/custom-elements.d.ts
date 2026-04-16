@@ -145,6 +145,10 @@ declare global {
         message?: string
         cta?: string
       }
+      'svelte-milestones-tabs': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        tabs?: Array<{ label: string; href: string }>
+        activeHref?: string
+      }
     }
   }
 }

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import { openTallyPopup } from "@/lib/tally"
-import { Sparkles } from "lucide-react"
-import { apiGet, apiPost } from "@/lib/apiClient"
+import { Power, RotateCcw, Sparkles } from "lucide-react"
+import { apiGet, apiPost, apiPut } from "@/lib/apiClient"
 
 /* =========================
    Tipos
@@ -58,7 +58,11 @@ export default function CuestionariosPage() {
   const [forms, setForms] = useState<DBForm[]>([])
   const [answered, setAnswered] = useState<AnswerMap>({})
   const [loading, setLoading] = useState(true)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [resettingId, setResettingId] = useState<string | null>(null)
   const currentOpenId = useRef<string | null>(null)
+  const isSuperAdmin =
+    user?.roleName?.toLowerCase() === "superadmin" || user?.roleScope === "global"
 
   /* =========================
      1️⃣ Cargar script de Tally
@@ -223,6 +227,54 @@ export default function CuestionariosPage() {
     })
   }
 
+  const toggleQuestionnaire = async (form: DBForm) => {
+    if (!isSuperAdmin) return
+
+    try {
+      setTogglingId(form.id)
+      const res = await apiPut(`/api/questionnaires/${form.id}/active`, {
+        active: !form.active,
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || "No se pudo actualizar el cuestionario")
+      }
+
+      setForms((prev) =>
+        prev.map((item) => (item.id === form.id ? { ...item, active: data.active } : item))
+      )
+    } catch (error) {
+      console.error("Error actualizando cuestionario:", error)
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  const resetQuestionnaire = async (form: DBForm) => {
+    if (!isSuperAdmin) return
+
+    try {
+      setResettingId(form.id)
+      const res = await apiPut(`/api/questionnaires/${form.id}/reset`, {})
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.error || "No se pudo reabrir el cuestionario")
+      }
+
+      setAnswered((prev) => {
+        if (!prev[form.id]) return prev
+        const next = { ...prev }
+        delete next[form.id]
+        return next
+      })
+    } catch (error) {
+      console.error("Error reabriendo cuestionario:", error)
+    } finally {
+      setResettingId(null)
+    }
+  }
+
   /* =========================
      6️⃣ Renderizado
      ========================= */
@@ -261,12 +313,21 @@ export default function CuestionariosPage() {
               : "border-gray-200 bg-gray-100 text-gray-500"
 
             return (
-              <button
+              <div
                 key={form.id}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
                 onClick={() => {
-                  if (isActive && !isAnswered) openForm(form)
+                  if (!disabled) openForm(form)
                 }}
-                disabled={disabled}
+                onKeyDown={(event) => {
+                  if (disabled) return
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    openForm(form)
+                  }
+                }}
+                aria-disabled={disabled}
                 className={`group rounded-2xl border shadow-sm transition hover:shadow-md px-5 py-4 sm:px-6 sm:py-5 min-h-[120px] ${
                   disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                 } ${cardClasses}`}
@@ -280,6 +341,38 @@ export default function CuestionariosPage() {
                     <span className="text-xs rounded-full px-2 py-0.5 border bg-white/60 backdrop-blur-sm">
                       {isAnswered ? "Completado" : isActive ? "Pendiente" : "Desactivado"}
                     </span>
+                    {isSuperAdmin && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            toggleQuestionnaire(form)
+                          }}
+                          disabled={togglingId === form.id || resettingId === form.id}
+                          className="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white/80 px-2.5 py-1 text-[12px] font-medium text-gray-700 transition hover:border-gray-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Power className="h-3.5 w-3.5" />
+                          {togglingId === form.id
+                            ? "Guardando..."
+                            : isActive
+                            ? "Desactivar"
+                            : "Activar"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            resetQuestionnaire(form)
+                          }}
+                          disabled={resettingId === form.id || togglingId === form.id}
+                          className="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white/80 px-2.5 py-1 text-[12px] font-medium text-gray-700 transition hover:border-gray-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          {resettingId === form.id ? "Reabriendo..." : "Permitir rehacer"}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="mt-2 text-xs opacity-80">
@@ -291,7 +384,7 @@ export default function CuestionariosPage() {
                       : "Cargando…"
                     : "No disponible"}
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
