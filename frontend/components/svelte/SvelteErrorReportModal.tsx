@@ -12,6 +12,9 @@ type SvelteErrorReportModalElement = HTMLElement & {
   hint?: string
   canViewInbox?: boolean
   inboxLabel?: string
+  attachmentName?: string
+  attachmentUrl?: string
+  attachmentUploading?: boolean
 }
 
 interface SvelteErrorReportModalProps {
@@ -24,8 +27,12 @@ interface SvelteErrorReportModalProps {
   hint?: string
   canViewInbox?: boolean
   inboxLabel?: string
+  attachmentName?: string
+  attachmentUrl?: string
+  attachmentUploading?: boolean
   onClose?: () => void
   onSubmit?: (payload: { category: string; message: string }) => void
+  onAttachmentChange?: (file: File | null) => void
   onInboxClick?: () => void
   scriptReady?: boolean
 }
@@ -40,8 +47,12 @@ export function SvelteErrorReportModal({
   hint,
   canViewInbox = false,
   inboxLabel = "Abrir buzón de reports",
+  attachmentName,
+  attachmentUrl,
+  attachmentUploading = false,
   onClose,
   onSubmit,
+  onAttachmentChange,
   onInboxClick,
   scriptReady = true,
 }: Readonly<SvelteErrorReportModalProps>) {
@@ -60,7 +71,24 @@ export function SvelteErrorReportModal({
     el.hint = hint ?? "Cuéntanos qué ha ocurrido para poder ayudarte."
     el.canViewInbox = canViewInbox
     el.inboxLabel = inboxLabel
-  }, [open, categories, submitting, error, success, title, hint, canViewInbox, inboxLabel, scriptReady])
+    el.attachmentName = attachmentName ?? ""
+    el.attachmentUrl = attachmentUrl ?? ""
+    el.attachmentUploading = attachmentUploading
+  }, [
+    open,
+    categories,
+    submitting,
+    error,
+    success,
+    title,
+    hint,
+    canViewInbox,
+    inboxLabel,
+    attachmentName,
+    attachmentUrl,
+    attachmentUploading,
+    scriptReady,
+  ])
 
   useEffect(() => {
     if (!scriptReady) return
@@ -77,16 +105,22 @@ export function SvelteErrorReportModal({
       })
     }
     const handleInboxClick = () => onInboxClick?.()
+    const handleAttachmentChange = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {}
+      onAttachmentChange?.(detail.file instanceof File ? detail.file : null)
+    }
 
     el.addEventListener("close", handleClose)
     el.addEventListener("submit", handleSubmit)
     el.addEventListener("inboxclick", handleInboxClick)
+    el.addEventListener("attachmentchange", handleAttachmentChange)
     return () => {
       el.removeEventListener("close", handleClose)
       el.removeEventListener("submit", handleSubmit)
       el.removeEventListener("inboxclick", handleInboxClick)
+      el.removeEventListener("attachmentchange", handleAttachmentChange)
     }
-  }, [onClose, onSubmit, onInboxClick, scriptReady])
+  }, [onClose, onSubmit, onAttachmentChange, onInboxClick, scriptReady])
 
   return <svelte-error-report-modal ref={modalRef} />
 }

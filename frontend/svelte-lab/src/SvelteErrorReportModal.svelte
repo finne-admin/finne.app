@@ -10,6 +10,9 @@
   export let hint = "Cuéntanos qué ha ocurrido para poder ayudarte."
   export let canViewInbox = false
   export let inboxLabel = "Abrir buzón de reports"
+  export let attachmentName = ""
+  export let attachmentUrl = ""
+  export let attachmentUploading = false
 
   let selected = ""
   let message = ""
@@ -37,6 +40,16 @@
 
   const openInbox = () => {
     dispatch("inboxclick")
+  }
+
+  const handleFileChange = (event) => {
+    const file = event?.currentTarget?.files?.[0] ?? null
+    dispatch("attachmentchange", { file })
+    event.currentTarget.value = ""
+  }
+
+  const clearAttachment = () => {
+    dispatch("attachmentchange", { file: null })
   }
 
   $: if (success) {
@@ -90,6 +103,40 @@
             maxlength={MAX_MESSAGE_LENGTH}
             placeholder="Ejemplo: al abrir notificaciones se queda cargando y no puedo volver atrás."
           />
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <label class="label" for="report-attachment">Imagen</label>
+            <span class="caption">Opcional · PNG, JPG, WEBP o GIF</span>
+          </div>
+          <div class="attachment-row">
+            <label class="attach-button" for="report-attachment">
+              {attachmentUploading ? "Subiendo..." : attachmentName ? "Cambiar imagen" : "Adjuntar imagen"}
+            </label>
+            <input
+              id="report-attachment"
+              class="file-input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              on:change={handleFileChange}
+            />
+            {#if attachmentName}
+              <button class="ghost small" type="button" on:click={clearAttachment}>Quitar</button>
+            {/if}
+          </div>
+
+          {#if attachmentName}
+            <div class="attachment-preview">
+              <div>
+                <p class="attachment-name">{attachmentName}</p>
+                <p class="attachment-caption">{attachmentUploading ? "Subiendo imagen..." : "Imagen lista para adjuntar"}</p>
+              </div>
+              {#if attachmentUrl}
+                <img src={attachmentUrl} alt="Adjunto del report" />
+              {/if}
+            </div>
+          {/if}
         </div>
 
         {#if error}
@@ -246,6 +293,55 @@
     line-height: 1.5;
     font-family: inherit;
   }
+  .attachment-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .attach-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d7dee8;
+    background: #ffffff;
+    color: #475569;
+    padding: 11px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .file-input {
+    display: none;
+  }
+  .attachment-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 18px;
+    padding: 12px 14px;
+  }
+  .attachment-preview img {
+    width: 76px;
+    height: 76px;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+  }
+  .attachment-name {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .attachment-caption {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #64748b;
+  }
   .error {
     font-size: 13px;
     color: #b91c1c;
@@ -281,6 +377,10 @@
     padding: 11px 18px;
     border-radius: 999px;
     cursor: pointer;
+  }
+  .ghost.small {
+    padding: 9px 14px;
+    font-size: 13px;
   }
   .secondary {
     border: 1px solid #fda4af;

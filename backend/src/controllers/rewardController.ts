@@ -6,10 +6,13 @@ import {
   deleteRewardDefinition,
   getRewardDefinitionsForScope,
   getRaffleThresholdsByOrganization,
+  getRaffleCandidatesByOrganization,
   replaceRaffleThresholdsByOrganization,
   upsertRewardDefinition,
 } from "../db/queries/rewardQueries"
+import { getMembershipForUser } from "../db/queries/userMembershipQueries"
 import { uploadRewardImage } from "../services/rewardStorage"
+import { calculateRaffleEntriesForPoints } from "../services/rewardService"
 
 const parseScopeType = (value: any): RewardScopeType => {
   if (value === "organization" || value === "department") return value
@@ -213,5 +216,94 @@ export const uploadRewardImageController = async (req: Request, res: Response) =
     console.error("Error subiendo imagen de recompensa:", error)
     fs.unlink(file.path, () => {})
     return res.status(500).json({ error: "No se pudo subir la imagen" })
+  }
+}
+
+export const drawRaffleRewardController = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user
+    const userId = user?.id
+    const roleName = user?.roleName?.toLowerCase()
+    const isGlobalAdmin = roleName === "superadmin" || roleName === "soporte" || user?.roleScope === "global"
+    const organizationId =
+      typeof req.body?.organizationId === "string" && req.body.organizationId.trim().length
+        ? req.body.organizationId.trim()
+        : null
+    const rewardKey = parseRewardKey(req.body?.rewardKey)
+
+    if (rewardKey === "guaranteed_winner") {
+      return res.status(400).json({ error: "El premio garantizado no se sortea" })
+    }
+
+    if (!organizationId) {
+      return res.status(400).json({ error: "Debes indicar una organizacion" })
+    }
+
+    if (!isGlobalAdmin) {
+      const membership = userId ? await getMembershipForUser(userId) : null
+      if (!membership?.organization_id || membership.organization_id !== organizationId) {
+        return res.status(403).json({ error: "No puedes sortear premios de otra organizacion" })
+      }
+    }
+
+    const [thresholds, candidates] = await Promise.all([
+      getRaffleThresholdsByOrganization(organizationId),
+      getRaffleCandidatesByOrganization(organizationId),
+    ])
+
+    const activeThresholds = thresholds
+      .filter((threshold) => threshold.active)
+      .map((threshold) => ({
+        id: threshold.id,
+        organization_id: threshold.organization_id,
+        min_points: Number(threshold.min_points ?? 0),
+        entries_count: Number(threshold.entries_count ?? 0),
+        active: Boolean(threshold.active),
+      }))
+
+    if (!activeThresholds.length) {
+      return res.status(400).json({ error: "No hay umbrales activos para esta organizacion" })
+    }
+
+    const topUserId = candidates[0]?.id ?? null
+    const weightedCandidates = candidates
+      .filter((candidate) => candidate.id !== topUserId)
+      .map((candidate) => ({
+        id: candidate.id,
+        first_name: candidate.first_name,
+        last_name: candidate.last_name,
+        avatar_url: candidate.avatar_url,
+        periodical_exp: Number(candidate.periodical_exp ?? 0),
+        entries: calculateRaffleEntriesForPoints(Number(candidate.periodical_exp ?? 0), activeThresholds),
+      }))
+      .filter((candidate) => candidate.entries > 0)
+
+    const totalEntries = weightedCandidates.reduce((sum, candidate) => sum + candidate.entries, 0)
+    if (totalEntries <= 0) {
+      return res.status(400).json({ error: "No hay participantes con participaciones para este sorteo" })
+    }
+
+    let ticket = Math.floor(Math.random() * totalEntries) + 1
+    let winner = weightedCandidates[0]
+    for (const candidate of weightedCandidates) {
+      ticket -= candidate.entries
+      if (ticket <= 0) {
+        winner = candidate
+        break
+      }
+    }
+
+    return res.json({
+      rewardKey,
+      organizationId,
+      winner,
+      totalEntries,
+      eligibleUsers: weightedCandidates.length,
+      excludedTopUserId: topUserId,
+      drawnAt: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error("Error realizando sorteo de recompensa:", error)
+    return res.status(500).json({ error: "No se pudo realizar el sorteo" })
   }
 }

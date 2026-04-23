@@ -33,7 +33,11 @@ import {
   getExerciseSatisfaction,
   resetOrganizationDataController,
 } from "../controllers/admin/adminMaintenanceController"
-import { listErrorReportsController, updateErrorReportStatusController } from "../controllers/reportController"
+import {
+  listErrorReportsController,
+  updateErrorReportStatusController,
+  uploadAdminReportAttachmentController,
+} from "../controllers/reportController"
 import {
   deleteRewardDefinitionController,
   listRaffleThresholdsController,
@@ -41,6 +45,7 @@ import {
   replaceRaffleThresholdsController,
   upsertRewardDefinitionController,
   uploadRewardImageController,
+  drawRaffleRewardController,
 } from "../controllers/rewardController"
 import {
   listAnnouncementsController,
@@ -87,11 +92,13 @@ router.get("/roles", requireSuperAdmin, listRolesController)
 router.get("/exercise-satisfaction", getExerciseSatisfaction)
 router.get("/reports", requireSuperAdmin, listErrorReportsController)
 router.put("/reports/:id/status", requireSuperAdmin, updateErrorReportStatusController)
+router.post("/reports/upload", requireSuperAdmin, upload.single("file"), uploadAdminReportAttachmentController)
 router.get("/rewards", requireSuperAdmin, listRewardDefinitionsController)
 router.post("/rewards", requireSuperAdmin, upsertRewardDefinitionController)
 router.delete("/rewards/:id", requireSuperAdmin, deleteRewardDefinitionController)
 router.get("/rewards/thresholds/:organizationId", requireSuperAdmin, listRaffleThresholdsController)
 router.put("/rewards/thresholds/:organizationId", requireSuperAdmin, replaceRaffleThresholdsController)
+router.post("/rewards/raffle/draw", drawRaffleRewardController)
 router.post(
   "/rewards/upload",
   requireSuperAdmin,

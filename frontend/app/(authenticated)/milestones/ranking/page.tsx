@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RankingUsuarios, RankingUser } from '@/components/milestones/UserRanking'
 import type { RaffleThreshold, RewardMode, RewardsMap } from '@/components/milestones/RewardsPodium'
+import { SvelteRewardsPodium } from '@/components/svelte/SvelteRewardsPodium'
 import HuchaPanel from '@/components/milestones/DepartmentPanel'
 import { calcThreeMonthGoal } from '@/lib/calcThreeMonthGoal'
-import { apiGet } from '@/lib/apiClient'
+import { apiGet, apiPost } from '@/lib/apiClient'
 import {
   Select,
   SelectContent,
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ChevronLeft, ChevronRight, Gift, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Gift, Shuffle, Sparkles } from 'lucide-react'
 
 type RankingScope =
   | { mode: 'global' }
@@ -61,6 +62,21 @@ type RankingFilter =
   | { scope: 'global' }
   | { scope: 'organization'; organizationId: string; departmentId?: string }
 
+type RaffleDrawResult = {
+  rewardKey: 'raffle_a' | 'raffle_b'
+  winner: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    avatar_url: string | null
+    periodical_exp: number
+    entries: number
+  }
+  totalEntries: number
+  eligibleUsers: number
+  drawnAt: string
+}
+
 export default function RankingPage() {
   const [goal, setGoal] = useState<number | null>(null)
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
@@ -78,7 +94,11 @@ export default function RankingPage() {
   const [orgOptions, setOrgOptions] = useState<OrgOption[]>([])
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
   const [selectedDept, setSelectedDept] = useState<string>('all')
+  const [drawingKey, setDrawingKey] = useState<'raffle_a' | 'raffle_b' | null>(null)
+  const [drawResults, setDrawResults] = useState<Partial<Record<'raffle_a' | 'raffle_b', RaffleDrawResult>>>({})
+  const [drawError, setDrawError] = useState<string | null>(null)
   const isSuperAdmin = (userRole ?? '').toLowerCase() === 'superadmin'
+  const canRunRaffle = ['admin', 'manager', 'superadmin', 'soporte'].includes((userRole ?? '').toLowerCase())
   const fallbackDeadline = new Date('2026-05-01T00:00:01')
 
   const deadline = useMemo(() => {
@@ -238,6 +258,13 @@ export default function RankingPage() {
     return `Ranking de ${ranking.scope.organizationName ?? 'tu organización'} / ${ranking.scope.departmentName ?? 'tu departamento'}`
   }, [ranking])
 
+  const rewardsScopeLabel = useMemo(() => {
+    if (!ranking?.scope) return ''
+    if (ranking.scope.mode === 'global') return 'Clasificación global'
+    if (ranking.scope.mode === 'organization') return `Organización: ${ranking.scope.organizationName ?? 'General'}`
+    return `Departamento: ${ranking.scope.departmentName ?? 'El tuyo'}`
+  }, [ranking?.scope])
+
   const activeThresholds = useMemo(
     () => (ranking?.raffleThresholds ?? []).filter((threshold) => threshold.active).sort((a, b) => a.min_points - b.min_points),
     [ranking?.raffleThresholds]
@@ -254,6 +281,14 @@ export default function RankingPage() {
 
   const isStnUser = (userOrgSlug ?? '').toLowerCase() === 'stn'
   const shouldHoldStnView = isStnUser && (!authResolved || filter.scope === 'global' || loadingRanking || !isClassicTop3)
+
+  const raffleOrganizationId = useMemo(() => {
+    if (!ranking) return null
+    if (ranking.scope.mode === 'organization' || ranking.scope.mode === 'department') {
+      return ranking.scope.organizationId ?? null
+    }
+    return ranking.membership?.organizationId ?? null
+  }, [ranking])
 
   const currentThreshold = useMemo(() => {
     if (isClassicTop3) return null
@@ -323,6 +358,31 @@ export default function RankingPage() {
 
     return () => clearTimeout(timer)
   }, [searchQuery, filter, pageOffset])
+
+  const drawRaffle = async (rewardKey: 'raffle_a' | 'raffle_b') => {
+    if (!raffleOrganizationId) {
+      setDrawError('Selecciona una organización para realizar el sorteo.')
+      return
+    }
+
+    try {
+      setDrawingKey(rewardKey)
+      setDrawError(null)
+      const res = await apiPost('/api/admin/rewards/raffle/draw', {
+        organizationId: raffleOrganizationId,
+        rewardKey,
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || 'No se pudo realizar el sorteo')
+      }
+      setDrawResults((prev) => ({ ...prev, [rewardKey]: data }))
+    } catch (error: any) {
+      setDrawError(error?.message || 'No se pudo realizar el sorteo')
+    } finally {
+      setDrawingKey(null)
+    }
+  }
 
   return (
     <div className="px-3 sm:px-6 py-4 sm:py-8">
@@ -536,6 +596,78 @@ export default function RankingPage() {
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
+
+          <section className="border-t border-gray-200/80 pt-8">
+            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600">
+                  Recompensas de temporada
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-gray-900">
+                  Premios y participaciones
+                </h3>
+              </div>
+
+              {!isClassicTop3 && canRunRaffle && raffleOrganizationId && (
+                <div className="flex flex-wrap gap-2">
+                  {(['raffle_a', 'raffle_b'] as const).map((rewardKey) => (
+                    <button
+                      key={rewardKey}
+                      type="button"
+                      onClick={() => drawRaffle(rewardKey)}
+                      disabled={drawingKey !== null}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Shuffle className="h-4 w-4" />
+                      {drawingKey === rewardKey
+                        ? 'Sorteando...'
+                        : rewardKey === 'raffle_a'
+                          ? 'Sortear premio A'
+                          : 'Sortear premio B'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {drawError && (
+              <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {drawError}
+              </div>
+            )}
+
+            {!!Object.keys(drawResults).length && (
+              <div className="mb-6 grid gap-3 sm:grid-cols-2">
+                {(['raffle_a', 'raffle_b'] as const).map((rewardKey) => {
+                  const result = drawResults[rewardKey]
+                  if (!result) return null
+                  const name = `${result.winner.first_name ?? ''} ${result.winner.last_name ?? ''}`.trim() || 'Usuario'
+                  return (
+                    <div key={rewardKey} className="border-t border-emerald-100 bg-emerald-50/30 py-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                        {rewardKey === 'raffle_a' ? 'Ganador sorteo A' : 'Ganador sorteo B'}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-gray-900">{name}</p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {result.winner.entries.toLocaleString('es-ES')} participaciones entre{' '}
+                        {result.totalEntries.toLocaleString('es-ES')} totales.
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <SvelteRewardsPodium
+              users={ranking?.top ?? []}
+              rewards={ranking?.rewards}
+              rewardMode={isClassicTop3 ? 'classic_top3' : ranking?.rewardMode}
+              raffleThresholds={ranking?.raffleThresholds}
+              userRaffleEntries={ranking?.userRaffleEntries}
+              scopeLabel={rewardsScopeLabel}
+              loading={loadingRanking}
+            />
+          </section>
         </section>
           </>
         )}

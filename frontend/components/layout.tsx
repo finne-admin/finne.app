@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTutorialState } from '@/components/tutorial/useTutorial';
 import { Tutorial } from '@/components/tutorial/Tutorial';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { apiGet, apiPost, apiPut } from "@/lib/apiClient";
+import { apiGet, apiPost, apiPostForm, apiPut } from "@/lib/apiClient";
 
 import { useAdminMenuItems } from '@/components/hooks/useAdminMenuItems';
 import { MobileNav } from '@/components/navigation/MobileNav';
@@ -39,6 +39,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [userReportsOpen, setUserReportsOpen] = useState(false);
   const [unreadReportReplies, setUnreadReportReplies] = useState(0);
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportAttachmentName, setReportAttachmentName] = useState("")
+  const [reportAttachmentUrl, setReportAttachmentUrl] = useState("")
+  const [reportAttachmentUploading, setReportAttachmentUploading] = useState(false)
   const [reportError, setReportError] = useState("");
   const [reportSuccess, setReportSuccess] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
@@ -161,11 +164,49 @@ export function Layout({ children }: { children: React.ReactNode }) {
     return normalizedRole === "superadmin" || userRoleScope === "global"
   }, [userRole, userRoleScope])
 
+  const resetReportAttachment = useCallback(() => {
+    setReportAttachmentName("")
+    setReportAttachmentUrl("")
+    setReportAttachmentUploading(false)
+  }, [])
+
+  const handleReportAttachmentChange = useCallback(async (file: File | null) => {
+    if (!file) {
+      resetReportAttachment()
+      return
+    }
+
+    try {
+      setReportAttachmentUploading(true)
+      setReportError("")
+      setReportAttachmentName(file.name)
+
+      const form = new FormData()
+      form.append("file", file)
+      const res = await apiPostForm("/api/reports/upload", form)
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || "No se pudo subir la imagen")
+      }
+
+      setReportAttachmentUrl(typeof data?.url === "string" ? data.url : "")
+    } catch (err: any) {
+      resetReportAttachment()
+      setReportError(err?.message || "No se pudo subir la imagen")
+    } finally {
+      setReportAttachmentUploading(false)
+    }
+  }, [resetReportAttachment])
+
   const handleSubmitReport = useCallback(
     async ({ category, message }: { category: string; message: string }) => {
       if (!category || !message.trim()) {
         setReportError("Completa categoria y mensaje");
         return;
+      }
+      if (reportAttachmentUploading) {
+        setReportError("Espera a que termine la subida de la imagen")
+        return
       }
       try {
         setReportSubmitting(true);
@@ -174,6 +215,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           category,
           message,
           page_path: typeof window !== "undefined" ? window.location.pathname : "",
+          attachment_url: reportAttachmentUrl || null,
         });
         const data = await res.json();
         if (!res.ok) {
@@ -183,6 +225,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         window.setTimeout(() => {
           setReportOpen(false);
           setReportSuccess(false);
+          resetReportAttachment()
         }, 1400);
       } catch (err: any) {
         setReportError(err.message || "No se pudo enviar el reporte");
@@ -190,7 +233,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         setReportSubmitting(false);
       }
     },
-    []
+    [reportAttachmentUploading, reportAttachmentUrl, resetReportAttachment]
   );
 
   const refreshUnreadReportReplies = useCallback(async () => {
@@ -301,17 +344,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hover:bg-red-50"
-            onClick={() => {
-              setReportOpen(true);
-              setReportError("");
-              setReportSuccess(false);
-            }}
-            title="Reportar problema"
-          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-red-50"
+              onClick={() => {
+                setReportOpen(true);
+                setReportError("");
+                setReportSuccess(false);
+                resetReportAttachment()
+              }}
+              title="Reportar problema"
+            >
             <TriangleAlert className="h-6 w-6 text-red-500" />
           </Button>
 
@@ -414,10 +458,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
           submitting={reportSubmitting}
           error={reportError}
           success={reportSuccess}
+          attachmentName={reportAttachmentName}
+          attachmentUrl={reportAttachmentUrl}
+          attachmentUploading={reportAttachmentUploading}
           canViewInbox={canViewReportInbox}
           inboxLabel="Ir al buzón"
-          onClose={() => setReportOpen(false)}
+          onClose={() => {
+            setReportOpen(false)
+            setReportError("")
+            setReportSuccess(false)
+            resetReportAttachment()
+          }}
           onSubmit={handleSubmitReport}
+          onAttachmentChange={handleReportAttachmentChange}
           onInboxClick={() => {
             setReportOpen(false)
             router.push('/admin/global?tab=reports')

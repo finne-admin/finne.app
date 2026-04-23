@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { apiGet, apiPut } from "@/lib/apiClient"
+import { apiGet, apiPostForm, apiPut } from "@/lib/apiClient"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -26,6 +26,7 @@ type ReportRow = {
   category: string
   message: string
   page_path: string | null
+  attachment_url: string | null
   user_agent: string | null
   status: "pending" | "resolved" | "dismissed"
   created_at: string
@@ -33,6 +34,7 @@ type ReportRow = {
   resolved_by: string | null
   resolved_by_email: string | null
   admin_reply: string | null
+  admin_attachment_url: string | null
   replied_at: string | null
   replied_by: string | null
   replied_by_email: string | null
@@ -59,6 +61,9 @@ export function GlobalReportsPanel() {
   const [status, setStatus] = useState("pending")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
+  const [replyAttachmentUrls, setReplyAttachmentUrls] = useState<Record<string, string>>({})
+  const [replyAttachmentNames, setReplyAttachmentNames] = useState<Record<string, string>>({})
+  const [uploadingAttachmentId, setUploadingAttachmentId] = useState<string | null>(null)
 
   const normalizeStatus = (value: unknown): ReportStatus => {
     return value === "resolved" || value === "dismissed" || value === "pending"
@@ -87,6 +92,24 @@ export function GlobalReportsPanel() {
         normalizedReports.forEach((report: ReportRow) => {
           if (typeof next[report.id] !== "string") {
             next[report.id] = report.admin_reply ?? ""
+          }
+        })
+        return next
+      })
+      setReplyAttachmentUrls((current) => {
+        const next = { ...current }
+        normalizedReports.forEach((report: ReportRow) => {
+          if (typeof next[report.id] !== "string") {
+            next[report.id] = report.admin_attachment_url ?? ""
+          }
+        })
+        return next
+      })
+      setReplyAttachmentNames((current) => {
+        const next = { ...current }
+        normalizedReports.forEach((report: ReportRow) => {
+          if (typeof next[report.id] !== "string") {
+            next[report.id] = report.admin_attachment_url ? "Imagen adjunta" : ""
           }
         })
         return next
@@ -156,6 +179,7 @@ export function GlobalReportsPanel() {
       const res = await apiPut(`/api/admin/reports/${reportId}/status`, {
         status: nextStatus,
         admin_reply: replyDrafts[reportId] ?? "",
+        admin_attachment_url: replyAttachmentUrls[reportId] ?? null,
       })
       const data = await res.json()
       if (!res.ok) {
@@ -167,6 +191,33 @@ export function GlobalReportsPanel() {
       setError(err instanceof Error ? err.message : "Error al guardar la respuesta")
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  const handleReplyAttachmentChange = async (reportId: string, file: File | null) => {
+    if (!file) {
+      setReplyAttachmentUrls((current) => ({ ...current, [reportId]: "" }))
+      setReplyAttachmentNames((current) => ({ ...current, [reportId]: "" }))
+      return
+    }
+
+    setUploadingAttachmentId(reportId)
+    setError("")
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await apiPostForm("/api/admin/reports/upload", form)
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || "No se pudo subir la imagen")
+      }
+      setReplyAttachmentUrls((current) => ({ ...current, [reportId]: typeof data?.url === "string" ? data.url : "" }))
+      setReplyAttachmentNames((current) => ({ ...current, [reportId]: file.name }))
+    } catch (err) {
+      console.error("Error subiendo adjunto del report:", err)
+      setError(err instanceof Error ? err.message : "No se pudo subir la imagen")
+    } finally {
+      setUploadingAttachmentId(null)
     }
   }
 
@@ -309,7 +360,9 @@ export function GlobalReportsPanel() {
               (() => {
                 const reportStatus = normalizeStatus(report.status)
                 const replyValue = replyDrafts[report.id] ?? ""
-                const canReply = replyValue.trim().length > 0
+                const replyAttachmentUrl = replyAttachmentUrls[report.id] ?? ""
+                const replyAttachmentName = replyAttachmentNames[report.id] ?? ""
+                const canReply = replyValue.trim().length > 0 || Boolean(replyAttachmentUrl)
                 return (
               <article
                 key={report.id}
@@ -346,6 +399,15 @@ export function GlobalReportsPanel() {
                       <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
                         {report.message}
                       </p>
+                      {report.attachment_url && (
+                        <div className="mt-3">
+                          <img
+                            src={report.attachment_url}
+                            alt="Adjunto del report"
+                            className="max-h-56 rounded-xl border border-gray-200 object-cover"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid gap-3 text-sm text-gray-500 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -389,6 +451,49 @@ export function GlobalReportsPanel() {
                         placeholder="Ejemplo: ya está corregido o este comportamiento es el esperado por este motivo."
                         className="min-h-[110px] resize-y bg-white"
                       />
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <label className="inline-flex cursor-pointer items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-slate-700">
+                          {uploadingAttachmentId === report.id
+                            ? "Subiendo..."
+                            : replyAttachmentName
+                              ? "Cambiar imagen"
+                              : "Adjuntar imagen"}
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/png,image/jpeg,image/webp,image/gif"
+                            onChange={(event) =>
+                              handleReplyAttachmentChange(report.id, event.target.files?.[0] ?? null)
+                            }
+                          />
+                        </label>
+                        {replyAttachmentName && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="border border-gray-200"
+                            onClick={() => handleReplyAttachmentChange(report.id, null)}
+                          >
+                            Quitar imagen
+                          </Button>
+                        )}
+                      </div>
+                      {replyAttachmentUrl && (
+                        <div className="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                          <img
+                            src={replyAttachmentUrl}
+                            alt="Adjunto de respuesta"
+                            className="h-20 w-20 rounded-lg border border-gray-200 object-cover"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-slate-800">
+                              {replyAttachmentName || "Imagen adjunta"}
+                            </p>
+                            <p className="text-xs text-slate-500">Se enviará junto a la respuesta.</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -28,6 +28,14 @@ export type RewardRaffleThresholdRow = {
   updated_at: Date
 }
 
+export type RewardRaffleCandidateRow = {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  avatar_url: string | null
+  periodical_exp: number
+}
+
 const normalizeScopeId = (scopeType: RewardScopeType, scopeId?: string | null) => {
   if (scopeType === "global") return null
   return scopeId ?? null
@@ -153,4 +161,24 @@ export const replaceRaffleThresholdsByOrganization = async (
   } finally {
     client.release()
   }
+}
+
+export const getRaffleCandidatesByOrganization = async (organizationId: string) => {
+  const pool = await getPool()
+  const { rows } = await pool.query<RewardRaffleCandidateRow>(
+    `
+    SELECT DISTINCT
+      u.id,
+      u.first_name,
+      u.last_name,
+      u.avatar_url,
+      COALESCE(u.periodical_exp, 0) AS periodical_exp
+    FROM users u
+    INNER JOIN user_membership um ON um.user_id = u.id
+    WHERE um.organization_id = $1
+    ORDER BY COALESCE(u.periodical_exp, 0) DESC, u.first_name ASC, u.last_name ASC
+    `,
+    [organizationId]
+  )
+  return rows
 }

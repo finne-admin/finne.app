@@ -6,6 +6,7 @@ export type ErrorReportInput = {
   message: string
   pagePath?: string | null
   userAgent?: string | null
+  attachmentUrl?: string | null
 }
 
 export type ErrorReportStatus = "pending" | "resolved" | "dismissed"
@@ -14,9 +15,9 @@ export const insertErrorReport = async (input: ErrorReportInput) => {
   const pool = await getPool()
   const { rows } = await pool.query(
     `
-    INSERT INTO error_reports (user_id, category, message, page_path, user_agent, status)
-    VALUES ($1, $2, $3, $4, $5, 'pending')
-    RETURNING id, user_id, category, message, page_path, status, created_at
+    INSERT INTO error_reports (user_id, category, message, page_path, user_agent, attachment_url, status)
+    VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+    RETURNING id, user_id, category, message, page_path, attachment_url, status, created_at
     `,
     [
       input.userId,
@@ -24,6 +25,7 @@ export const insertErrorReport = async (input: ErrorReportInput) => {
       input.message,
       input.pagePath ?? null,
       input.userAgent ?? null,
+      input.attachmentUrl ?? null,
     ]
   )
   return rows[0]
@@ -35,6 +37,7 @@ export type ErrorReportListRow = {
   category: string
   message: string
   page_path: string | null
+  attachment_url: string | null
   user_agent: string | null
   status: ErrorReportStatus
   created_at: string
@@ -42,6 +45,7 @@ export type ErrorReportListRow = {
   resolved_by: string | null
   resolved_by_email: string | null
   admin_reply: string | null
+  admin_attachment_url: string | null
   replied_at: string | null
   replied_by: string | null
   replied_by_email: string | null
@@ -63,12 +67,14 @@ export const listErrorReports = async (limit = 200): Promise<ErrorReportListRow[
       er.category,
       er.message,
       er.page_path,
+      er.attachment_url,
       er.user_agent,
       er.status,
       er.created_at,
       er.resolved_at,
       er.resolved_by,
       er.admin_reply,
+      er.admin_attachment_url,
       er.replied_at,
       er.replied_by,
       er.reply_read_at,
@@ -97,11 +103,16 @@ export const updateErrorReportStatus = async (
   id: string,
   status: ErrorReportStatus,
   resolvedBy: string,
-  adminReply?: string | null
+  adminReply?: string | null,
+  adminAttachmentUrl?: string | null
 ) => {
   const pool = await getPool()
   const normalizedReply =
     typeof adminReply === "string" && adminReply.trim().length ? adminReply.trim() : null
+  const normalizedAttachment =
+    typeof adminAttachmentUrl === "string" && adminAttachmentUrl.trim().length
+      ? adminAttachmentUrl.trim()
+      : null
   const { rows } = await pool.query(
     `
     UPDATE error_reports
@@ -110,25 +121,29 @@ export const updateErrorReportStatus = async (
       resolved_at = CASE WHEN $2::text = 'pending' THEN NULL ELSE NOW() END,
       resolved_by = CASE WHEN $2::text = 'pending' THEN NULL ELSE $3::uuid END,
       admin_reply = CASE
-        WHEN $2::text = 'pending' AND $4::text IS NULL THEN admin_reply
+        WHEN $2::text = 'pending' AND $4::text IS NULL AND $5::text IS NULL THEN admin_reply
         ELSE $4::text
       END,
+      admin_attachment_url = CASE
+        WHEN $2::text = 'pending' AND $4::text IS NULL AND $5::text IS NULL THEN admin_attachment_url
+        ELSE $5::text
+      END,
       replied_at = CASE
-        WHEN $4::text IS NULL THEN replied_at
+        WHEN $4::text IS NULL AND $5::text IS NULL THEN replied_at
         ELSE NOW()
       END,
       replied_by = CASE
-        WHEN $4::text IS NULL THEN replied_by
+        WHEN $4::text IS NULL AND $5::text IS NULL THEN replied_by
         ELSE $3::uuid
       END,
       reply_read_at = CASE
-        WHEN $4::text IS NULL THEN reply_read_at
+        WHEN $4::text IS NULL AND $5::text IS NULL THEN reply_read_at
         ELSE NULL
       END
     WHERE id = $1::uuid
-    RETURNING id, status, resolved_at, resolved_by, admin_reply, replied_at, replied_by, reply_read_at
+    RETURNING id, status, resolved_at, resolved_by, admin_reply, admin_attachment_url, replied_at, replied_by, reply_read_at
     `,
-    [id, status, resolvedBy, normalizedReply]
+    [id, status, resolvedBy, normalizedReply, normalizedAttachment]
   )
   return rows[0] ?? null
 }
@@ -143,12 +158,14 @@ export const listErrorReportsByUser = async (userId: string): Promise<ErrorRepor
       er.category,
       er.message,
       er.page_path,
+      er.attachment_url,
       er.user_agent,
       er.status,
       er.created_at,
       er.resolved_at,
       er.resolved_by,
       er.admin_reply,
+      er.admin_attachment_url,
       er.replied_at,
       er.replied_by,
       er.reply_read_at,

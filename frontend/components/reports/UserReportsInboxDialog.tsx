@@ -13,10 +13,12 @@ type UserReport = {
   category: string
   message: string
   page_path: string | null
+  attachment_url: string | null
   status: UserReportStatus
   created_at: string
   resolved_at: string | null
   admin_reply: string | null
+  admin_attachment_url: string | null
   replied_at: string | null
   replied_by_email: string | null
   reply_read_at: string | null
@@ -146,6 +148,15 @@ export function UserReportsInboxDialog({
           <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
             {report.message}
           </p>
+          {report.attachment_url && (
+            <div className="mt-3">
+              <img
+                src={report.attachment_url}
+                alt="Adjunto del report"
+                className="max-h-56 rounded-xl border border-slate-200 object-cover"
+              />
+            </div>
+          )}
           {report.page_path && (
             <p className="mt-2 text-xs text-slate-400">Ruta: {report.page_path}</p>
           )}
@@ -183,6 +194,15 @@ export function UserReportsInboxDialog({
             <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-emerald-950">
               {report.admin_reply}
             </p>
+            {report.admin_attachment_url && (
+              <div className="mt-3">
+                <img
+                  src={report.admin_attachment_url}
+                  alt="Adjunto de la respuesta"
+                  className="max-h-56 rounded-xl border border-emerald-100 object-cover"
+                />
+              </div>
+            )}
             <p className="mt-2 text-xs text-emerald-700/80">
               {report.replied_at ? formatDate(report.replied_at) : ""}
               {report.replied_by_email ? ` · ${report.replied_by_email}` : ""}

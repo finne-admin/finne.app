@@ -15,10 +15,12 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     token = localStorage.getItem("accessToken")
   }
 
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData
+
   const headers = {
     ...(options.headers || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
   }
 
   const res = await fetch(url, {
@@ -36,6 +38,11 @@ export const apiPost = (path: string, body: any) =>
   apiFetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     body: JSON.stringify(body),
+  })
+export const apiPostForm = (path: string, body: FormData) =>
+  apiFetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    body,
   })
 export const apiPut = (path: string, body: any) =>
   apiFetch(`${API_BASE_URL}${path}`, {
