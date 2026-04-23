@@ -35,6 +35,8 @@ type RankingResponse = {
   scope: RankingScope
   seasonDeadline?: string | null
   seasonTimezone?: string | null
+  seasonAnchorDate?: string | null
+  seasonIntervalMonths?: number | null
   membership: {
     organizationId: string | null
     organizationName: string | null

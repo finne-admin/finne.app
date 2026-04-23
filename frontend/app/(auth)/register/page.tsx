@@ -193,7 +193,7 @@ export default function RegisterPage() {
         <div className="hidden lg:flex lg:w-1/3 xl:w-1/4 bg-gradient-to-b from-[#8BC5B5] to-[#5B9B8B] p-8 items-center justify-center relative overflow-hidden">
           <div className="max-w-md text-center z-10">
             <Image
-                src="/logoprincipalRecurso 4@4x.png"
+                src="/logonegativoRecurso.png"
                 alt="Finne Logo"
                 width={140}
                 height={60}
@@ -230,7 +230,7 @@ export default function RegisterPage() {
             <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
               <div className="lg:hidden mb-8 text-center">
                 <Image
-                    src="/logoprincipalRecurso 4@4x.png"
+                    src="/logonegativoRecurso.png"
                     alt="Finne Logo"
                     width={140}
                     height={60}

@@ -119,7 +119,7 @@ export const listOrganizationSeasonTimers = async (_req: Request, res: Response)
 
 export const updateOrganizationSeasonTimer = async (req: Request, res: Response) => {
   const { organizationId } = req.params
-  const { season_deadline, season_timezone } = req.body || {}
+  const { season_deadline, season_timezone, season_anchor_date, season_interval_months } = req.body || {}
 
   if (!organizationId) {
     return res.status(400).json({ error: "Falta el ID de la organizacion" })
@@ -134,6 +134,30 @@ export const updateOrganizationSeasonTimer = async (req: Request, res: Response)
     parsedDeadline = date.toISOString().slice(0, 10)
   }
 
+  let parsedAnchorDate: string | null = null
+  if (season_anchor_date) {
+    const date = new Date(season_anchor_date)
+    if (Number.isNaN(date.getTime())) {
+      return res.status(400).json({ error: "La fecha de inicio del ciclo es invalida" })
+    }
+    parsedAnchorDate = date.toISOString().slice(0, 10)
+  }
+
+  let parsedIntervalMonths: number | null = null
+  if (typeof season_interval_months !== "undefined" && season_interval_months !== null && season_interval_months !== "") {
+    const parsed = Number(season_interval_months)
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 24) {
+      return res.status(400).json({ error: "El intervalo de temporada debe estar entre 1 y 24 meses" })
+    }
+    parsedIntervalMonths = parsed
+  }
+
+  if ((parsedAnchorDate && !parsedIntervalMonths) || (!parsedAnchorDate && parsedIntervalMonths)) {
+    return res.status(400).json({
+      error: "Debes indicar tanto la fecha de inicio del ciclo como el intervalo de meses",
+    })
+  }
+
   const timezone =
     typeof season_timezone === "string" && season_timezone.trim().length
       ? season_timezone.trim()
@@ -143,7 +167,9 @@ export const updateOrganizationSeasonTimer = async (req: Request, res: Response)
     const organization = await updateOrganizationSeasonTimerById(
       organizationId,
       parsedDeadline,
-      timezone
+      timezone,
+      parsedAnchorDate,
+      parsedIntervalMonths
     )
     if (!organization) {
       return res.status(404).json({ error: "Organizacion no encontrada" })

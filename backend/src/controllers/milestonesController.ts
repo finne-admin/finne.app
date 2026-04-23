@@ -118,6 +118,48 @@ const fetchScopeNames = async (organizationId?: string | null, departmentId?: st
 const getRewardModeForSlug = (organizationSlug?: string | null) =>
   organizationSlug?.toLowerCase() === "stn" ? "classic_top3" : "raffle_thresholds"
 
+const parseIsoDateToUtc = (value?: string | null) => {
+  if (!value) return null
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return null
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
+}
+
+const addUtcMonths = (date: Date, months: number) => {
+  const year = date.getUTCFullYear()
+  const month = date.getUTCMonth()
+  const day = date.getUTCDate()
+
+  const targetMonthIndex = month + months
+  const targetYear = year + Math.floor(targetMonthIndex / 12)
+  const normalizedMonth = ((targetMonthIndex % 12) + 12) % 12
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
+  const safeDay = Math.min(day, lastDayOfTargetMonth)
+
+  return new Date(Date.UTC(targetYear, normalizedMonth, safeDay, 0, 0, 0, 0))
+}
+
+const resolveSeasonDeadline = (organization?: {
+  season_deadline?: string | null
+  season_anchor_date?: string | null
+  season_interval_months?: number | string | null
+}) => {
+  if (!organization) return null
+
+  const anchorDate = parseIsoDateToUtc(organization.season_anchor_date)
+  const intervalMonths = Number(organization.season_interval_months ?? 0)
+  if (anchorDate && Number.isInteger(intervalMonths) && intervalMonths > 0) {
+    const now = new Date()
+    let nextBoundary = new Date(anchorDate.getTime())
+    while (nextBoundary.getTime() <= now.getTime()) {
+      nextBoundary = addUtcMonths(nextBoundary, intervalMonths)
+    }
+    return nextBoundary.toISOString()
+  }
+
+  return organization.season_deadline ? new Date(organization.season_deadline).toISOString() : null
+}
+
 export const getMilestonesSummary = async (req: Request, res: Response) => {
   const userId = (req as any).user?.id
   if (!userId) return res.status(401).json({ error: "No autenticado" })
@@ -450,6 +492,8 @@ export const getRankingController = async (req: Request, res: Response) => {
   let scopeInfo: any = { mode: "global" as const }
   let seasonDeadline: string | null = null
   let seasonTimezone: string | null = null
+  let seasonAnchorDate: string | null = null
+  let seasonIntervalMonths: number | null = null
   let rewardMode: "classic_top3" | "raffle_thresholds" = "raffle_thresholds"
 
   const normalizeScopeId = (value?: string) => {
@@ -507,8 +551,10 @@ export const getRankingController = async (req: Request, res: Response) => {
           requestedDept
         )
         const org = await findOrganizationById(requestedOrg)
-        seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
+        seasonDeadline = resolveSeasonDeadline(org)
         seasonTimezone = org?.season_timezone ?? null
+        seasonAnchorDate = org?.season_anchor_date ?? null
+        seasonIntervalMonths = org?.season_interval_months ? Number(org.season_interval_months) : null
         rewardMode = getRewardModeForSlug(org?.slug ?? null)
         scopeInfo = {
           mode: requestedDept ? "department" : "organization",
@@ -532,8 +578,10 @@ export const getRankingController = async (req: Request, res: Response) => {
         filters = { organizationId: requestedOrg }
         const { organizationName, organizationSlug } = await fetchScopeNames(requestedOrg)
         const org = await findOrganizationById(requestedOrg)
-        seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
+        seasonDeadline = resolveSeasonDeadline(org)
         seasonTimezone = org?.season_timezone ?? null
+        seasonAnchorDate = org?.season_anchor_date ?? null
+        seasonIntervalMonths = org?.season_interval_months ? Number(org.season_interval_months) : null
         rewardMode = "classic_top3"
         scopeInfo = {
           mode: "organization",
@@ -554,8 +602,10 @@ export const getRankingController = async (req: Request, res: Response) => {
           .json({ error: "Tu cuenta no esta asociada a una organizacion y departamento" })
       }
       const org = await findOrganizationById(membership.organization_id)
-      seasonDeadline = org?.season_deadline ? new Date(org.season_deadline).toISOString() : null
+      seasonDeadline = resolveSeasonDeadline(org)
       seasonTimezone = org?.season_timezone ?? null
+      seasonAnchorDate = org?.season_anchor_date ?? null
+      seasonIntervalMonths = org?.season_interval_months ? Number(org.season_interval_months) : null
       rewardMode = getRewardModeForSlug(membership.organization_slug ?? org?.slug ?? null)
       filters = {
         organizationId: membership.organization_id,
@@ -601,6 +651,8 @@ export const getRankingController = async (req: Request, res: Response) => {
       canSelectOrganization: isSuperAdmin,
       seasonDeadline,
       seasonTimezone,
+      seasonAnchorDate,
+      seasonIntervalMonths,
       rewards,
       rewardMode,
       raffleThresholds: effectiveThresholds,

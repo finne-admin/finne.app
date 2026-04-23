@@ -186,9 +186,14 @@ export const updateQuestionnaireActiveController = async (req: Request, res: Res
 
 export const resetQuestionnaireResponsesController = async (req: Request, res: Response) => {
   const questionnaireId = req.params.id
+  const { organizationId } = req.body ?? {}
 
   if (!questionnaireId) {
     return res.status(400).json({ error: "Falta el id del cuestionario" })
+  }
+
+  if (typeof organizationId !== "undefined" && organizationId !== null && typeof organizationId !== "string") {
+    return res.status(400).json({ error: "organizationId debe ser un string o null" })
   }
 
   try {
@@ -207,22 +212,61 @@ export const resetQuestionnaireResponsesController = async (req: Request, res: R
       return res.status(404).json({ error: "Cuestionario no encontrado" })
     }
 
-    const resetResult = await pool.query(
-      `
-      UPDATE questionnaire_responses
-      SET answered = FALSE,
-          tally_submission_id = NULL,
-          submitted_at = NULL
-      WHERE questionnaire_id = $1
-        AND answered = TRUE
-      `,
-      [questionnaireId]
-    )
+    const trimmedOrganizationId =
+      typeof organizationId === "string" && organizationId.trim().length ? organizationId.trim() : null
+
+    let organizationName: string | null = null
+
+    if (trimmedOrganizationId) {
+      const organizationResult = await pool.query(
+        `
+        SELECT id, name
+        FROM organizations
+        WHERE id = $1
+        `,
+        [trimmedOrganizationId]
+      )
+
+      if (!organizationResult.rows[0]) {
+        return res.status(404).json({ error: "Organizacion no encontrada" })
+      }
+
+      organizationName = organizationResult.rows[0].name
+    }
+
+    const resetResult = trimmedOrganizationId
+      ? await pool.query(
+          `
+          UPDATE questionnaire_responses qr
+          SET answered = FALSE,
+              tally_submission_id = NULL,
+              submitted_at = NULL
+          FROM user_membership um
+          WHERE qr.questionnaire_id = $1
+            AND qr.answered = TRUE
+            AND um.user_id = qr.user_id
+            AND um.organization_id = $2
+          `,
+          [questionnaireId, trimmedOrganizationId]
+        )
+      : await pool.query(
+          `
+          UPDATE questionnaire_responses
+          SET answered = FALSE,
+              tally_submission_id = NULL,
+              submitted_at = NULL
+          WHERE questionnaire_id = $1
+            AND answered = TRUE
+          `,
+          [questionnaireId]
+        )
 
     return res.json({
       id: questionnaireResult.rows[0].id,
       title: questionnaireResult.rows[0].title,
       resetCount: resetResult.rowCount ?? 0,
+      organizationId: trimmedOrganizationId,
+      organizationName,
     })
   } catch (err) {
     console.error("❌ Error reabriendo el cuestionario:", err)

@@ -10,6 +10,7 @@ import { apiGet, apiPost, apiPut } from "@/lib/apiClient"
    ========================= */
 type AnswerMap = Record<string, boolean>
 type DBForm = { id: string; title: string; active: boolean }
+type OrganizationOption = { id: string; name: string }
 
 declare global {
   interface Window {
@@ -60,6 +61,8 @@ export default function CuestionariosPage() {
   const [loading, setLoading] = useState(true)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [resettingId, setResettingId] = useState<string | null>(null)
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("all")
   const currentOpenId = useRef<string | null>(null)
   const isSuperAdmin =
     user?.roleName?.toLowerCase() === "superadmin" || user?.roleScope === "global"
@@ -156,6 +159,37 @@ export default function CuestionariosPage() {
 
     if (user) fetchFormsAndResponses()
   }, [user])
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      if (!isSuperAdmin) {
+        setOrganizations([])
+        setSelectedOrganizationId("all")
+        return
+      }
+
+      try {
+        const res = await apiGet("/api/admin/org-structure")
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data?.error || "No se pudieron cargar las organizaciones")
+        }
+
+        const list = Array.isArray(data?.organizations)
+          ? data.organizations.map((organization: any) => ({
+              id: organization.id,
+              name: organization.name,
+            }))
+          : []
+
+        setOrganizations(list)
+      } catch (error) {
+        console.error("Error cargando organizaciones:", error)
+      }
+    }
+
+    fetchOrganizations()
+  }, [isSuperAdmin])
 
   /* =========================
      4️⃣ Guardar respuesta + XP
@@ -255,19 +289,27 @@ export default function CuestionariosPage() {
 
     try {
       setResettingId(form.id)
-      const res = await apiPut(`/api/questionnaires/${form.id}/reset`, {})
+      const res = await apiPut(`/api/questionnaires/${form.id}/reset`, {
+        organizationId: selectedOrganizationId === "all" ? null : selectedOrganizationId,
+      })
       const data = await res.json()
 
       if (!res.ok) {
         throw new Error(data?.error || "No se pudo reabrir el cuestionario")
       }
 
-      setAnswered((prev) => {
-        if (!prev[form.id]) return prev
-        const next = { ...prev }
-        delete next[form.id]
-        return next
-      })
+      const shouldResetLocalState =
+        selectedOrganizationId === "all" ||
+        (typeof user?.organizationId === "string" && user.organizationId === selectedOrganizationId)
+
+      if (shouldResetLocalState) {
+        setAnswered((prev) => {
+          if (!prev[form.id]) return prev
+          const next = { ...prev }
+          delete next[form.id]
+          return next
+        })
+      }
     } catch (error) {
       console.error("Error reabriendo cuestionario:", error)
     } finally {
@@ -293,6 +335,30 @@ export default function CuestionariosPage() {
           Completa los formularios para ganar puntos. Los desactivados aparecerán en gris.
         </p>
       </header>
+
+      {isSuperAdmin && (
+        <section className="mb-6 flex flex-col gap-2 sm:max-w-sm">
+          <label htmlFor="questionnaire-reset-organization" className="text-sm font-medium text-gray-700">
+            Reapertura por organizacion
+          </label>
+          <select
+            id="questionnaire-reset-organization"
+            value={selectedOrganizationId}
+            onChange={(event) => setSelectedOrganizationId(event.target.value)}
+            className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-gray-400"
+          >
+            <option value="all">Todas las organizaciones</option>
+            {organizations.map((organization) => (
+              <option key={organization.id} value={organization.id}>
+                {organization.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500">
+            El boton &quot;Permitir rehacer&quot; afectara solo a la organizacion seleccionada.
+          </p>
+        </section>
+      )}
 
       {!user && (
         <p className="text-sm text-orange-600 mb-4">

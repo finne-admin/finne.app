@@ -148,7 +148,9 @@ export const findOrganizationById = async (organizationId: string) => {
       slug,
       max_daily_active_pauses,
       season_deadline,
-      season_timezone
+      season_timezone,
+      season_anchor_date,
+      season_interval_months
     FROM organizations
     WHERE id = $1
     `,
@@ -233,7 +235,9 @@ export const fetchOrganizationStructure = async () => {
       slug,
       max_daily_active_pauses,
       season_deadline,
-      season_timezone
+      season_timezone,
+      season_anchor_date,
+      season_interval_months
     FROM organizations
     ORDER BY name
     `
@@ -253,7 +257,9 @@ export const listOrganizationSeasonTimers = async () => {
       name,
       slug,
       season_deadline,
-      season_timezone
+      season_timezone,
+      season_anchor_date,
+      season_interval_months
     FROM organizations
     ORDER BY name
     `
@@ -264,7 +270,9 @@ export const listOrganizationSeasonTimers = async () => {
 export const updateOrganizationSeasonTimerById = async (
   organizationId: string,
   seasonDeadline: string | null,
-  seasonTimezone: string | null
+  seasonTimezone: string | null,
+  seasonAnchorDate: string | null,
+  seasonIntervalMonths: number | null
 ) => {
   const pool = await getPool();
   const { rows } = await pool.query(
@@ -272,11 +280,13 @@ export const updateOrganizationSeasonTimerById = async (
     UPDATE organizations
     SET
       season_deadline = $2,
-      season_timezone = $3
+      season_timezone = $3,
+      season_anchor_date = $4,
+      season_interval_months = $5
     WHERE id = $1
-    RETURNING id, name, slug, season_deadline, season_timezone
+    RETURNING id, name, slug, season_deadline, season_timezone, season_anchor_date, season_interval_months
     `,
-    [organizationId, seasonDeadline, seasonTimezone]
+    [organizationId, seasonDeadline, seasonTimezone, seasonAnchorDate, seasonIntervalMonths]
   );
   return rows[0];
 };

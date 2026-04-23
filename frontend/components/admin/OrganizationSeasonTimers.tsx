@@ -14,6 +14,8 @@ type OrganizationTimer = {
   slug: string
   season_deadline?: string | null
   season_timezone?: string | null
+  season_anchor_date?: string | null
+  season_interval_months?: number | null
 }
 
 const toDateInput = (value?: string | null) => {
@@ -21,10 +23,19 @@ const toDateInput = (value?: string | null) => {
   return value.slice(0, 10)
 }
 
+const INTERVAL_OPTIONS = [
+  { value: "1", label: "1 mes" },
+  { value: "2", label: "2 meses" },
+  { value: "3", label: "3 meses" },
+  { value: "6", label: "6 meses" },
+  { value: "12", label: "12 meses" },
+]
+
 export function OrganizationSeasonTimers() {
   const [organizations, setOrganizations] = React.useState<OrganizationTimer[]>([])
   const [selectedOrgId, setSelectedOrgId] = React.useState<string>("")
-  const [deadline, setDeadline] = React.useState<string>("")
+  const [anchorDate, setAnchorDate] = React.useState<string>("")
+  const [intervalMonths, setIntervalMonths] = React.useState<string>("1")
   const [timezone, setTimezone] = React.useState<string>("Europe/Madrid")
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
@@ -48,7 +59,8 @@ export function OrganizationSeasonTimers() {
         if (list.length) {
           const first = list[0]
           setSelectedOrgId(first.id)
-          setDeadline(toDateInput(first.season_deadline))
+          setAnchorDate(toDateInput(first.season_anchor_date ?? first.season_deadline))
+          setIntervalMonths(String(first.season_interval_months ?? 1))
           setTimezone(first.season_timezone || "Europe/Madrid")
         }
       } catch (err) {
@@ -64,14 +76,15 @@ export function OrganizationSeasonTimers() {
   React.useEffect(() => {
     const selected = organizations.find((org) => org.id === selectedOrgId)
     if (!selected) return
-    setDeadline(toDateInput(selected.season_deadline))
+    setAnchorDate(toDateInput(selected.season_anchor_date ?? selected.season_deadline))
+    setIntervalMonths(String(selected.season_interval_months ?? 1))
     setTimezone(selected.season_timezone || "Europe/Madrid")
   }, [organizations, selectedOrgId])
 
   const handleSave = async () => {
     if (!selectedOrgId) return
-    if (!deadline) {
-      setError("Debes indicar una fecha limite de temporada")
+    if (!anchorDate) {
+      setError("Debes indicar la fecha de inicio del ciclo")
       return
     }
     try {
@@ -79,7 +92,9 @@ export function OrganizationSeasonTimers() {
       setError("")
       setStatus("")
       const res = await apiPut(`/api/admin/season-timers/${selectedOrgId}`, {
-        season_deadline: deadline,
+        season_deadline: null,
+        season_anchor_date: anchorDate,
+        season_interval_months: Number(intervalMonths),
         season_timezone: timezone,
       })
       const data = await res.json()
@@ -94,6 +109,9 @@ export function OrganizationSeasonTimers() {
                 ...org,
                 season_deadline: updated.season_deadline ?? updated.seasonDeadline ?? null,
                 season_timezone: updated.season_timezone ?? updated.seasonTimezone ?? null,
+                season_anchor_date: updated.season_anchor_date ?? updated.seasonAnchorDate ?? null,
+                season_interval_months:
+                  updated.season_interval_months ?? updated.seasonIntervalMonths ?? null,
               }
             : org
         )
@@ -155,14 +173,32 @@ export function OrganizationSeasonTimers() {
             </div>
 
             {selectedOrgId && (
-              <div className="grid gap-4 sm:grid-cols-[200px_1fr] sm:items-end">
+              <div className="grid gap-4 lg:grid-cols-[200px_180px_minmax(0,1fr)] lg:items-end">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Fecha limite</label>
+                  <label className="text-sm font-medium text-gray-700">Inicio del ciclo</label>
                   <Input
                     type="date"
-                    value={deadline}
-                    onChange={(event) => setDeadline(event.target.value)}
+                    value={anchorDate}
+                    onChange={(event) => setAnchorDate(event.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Intervalo</label>
+                  <Select value={intervalMonths} onValueChange={setIntervalMonths}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un intervalo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INTERVAL_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">
+                    La temporada se reinicia automáticamente al completar este ciclo.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Zona horaria</label>
@@ -177,6 +213,13 @@ export function OrganizationSeasonTimers() {
                 </div>
               </div>
             )}
+
+            <div className="rounded-md border border-emerald-100 bg-emerald-50/40 px-4 py-3 text-sm text-gray-600">
+              Próximo corte calculado desde <span className="font-medium">{anchorDate || "la fecha seleccionada"}</span> cada{" "}
+              <span className="font-medium">
+                {INTERVAL_OPTIONS.find((option) => option.value === intervalMonths)?.label ?? `${intervalMonths} meses`}
+              </span>.
+            </div>
 
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={saving}>
