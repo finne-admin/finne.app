@@ -118,8 +118,14 @@ const fetchScopeNames = async (organizationId?: string | null, departmentId?: st
 const getRewardModeForSlug = (organizationSlug?: string | null) =>
   organizationSlug?.toLowerCase() === "stn" ? "classic_top3" : "raffle_thresholds"
 
-const parseIsoDateToUtc = (value?: string | null) => {
+const parseIsoDateToUtc = (value?: string | Date | null) => {
   if (!value) return null
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null
+    return new Date(
+      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 0, 0, 0, 0)
+    )
+  }
   const [year, month, day] = value.split("-").map(Number)
   if (!year || !month || !day) return null
   return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
@@ -628,13 +634,18 @@ export const getRankingController = async (req: Request, res: Response) => {
         ? scopeInfo.organizationId ?? null
         : membershipInfo?.organizationId ?? null
 
+    const raffleThresholdsPromise =
+      rewardMode === "classic_top3" || !rewardOrganizationId
+        ? Promise.resolve([])
+        : getOrganizationRaffleThresholds(rewardOrganizationId)
+
     const [top, position, rewards, userExp, searchResults, raffleThresholds] = await Promise.all([
       getRankingPage(limit, offset, filters),
       getUserRankingPosition(userId, filters),
       resolveRewardsForScope(scopeInfo as any),
       getUserPeriodicalExp(userId),
       searchQuery ? searchRankingUsers(searchQuery, 5, filters) : Promise.resolve([]),
-      getOrganizationRaffleThresholds(rewardOrganizationId),
+      raffleThresholdsPromise,
     ])
 
     const effectiveThresholds = rewardMode === "classic_top3" ? [] : raffleThresholds
