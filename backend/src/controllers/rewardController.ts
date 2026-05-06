@@ -3,8 +3,10 @@ import fs from "fs"
 import {
   RewardKey,
   RewardScopeType,
+  createRewardRaffleDraw,
   deleteRewardDefinition,
   getRewardDefinitionsForScope,
+  getLatestRewardRaffleDrawsByOrganization,
   getRaffleThresholdsByOrganization,
   getRaffleCandidatesByOrganization,
   replaceRaffleThresholdsByOrganization,
@@ -52,6 +54,22 @@ const mapRow = (row: any) => ({
   cta_url: row.cta_url,
   updated_by: row.updated_by,
   updated_at: row.updated_at,
+})
+
+const mapRaffleDrawRow = (row: any) => ({
+  rewardKey: row.reward_key,
+  winner: {
+    id: row.winner_user_id,
+    first_name: row.first_name ?? null,
+    last_name: row.last_name ?? null,
+    avatar_url: row.avatar_url ?? null,
+    periodical_exp: Number(row.periodical_exp ?? 0),
+    entries: Number(row.winner_entries ?? 0),
+  },
+  totalEntries: Number(row.total_entries ?? 0),
+  eligibleUsers: Number(row.eligible_users ?? 0),
+  excludedTopUserId: row.excluded_top_user_id ?? null,
+  drawnAt: row.drawn_at instanceof Date ? row.drawn_at.toISOString() : new Date(row.drawn_at).toISOString(),
 })
 
 export const listRewardDefinitionsController = async (req: Request, res: Response) => {
@@ -293,15 +311,33 @@ export const drawRaffleRewardController = async (req: Request, res: Response) =>
       }
     }
 
-    return res.json({
-      rewardKey,
+    await createRewardRaffleDraw({
       organizationId,
-      winner,
+      rewardKey,
+      winnerUserId: winner.id,
+      winnerEntries: winner.entries,
       totalEntries,
       eligibleUsers: weightedCandidates.length,
       excludedTopUserId: topUserId,
-      drawnAt: new Date().toISOString(),
+      drawnBy: userId ?? null,
     })
+
+    const latestRows = await getLatestRewardRaffleDrawsByOrganization(organizationId)
+    const saved = latestRows.find((row) => row.reward_key === rewardKey)
+
+    return res.json(
+      saved
+        ? mapRaffleDrawRow(saved)
+        : {
+            rewardKey,
+            organizationId,
+            winner,
+            totalEntries,
+            eligibleUsers: weightedCandidates.length,
+            excludedTopUserId: topUserId,
+            drawnAt: new Date().toISOString(),
+          }
+    )
   } catch (error) {
     console.error("Error realizando sorteo de recompensa:", error)
     return res.status(500).json({ error: "No se pudo realizar el sorteo" })

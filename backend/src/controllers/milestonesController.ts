@@ -29,6 +29,7 @@ import {
 } from "../db/queries/milestonesQueries"
 import { getMembershipForUser } from "../db/queries/userMembershipQueries"
 import { findDepartmentById, findOrganizationById } from "../db/queries/adminQueries"
+import { getLatestRewardRaffleDrawsByOrganization } from "../db/queries/rewardQueries"
 import { calculateWorkdayStreak } from "../utils/streak"
 import { getZonedDateInfo, nextCalendarDay, shiftDateByDays } from "../utils/timezone"
 import { addUserXP } from "../db/queries/xpQueries"
@@ -638,19 +639,50 @@ export const getRankingController = async (req: Request, res: Response) => {
       rewardMode === "classic_top3" || !rewardOrganizationId
         ? Promise.resolve([])
         : getOrganizationRaffleThresholds(rewardOrganizationId)
+    const raffleDrawsPromise =
+      rewardMode === "classic_top3" || !rewardOrganizationId
+        ? Promise.resolve([])
+        : getLatestRewardRaffleDrawsByOrganization(rewardOrganizationId)
 
-    const [top, position, rewards, userExp, searchResults, raffleThresholds] = await Promise.all([
+    const [top, position, rewards, userExp, searchResults, raffleThresholds, raffleDraws] = await Promise.all([
       getRankingPage(limit, offset, filters),
       getUserRankingPosition(userId, filters),
       resolveRewardsForScope(scopeInfo as any),
       getUserPeriodicalExp(userId),
       searchQuery ? searchRankingUsers(searchQuery, 5, filters) : Promise.resolve([]),
       raffleThresholdsPromise,
+      raffleDrawsPromise,
     ])
 
     const effectiveThresholds = rewardMode === "classic_top3" ? [] : raffleThresholds
     const userRaffleEntries =
       rewardMode === "classic_top3" ? 0 : calculateRaffleEntriesForPoints(userExp, effectiveThresholds)
+    const savedRaffleWinners =
+      rewardMode === "classic_top3"
+        ? {}
+        : Object.fromEntries(
+            raffleDraws.map((row: any) => [
+              row.reward_key,
+              {
+                rewardKey: row.reward_key,
+                winner: {
+                  id: row.winner_user_id,
+                  first_name: row.first_name ?? null,
+                  last_name: row.last_name ?? null,
+                  avatar_url: row.avatar_url ?? null,
+                  periodical_exp: Number(row.periodical_exp ?? 0),
+                  entries: Number(row.winner_entries ?? 0),
+                },
+                totalEntries: Number(row.total_entries ?? 0),
+                eligibleUsers: Number(row.eligible_users ?? 0),
+                excludedTopUserId: row.excluded_top_user_id ?? null,
+                drawnAt:
+                  row.drawn_at instanceof Date
+                    ? row.drawn_at.toISOString()
+                    : new Date(row.drawn_at).toISOString(),
+              },
+            ])
+          )
 
     return res.json({
       top,
@@ -668,6 +700,7 @@ export const getRankingController = async (req: Request, res: Response) => {
       rewardMode,
       raffleThresholds: effectiveThresholds,
       userRaffleEntries,
+      savedRaffleWinners,
       limit,
       offset,
       searchResults,

@@ -11,6 +11,7 @@ import {
   listRolesController,
   updateUserRoleController,
   updateUserMembershipController,
+  addManualXpController,
 } from "../controllers/admin/adminUsersController"
 import {
   listJoinCodesController,
@@ -70,6 +71,7 @@ router.delete("/users/:id", deleteUser)
 router.post("/users/:id/password", changeUserPassword)
 router.post("/users/:id/approve", approveUserRequest)
 router.post("/users/:id/reject", rejectUserRequest)
+router.post("/users/:id/xp", requireSuperAdmin, addManualXpController)
 router.put("/users/:id/role", requireSuperAdmin, updateUserRoleController)
 router.put("/users/:id/membership", requireSuperAdmin, updateUserMembershipController)
 router.get("/join-codes", requireSuperAdmin, listJoinCodesController)

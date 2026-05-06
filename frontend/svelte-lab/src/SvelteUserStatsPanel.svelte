@@ -55,6 +55,9 @@
       if (title) return `Logro · ${title}`;
       return "Logro";
     }
+    if (source === "admin_adjustment") {
+      return entry?.metadata?.reason_label || "Ajuste manual";
+    }
     if (source === "weekly_challenge") return "Reto semanal";
     if (source === "questionnaire") return "Cuestionario";
     if (source === "active_pause" || source === "pause") return "Pausa activa";

@@ -3,6 +3,7 @@ import bcrypt from "bcrypt"
 import {
   approveUserAccount,
   rejectUserAccount,
+  findUserById,
   updateUserPasswordById,
 } from "../../db/queries/userQueries"
 import {
@@ -13,6 +14,7 @@ import {
 } from "../../db/queries/adminQueries"
 import { getMembershipForUser, upsertUserMembership } from "../../db/queries/userMembershipQueries"
 import { findRoleById, listRoles } from "../../db/queries/roleQueries"
+import { addUserXP } from "../../db/queries/xpQueries"
 import { mapAdminUserRows, isSuperAdmin, validateOrganizationDepartmentScope } from "./shared"
 
 export const listUsers = async (req: Request, res: Response) => {
@@ -256,5 +258,108 @@ export const updateUserMembershipController = async (req: Request, res: Response
 
     console.error("Error actualizando membership:", error)
     return res.status(500).json({ error: "Error al actualizar organizacion/departamento" })
+  }
+}
+
+const ADMIN_XP_REASONS = new Set([
+  "correction",
+  "bonus",
+  "incident",
+  "campaign",
+  "manual_reward",
+  "other",
+])
+
+export const addManualXpController = async (req: Request, res: Response) => {
+  const { id } = req.params
+  const requester = (req as any).user
+  const {
+    points,
+    reasonKey,
+    reasonLabel,
+    reasonDetail,
+    effectiveAt,
+  } = req.body as {
+    points?: number
+    reasonKey?: string
+    reasonLabel?: string
+    reasonDetail?: string
+    effectiveAt?: string
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: "Falta el ID del usuario" })
+  }
+
+  if (!requester?.id) {
+    return res.status(401).json({ error: "No autenticado" })
+  }
+
+  if (!Number.isFinite(points) || Number(points) <= 0) {
+    return res.status(400).json({ error: "Los puntos deben ser un numero positivo" })
+  }
+
+  const normalizedPoints = Math.floor(Number(points))
+  if (normalizedPoints <= 0) {
+    return res.status(400).json({ error: "Los puntos deben ser un entero positivo" })
+  }
+
+  const normalizedReasonKey =
+    typeof reasonKey === "string" && ADMIN_XP_REASONS.has(reasonKey.trim())
+      ? reasonKey.trim()
+      : "other"
+
+  const normalizedReasonLabel =
+    typeof reasonLabel === "string" && reasonLabel.trim().length
+      ? reasonLabel.trim().slice(0, 120)
+      : "Ajuste manual"
+
+  const normalizedReasonDetail =
+    typeof reasonDetail === "string" && reasonDetail.trim().length
+      ? reasonDetail.trim().slice(0, 500)
+      : null
+
+  let createdAt: string | undefined
+  if (typeof effectiveAt === "string" && effectiveAt.trim().length) {
+    const parsed = new Date(effectiveAt)
+    if (Number.isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: "La fecha indicada no es valida" })
+    }
+    createdAt = parsed.toISOString()
+  }
+
+  try {
+    const targetUser = await findUserById(id)
+    if (!targetUser) {
+      return res.status(404).json({ error: "Usuario no encontrado" })
+    }
+
+    const result = await addUserXP(
+      id,
+      normalizedPoints,
+      {
+        source: "admin_adjustment",
+        reason_key: normalizedReasonKey,
+        reason_label: normalizedReasonLabel,
+        reason_detail: normalizedReasonDetail,
+        granted_by_user_id: requester.id,
+        granted_at: new Date().toISOString(),
+      },
+      createdAt ? { createdAt } : undefined
+    )
+
+    if (!result) {
+      return res.status(404).json({ error: "Usuario no encontrado" })
+    }
+
+    return res.json({
+      success: true,
+      user_id: result.id,
+      new_exp_total: result.exp,
+      added_points: result.added_points ?? normalizedPoints,
+    })
+  } catch (error) {
+    console.error("Error asignando XP manual:", error)
+    return res.status(500).json({ error: "Error al asignar XP manual" })
   }
 }

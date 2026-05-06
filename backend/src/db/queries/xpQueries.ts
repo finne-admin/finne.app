@@ -2,11 +2,20 @@ import { getPool } from "../../config/dbManager"
 
 const DAILY_ACTIVE_PAUSE_CAP = Number(process.env.ACTIVE_PAUSE_DAILY_CAP || "60")
 
+type AddUserXpOptions = {
+  createdAt?: string | Date
+}
+
 /**
  * Añade XP a un usuario y registra el evento en activity_points.
  * Aplica un tope diario cuando la fuente es una pausa activa.
  */
-export const addUserXP = async (userId: string, points: number, meta?: Record<string, any>) => {
+export const addUserXP = async (
+  userId: string,
+  points: number,
+  meta?: Record<string, any>,
+  options?: AddUserXpOptions
+) => {
   const pool = await getPool()
   let appliedPoints = points
 
@@ -34,11 +43,19 @@ export const addUserXP = async (userId: string, points: number, meta?: Record<st
     return userRow ? { ...userRow, added_points: 0 } : null
   }
 
-  await pool.query(
-    `INSERT INTO activity_points (user_id, action_type, points, metadata, created_at)
-     VALUES ($1, $2, $3, $4, NOW())`,
-    [userId, "xp_gain", appliedPoints, meta || {}]
-  )
+  if (options?.createdAt) {
+    await pool.query(
+      `INSERT INTO activity_points (user_id, action_type, points, metadata, created_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, "xp_gain", appliedPoints, meta || {}, options.createdAt]
+    )
+  } else {
+    await pool.query(
+      `INSERT INTO activity_points (user_id, action_type, points, metadata, created_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [userId, "xp_gain", appliedPoints, meta || {}]
+    )
+  }
 
   const { rows } = await pool.query(
     `

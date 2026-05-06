@@ -49,6 +49,7 @@ type RankingResponse = {
   rewards?: RewardsMap
   raffleThresholds?: RaffleThreshold[]
   userRaffleEntries?: number
+  savedRaffleWinners?: Partial<Record<'raffle_a' | 'raffle_b', RaffleDrawResult>>
   limit?: number
   offset?: number
   searchResults?: RankingUser[]
@@ -173,6 +174,7 @@ export default function RankingPage() {
         rewards: data.rewards ?? {},
         rewardMode: data.rewardMode ?? 'raffle_thresholds',
         raffleThresholds: Array.isArray(data.raffleThresholds) ? data.raffleThresholds : [],
+        savedRaffleWinners: data.savedRaffleWinners ?? {},
       })
     } catch (error) {
       console.error('Error al obtener ranking:', error)
@@ -191,6 +193,10 @@ export default function RankingPage() {
     setSearchQuery("")
     setSearchResults([])
   }, [filter])
+
+  useEffect(() => {
+    setDrawResults(ranking?.savedRaffleWinners ?? {})
+  }, [ranking?.savedRaffleWinners])
 
   useEffect(() => {
     if (!isSuperAdmin) return
@@ -653,6 +659,13 @@ export default function RankingPage() {
                       <p className="mt-1 text-sm text-gray-600">
                         {result.winner.entries.toLocaleString('es-ES')} participaciones entre{' '}
                         {result.totalEntries.toLocaleString('es-ES')} totales.
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Sorteado el{" "}
+                        {new Date(result.drawnAt).toLocaleString('es-ES', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
                       </p>
                     </div>
                   )

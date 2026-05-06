@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Eye, Pencil, Trash2, Search, Loader2 } from "lucide-react"
+import { Eye, Pencil, Trash2, Search, Loader2, Sparkles } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiGet, apiFetch, API_BASE_URL } from "@/lib/apiClient"
 
@@ -153,12 +153,16 @@ const XP_SOURCE_LABELS: Record<string, string> = {
   achievement: "Logro",
   weekly_challenge: "Reto semanal",
   questionnaire: "Cuestionario",
+  admin_adjustment: "Ajuste manual",
   xp_gain: "XP",
 }
 
 const resolveXpLabel = (entry: XpLog) => {
   const meta = entry.metadata ?? {}
   const source = (meta.source || entry.action_type || "xp_gain") as string
+  if (source === "admin_adjustment") {
+    return meta.reason_label || XP_SOURCE_LABELS[source] || "Ajuste manual"
+  }
   return XP_SOURCE_LABELS[source] ?? "XP"
 }
 
@@ -177,6 +181,36 @@ type EmployeeTableMode = "organization" | "global"
 interface EmployeeTableProps {
   mode?: EmployeeTableMode
 }
+
+type ManualXpFormState = {
+  points: string
+  reasonKey: string
+  reasonLabel: string
+  reasonDetail: string
+  effectiveAt: string
+}
+
+const MANUAL_XP_REASON_OPTIONS = [
+  { value: "bonus", label: "Bonus" },
+  { value: "manual_reward", label: "Recompensa manual" },
+  { value: "correction", label: "Corrección" },
+  { value: "campaign", label: "Campaña" },
+  { value: "incident", label: "Incidencia" },
+  { value: "other", label: "Otro" },
+]
+
+const formatLocalDateTimeInput = (date = new Date()) => {
+  const offsetMs = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
+const createDefaultManualXpForm = (): ManualXpFormState => ({
+  points: "",
+  reasonKey: "bonus",
+  reasonLabel: "Bonus",
+  reasonDetail: "",
+  effectiveAt: formatLocalDateTimeInput(),
+})
 
 interface OrganizationOption {
   id: string
@@ -206,6 +240,11 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
   const [editLoading, setEditLoading] = React.useState(false)
   const [editError, setEditError] = React.useState("")
   const [editSuccess, setEditSuccess] = React.useState("")
+  const [manualXpUser, setManualXpUser] = React.useState<Employee | null>(null)
+  const [manualXpForm, setManualXpForm] = React.useState<ManualXpFormState>(createDefaultManualXpForm)
+  const [manualXpLoading, setManualXpLoading] = React.useState(false)
+  const [manualXpError, setManualXpError] = React.useState("")
+  const [manualXpSuccess, setManualXpSuccess] = React.useState("")
   const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = React.useState(false)
   const [accountActionLoading, setAccountActionLoading] = React.useState<string | null>(null)
@@ -708,6 +747,79 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
     }
   }
 
+  const openManualXpModal = (employee: Employee) => {
+    setManualXpUser(employee)
+    setManualXpForm(createDefaultManualXpForm())
+    setManualXpError("")
+    setManualXpSuccess("")
+  }
+
+  const handleManualXpReasonChange = (reasonKey: string) => {
+    const selected = MANUAL_XP_REASON_OPTIONS.find((option) => option.value === reasonKey)
+    setManualXpForm((prev) => ({
+      ...prev,
+      reasonKey,
+      reasonLabel:
+        prev.reasonLabel.trim().length === 0 ||
+        MANUAL_XP_REASON_OPTIONS.some((option) => option.label === prev.reasonLabel)
+          ? selected?.label || "Ajuste manual"
+          : prev.reasonLabel,
+    }))
+  }
+
+  const submitManualXp = async () => {
+    if (!manualXpUser) return
+
+    const numericPoints = Number(manualXpForm.points)
+    if (!Number.isFinite(numericPoints) || numericPoints <= 0) {
+      setManualXpError("Introduce una cantidad de XP valida")
+      return
+    }
+
+    if (!manualXpForm.reasonLabel.trim()) {
+      setManualXpError("Indica el motivo de la subida")
+      return
+    }
+
+    try {
+      setManualXpLoading(true)
+      setManualXpError("")
+      setManualXpSuccess("")
+
+      const effectiveAt = manualXpForm.effectiveAt
+        ? new Date(manualXpForm.effectiveAt).toISOString()
+        : undefined
+
+      const res = await apiFetch(`${API_BASE_URL}/api/admin/users/${manualXpUser.id}/xp`, {
+        method: "POST",
+        body: JSON.stringify({
+          points: Math.floor(numericPoints),
+          reasonKey: manualXpForm.reasonKey,
+          reasonLabel: manualXpForm.reasonLabel.trim(),
+          reasonDetail: manualXpForm.reasonDetail.trim(),
+          effectiveAt,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo asignar XP")
+      }
+
+      setManualXpSuccess("XP asignada correctamente")
+      await fetchEmployees({ silent: true })
+      setTimeout(() => {
+        setManualXpUser(null)
+        setManualXpSuccess("")
+      }, 1200)
+    } catch (error) {
+      console.error("Error asignando XP manual:", error)
+      setManualXpError(error instanceof Error ? error.message : "No se pudo asignar XP")
+    } finally {
+      setManualXpLoading(false)
+    }
+  }
+
   const headerCheckboxChecked =
     paginatedEmployees.length > 0 &&
     paginatedEmployees.every((emp) => selectedEmployees.has(emp.id))
@@ -1046,6 +1158,11 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
                             <Button variant="ghost" size="icon" onClick={() => openStatsModal(employee)}>
                               <Eye className="h-4 w-4" />
                             </Button>
+                            {mode === "global" && (
+                              <Button variant="ghost" size="icon" onClick={() => openManualXpModal(employee)}>
+                                <Sparkles className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="icon" onClick={() => setEditUser(employee)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -1130,6 +1247,79 @@ export function EmployeeTable({ mode = "organization" }: EmployeeTableProps) {
               </Button>
               <Button onClick={handleSaveEdit} disabled={editLoading}>
                 {editLoading ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {manualXpUser && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative">
+            <h2 className="text-xl font-semibold mb-1">Sumar experiencia</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {manualXpUser.first_name} {manualXpUser.last_name} · {manualXpUser.email}
+            </p>
+
+            {manualXpError && <p className="text-sm text-red-600 mb-2">{manualXpError}</p>}
+            {manualXpSuccess && <p className="text-sm text-green-600 mb-2">{manualXpSuccess}</p>}
+
+            <div className="space-y-4">
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Cantidad de XP"
+                value={manualXpForm.points}
+                onChange={(e) => setManualXpForm((prev) => ({ ...prev, points: e.target.value }))}
+              />
+
+              <Select value={manualXpForm.reasonKey} onValueChange={handleManualXpReasonChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MANUAL_XP_REASON_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Input
+                placeholder="Etiqueta visible en historial"
+                value={manualXpForm.reasonLabel}
+                onChange={(e) => setManualXpForm((prev) => ({ ...prev, reasonLabel: e.target.value }))}
+              />
+
+              <textarea
+                className="min-h-[96px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="Detalle interno u observación"
+                value={manualXpForm.reasonDetail}
+                onChange={(e) => setManualXpForm((prev) => ({ ...prev, reasonDetail: e.target.value }))}
+              />
+
+              <div className="space-y-1">
+                <label className="text-sm text-gray-600">Fecha y hora efectiva</label>
+                <Input
+                  type="datetime-local"
+                  value={manualXpForm.effectiveAt}
+                  onChange={(e) => setManualXpForm((prev) => ({ ...prev, effectiveAt: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-5 gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setManualXpUser(null)}
+                disabled={manualXpLoading}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={submitManualXp} disabled={manualXpLoading}>
+                {manualXpLoading ? "Guardando..." : "Asignar XP"}
               </Button>
             </div>
           </div>

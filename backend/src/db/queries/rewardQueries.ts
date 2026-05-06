@@ -36,6 +36,47 @@ export type RewardRaffleCandidateRow = {
   periodical_exp: number
 }
 
+export type RewardRaffleDrawRow = {
+  id: number
+  organization_id: string
+  reward_key: Exclude<RewardKey, "guaranteed_winner">
+  winner_user_id: string
+  winner_entries: number
+  total_entries: number
+  eligible_users: number
+  excluded_top_user_id: string | null
+  drawn_by: string | null
+  drawn_at: Date
+  first_name: string | null
+  last_name: string | null
+  avatar_url: string | null
+  periodical_exp: number
+}
+
+let raffleDrawsTableEnsured = false
+
+export const ensureRewardRaffleDrawsTable = async () => {
+  if (raffleDrawsTableEnsured) return
+  const pool = await getPool()
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reward_raffle_draws (
+      id BIGSERIAL PRIMARY KEY,
+      organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      reward_key TEXT NOT NULL CHECK (reward_key IN ('raffle_a', 'raffle_b')),
+      winner_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      winner_entries INTEGER NOT NULL,
+      total_entries INTEGER NOT NULL,
+      eligible_users INTEGER NOT NULL,
+      excluded_top_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      drawn_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      drawn_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_reward_raffle_draws_org_key_drawn_at
+      ON reward_raffle_draws(organization_id, reward_key, drawn_at DESC, id DESC);
+  `)
+  raffleDrawsTableEnsured = true
+}
+
 const normalizeScopeId = (scopeType: RewardScopeType, scopeId?: string | null) => {
   if (scopeType === "global") return null
   return scopeId ?? null
@@ -177,6 +218,91 @@ export const getRaffleCandidatesByOrganization = async (organizationId: string) 
     INNER JOIN user_membership um ON um.user_id = u.id
     WHERE um.organization_id = $1
     ORDER BY COALESCE(u.periodical_exp, 0) DESC, u.first_name ASC, u.last_name ASC
+    `,
+    [organizationId]
+  )
+  return rows
+}
+
+export const createRewardRaffleDraw = async (input: {
+  organizationId: string
+  rewardKey: Exclude<RewardKey, "guaranteed_winner">
+  winnerUserId: string
+  winnerEntries: number
+  totalEntries: number
+  eligibleUsers: number
+  excludedTopUserId: string | null
+  drawnBy: string | null
+}) => {
+  await ensureRewardRaffleDrawsTable()
+  const pool = await getPool()
+  const { rows } = await pool.query<RewardRaffleDrawRow>(
+    `
+    INSERT INTO reward_raffle_draws (
+      organization_id,
+      reward_key,
+      winner_user_id,
+      winner_entries,
+      total_entries,
+      eligible_users,
+      excluded_top_user_id,
+      drawn_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING
+      id,
+      organization_id,
+      reward_key,
+      winner_user_id,
+      winner_entries,
+      total_entries,
+      eligible_users,
+      excluded_top_user_id,
+      drawn_by,
+      drawn_at,
+      NULL::text AS first_name,
+      NULL::text AS last_name,
+      NULL::text AS avatar_url,
+      0::int AS periodical_exp
+    `,
+    [
+      input.organizationId,
+      input.rewardKey,
+      input.winnerUserId,
+      input.winnerEntries,
+      input.totalEntries,
+      input.eligibleUsers,
+      input.excludedTopUserId,
+      input.drawnBy,
+    ]
+  )
+  return rows[0] || null
+}
+
+export const getLatestRewardRaffleDrawsByOrganization = async (organizationId: string) => {
+  await ensureRewardRaffleDrawsTable()
+  const pool = await getPool()
+  const { rows } = await pool.query<RewardRaffleDrawRow>(
+    `
+    SELECT DISTINCT ON (rrd.reward_key)
+      rrd.id,
+      rrd.organization_id,
+      rrd.reward_key,
+      rrd.winner_user_id,
+      rrd.winner_entries,
+      rrd.total_entries,
+      rrd.eligible_users,
+      rrd.excluded_top_user_id,
+      rrd.drawn_by,
+      rrd.drawn_at,
+      u.first_name,
+      u.last_name,
+      u.avatar_url,
+      COALESCE(u.periodical_exp, 0) AS periodical_exp
+    FROM reward_raffle_draws rrd
+    INNER JOIN users u ON u.id = rrd.winner_user_id
+    WHERE rrd.organization_id = $1
+    ORDER BY rrd.reward_key, rrd.drawn_at DESC, rrd.id DESC
     `,
     [organizationId]
   )

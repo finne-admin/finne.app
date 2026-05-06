@@ -46,6 +46,7 @@ const XP_SOURCE_META: Record<string, { icon: string; title: string; fallbackDeta
   achievement: { icon: "🏅", title: "Logro reclamado" },
   weekly_challenge: { icon: "🎯", title: "Reto semanal" },
   questionnaire: { icon: "📝", title: "Cuestionario" },
+  admin_adjustment: { icon: "🛠️", title: "Ajuste manual" },
   xp_gain: { icon: "✨", title: "XP" },
 }
 
@@ -70,6 +71,8 @@ const resolveXpEntryInfo = (log: XpLog) => {
     detail = meta.challenge_title || meta.challenge_id || detail || "Reto semanal"
   } else if (sourceKey === "questionnaire") {
     detail = meta.questionnaire_title || meta.questionnaire_id || detail || "Cuestionario"
+  } else if (sourceKey === "admin_adjustment") {
+    detail = meta.reason_label || meta.reason_detail || detail || "Ajuste manual"
   } else if (sourceKey === "active_pause" || sourceKey === "pause") {
     detail = detail || "Rutina diaria"
   } else if (meta.description) {
