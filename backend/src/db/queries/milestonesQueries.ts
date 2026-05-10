@@ -1,5 +1,6 @@
 import { PoolClient } from "pg"
 import { getPool } from "../../config/dbManager"
+import { ensureSeasonResetTable, getLatestApplicableResetAtForUser } from "./seasonResetQueries"
 
 export type TimestampRow = { created_at: string }
 
@@ -88,63 +89,74 @@ export const getUserBasics = async (userId: string) => {
 
 export const countCompletedAchievements = async (userId: string) => {
   const pool = await getPool()
+  const resetAt = await getLatestApplicableResetAtForUser(userId, "general_achievements")
   const { rows } = await pool.query(
     `
     SELECT COUNT(*)::int AS total
     FROM user_achievements
-    WHERE user_id = $1 AND completado = true
+    WHERE user_id = $1
+      AND completado = true
+      AND ($2::timestamptz IS NULL OR unlocked_at >= $2)
     `,
-    [userId]
+    [userId, resetAt]
   )
   return rows[0]?.total ?? 0
 }
 
 export const getActivePausesSince = async (userId: string, sinceISO: string): Promise<TimestampRow[]> => {
   const pool = await getPool()
+  const resetAt = await getLatestApplicableResetAtForUser(userId, "active_pauses")
   const { rows } = await pool.query(
     `
     SELECT created_at
     FROM active_pauses
-    WHERE user_id = $1 AND created_at >= $2
+    WHERE user_id = $1
+      AND created_at >= GREATEST($2::timestamptz, COALESCE($3::timestamptz, TIMESTAMPTZ 'epoch'))
     ORDER BY created_at DESC
     `,
-    [userId, sinceISO]
+    [userId, sinceISO, resetAt]
   )
   return rows as TimestampRow[]
 }
 
 export const getWeeklyActivityPauses = async (userId: string): Promise<TimestampRow[]> => {
   const pool = await getPool()
+  const resetAt = await getLatestApplicableResetAtForUser(userId, "active_pauses")
   const { rows } = await pool.query(
     `
     SELECT created_at
     FROM active_pauses
-    WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '10 days'
+    WHERE user_id = $1
+      AND created_at >= GREATEST(NOW() - INTERVAL '10 days', COALESCE($2::timestamptz, TIMESTAMPTZ 'epoch'))
     ORDER BY created_at DESC
     `,
-    [userId]
+    [userId, resetAt]
   )
   return rows as TimestampRow[]
 }
 
 export const getUnlockedAchievements = async (userId: string): Promise<UnlockedAchievementRow[]> => {
   const pool = await getPool()
+  const resetAt = await getLatestApplicableResetAtForUser(userId, "general_achievements")
   const { rows } = await pool.query(
     `
     SELECT c.id, c.title, c.description, c.icon
     FROM user_achievements ua
     JOIN achievements_catalog c ON c.id = ua.achievement_id
-    WHERE ua.user_id = $1 AND ua.completado = true
+    WHERE ua.user_id = $1
+      AND ua.completado = true
+      AND ($2::timestamptz IS NULL OR ua.unlocked_at >= $2)
     ORDER BY ua.unlocked_at DESC NULLS LAST
     LIMIT 50
     `,
-    [userId]
+    [userId, resetAt]
   )
   return rows as UnlockedAchievementRow[]
 }
 
 export const getAchievementsCatalogWithStatus = async (userId: string): Promise<AchievementStatusRow[]> => {
   const pool = await getPool()
+  const resetAt = await getLatestApplicableResetAtForUser(userId, "general_achievements")
   const { rows } = await pool.query(
     `
     SELECT
@@ -162,9 +174,10 @@ export const getAchievementsCatalogWithStatus = async (userId: string): Promise<
     LEFT JOIN user_achievements ua
       ON ua.achievement_id = c.id
      AND ua.user_id = $1
+     AND ($2::timestamptz IS NULL OR ua.unlocked_at >= $2)
     ORDER BY COALESCE(c.group_id::text, c.id::text), COALESCE(c.level, 999), c.title ASC
     `,
-    [userId]
+    [userId, resetAt]
   )
   return rows as AchievementStatusRow[]
 }
@@ -199,7 +212,8 @@ export const getUserWeeklyChallenges = async (
 export const claimAchievementRow = async (
   client: PoolClient,
   userId: string,
-  achievementId: string
+  achievementId: string,
+  resetAt?: string | null
 ) => {
   const { rows } = await client.query(
     `
@@ -209,9 +223,10 @@ export const claimAchievementRow = async (
       AND achievement_id = $2
       AND completado = true
       AND (reclamado = false OR reclamado IS NULL)
+      AND ($3::timestamptz IS NULL OR unlocked_at >= $3)
     RETURNING achievement_id
     `,
-    [userId, achievementId]
+    [userId, achievementId, resetAt ?? null]
   )
   return (rows[0] as WeeklyChallengeProgressRow) || null
 }
@@ -316,27 +331,40 @@ export const getUnclaimedCounts = async (
   userId: string
 ): Promise<{ achievements: number; weekly: number }> => {
   const pool = await getPool()
+  const resetAt = await getLatestApplicableResetAtForUser(userId, "general_achievements")
   const { rows } = await pool.query(
     `
     SELECT
       (SELECT COUNT(*)::int
        FROM user_achievements
-       WHERE user_id = $1 AND completado = true AND (reclamado = false OR reclamado IS NULL)
+       WHERE user_id = $1
+         AND completado = true
+         AND (reclamado = false OR reclamado IS NULL)
+         AND ($2::timestamptz IS NULL OR unlocked_at >= $2)
       ) AS achievements,
       (SELECT COUNT(*)::int
        FROM user_weekly_challenges
        WHERE user_id = $1 AND completado = true AND (reclamado = false OR reclamado IS NULL)
       ) AS weekly
     `,
-    [userId]
+    [userId, resetAt]
   )
   return rows[0] || { achievements: 0, weekly: 0 }
 }
 
 export const getDepartmentTotalExp = async () => {
+  await ensureSeasonResetTable()
   const pool = await getPool()
   const { rows } = await pool.query(
-    `SELECT COALESCE(SUM(periodical_exp), 0) AS total FROM users`
+    `
+    SELECT COALESCE(SUM(periodical_exp), 0) AS total
+    FROM (
+      SELECT u.id, ${rankingPointsExpr} AS periodical_exp
+      FROM users u
+      LEFT JOIN user_membership um ON um.user_id = u.id
+      ${rankingResetJoin}
+    ) ranked
+    `
   )
   return Number(rows[0]?.total ?? 0)
 }
@@ -359,18 +387,40 @@ const buildRankingFilterClause = (filters?: RankingFilter) => {
   return { whereClause, params }
 }
 
+const rankingResetJoin = `
+  LEFT JOIN LATERAL (
+    SELECT MAX(srm.reset_at) AS reset_at
+    FROM season_reset_markers srm
+    WHERE srm.reset_type = 'ranking'
+      AND srm.organization_id = um.organization_id
+      AND (srm.department_id IS NULL OR srm.department_id = um.department_id)
+  ) rreset ON TRUE
+`
+
+const rankingPointsExpr = `
+  COALESCE((
+    SELECT SUM(ap.points)
+    FROM activity_points ap
+    WHERE ap.user_id = u.id
+      AND ap.action_type = 'xp_gain'
+      AND ap.created_at >= COALESCE(rreset.reset_at, TIMESTAMPTZ 'epoch')
+  ), 0)
+`
+
 export const getRankingTop = async (limit = 10, filters?: RankingFilter): Promise<RankingRow[]> => {
+  await ensureSeasonResetTable()
   const pool = await getPool()
   const { whereClause, params } = buildRankingFilterClause(filters)
   params.push(limit)
 
   const { rows } = await pool.query(
     `
-    SELECT u.id, u.first_name, u.last_name, u.avatar_url, COALESCE(u.periodical_exp, 0) AS periodical_exp
+    SELECT u.id, u.first_name, u.last_name, u.avatar_url, ${rankingPointsExpr} AS periodical_exp
     FROM users u
     LEFT JOIN user_membership um ON um.user_id = u.id
+    ${rankingResetJoin}
     ${whereClause}
-    ORDER BY COALESCE(u.periodical_exp, 0) DESC, u.first_name ASC
+    ORDER BY periodical_exp DESC, u.first_name ASC
     LIMIT $${params.length}
     `,
     params
@@ -383,6 +433,7 @@ export const getRankingPage = async (
   offset = 0,
   filters?: RankingFilter
 ): Promise<RankingRow[]> => {
+  await ensureSeasonResetTable()
   const pool = await getPool()
   const { whereClause, params } = buildRankingFilterClause(filters)
   params.push(limit)
@@ -390,11 +441,12 @@ export const getRankingPage = async (
 
   const { rows } = await pool.query(
     `
-    SELECT u.id, u.first_name, u.last_name, u.avatar_url, COALESCE(u.periodical_exp, 0) AS periodical_exp
+    SELECT u.id, u.first_name, u.last_name, u.avatar_url, ${rankingPointsExpr} AS periodical_exp
     FROM users u
     LEFT JOIN user_membership um ON um.user_id = u.id
+    ${rankingResetJoin}
     ${whereClause}
-    ORDER BY COALESCE(u.periodical_exp, 0) DESC, u.first_name ASC
+    ORDER BY periodical_exp DESC, u.first_name ASC
     LIMIT $${params.length - 1}
     OFFSET $${params.length}
     `,
@@ -408,6 +460,7 @@ export const searchRankingUsers = async (
   limit = 5,
   filters?: RankingFilter
 ): Promise<RankingMatchRow[]> => {
+  await ensureSeasonResetTable()
   const pool = await getPool()
   const { whereClause, params } = buildRankingFilterClause(filters)
   const searchParam = `${query}%`
@@ -422,9 +475,10 @@ export const searchRankingUsers = async (
         u.first_name,
         u.last_name,
         u.avatar_url,
-        COALESCE(u.periodical_exp, 0) AS periodical_exp
+        ${rankingPointsExpr} AS periodical_exp
       FROM users u
       LEFT JOIN user_membership um ON um.user_id = u.id
+      ${rankingResetJoin}
       ${whereClause}
     ),
     ranked AS (
@@ -448,9 +502,16 @@ export const searchRankingUsers = async (
 }
 
 export const getUserPeriodicalExp = async (userId: string): Promise<number> => {
+  await ensureSeasonResetTable()
   const pool = await getPool()
   const { rows } = await pool.query(
-    `SELECT COALESCE(periodical_exp, 0) AS periodical_exp FROM users WHERE id = $1`,
+    `
+    SELECT ${rankingPointsExpr} AS periodical_exp
+    FROM users u
+    LEFT JOIN user_membership um ON um.user_id = u.id
+    ${rankingResetJoin}
+    WHERE u.id = $1
+    `,
     [userId]
   )
   return Number(rows[0]?.periodical_exp ?? 0)
@@ -460,6 +521,7 @@ export const getUserRankingPosition = async (
   userId: string,
   filters?: RankingFilter
 ): Promise<RankingPositionRow | null> => {
+  await ensureSeasonResetTable()
   const pool = await getPool()
   const { whereClause, params } = buildRankingFilterClause(filters)
   const userParamIndex = params.length + 1
@@ -467,9 +529,10 @@ export const getUserRankingPosition = async (
   const { rows } = await pool.query(
     `
     WITH filtered AS (
-      SELECT u.id, COALESCE(u.periodical_exp, 0) AS periodical_exp
+      SELECT u.id, ${rankingPointsExpr} AS periodical_exp
       FROM users u
       LEFT JOIN user_membership um ON um.user_id = u.id
+      ${rankingResetJoin}
       ${whereClause}
     ),
     ranked AS (

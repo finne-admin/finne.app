@@ -60,6 +60,7 @@ export const resetOrganizationDataController = async (req: Request, res: Respons
       resetWeeklyAchievements: Boolean(resetWeeklyAchievements),
       resetActivePauses: Boolean(resetActivePauses),
       resetRanking: Boolean(resetRanking),
+      requestedBy: (req as any).user?.id ?? null,
     })
 
     return res.json({ success: true, result })

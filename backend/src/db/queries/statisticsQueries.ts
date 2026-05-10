@@ -1,25 +1,28 @@
 import { getPool } from "../../config/dbManager"
+import { getLatestApplicableResetAtForUser } from "./seasonResetQueries"
 
 const AVERAGE_PAUSE_MINUTES = Number(process.env.AVERAGE_PAUSE_MINUTES || "8")
 
 export const getUserStatistics = async (userId: string) => {
   const pool = await getPool()
+  const resetAt = await getLatestApplicableResetAtForUser(userId, "active_pauses")
 
   try {
     const { rows: summaryRows } = await pool.query(
       `
       SELECT
-        (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1) AS total_exercises,
-        (SELECT COUNT(DISTINCT DATE(created_at)) FROM active_pauses WHERE user_id = $1) AS distinct_days,
-        (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '7 days') AS weekly_sessions,
-        (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '15 days') AS last_15_days,
+        (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1 AND ($2::timestamptz IS NULL OR created_at >= $2)) AS total_exercises,
+        (SELECT COUNT(DISTINCT DATE(created_at)) FROM active_pauses WHERE user_id = $1 AND ($2::timestamptz IS NULL OR created_at >= $2)) AS distinct_days,
+        (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1 AND created_at >= GREATEST(NOW() - INTERVAL '7 days', COALESCE($2::timestamptz, TIMESTAMPTZ 'epoch'))) AS weekly_sessions,
+        (SELECT COUNT(*) FROM active_pauses WHERE user_id = $1 AND created_at >= GREATEST(NOW() - INTERVAL '15 days', COALESCE($2::timestamptz, TIMESTAMPTZ 'epoch'))) AS last_15_days,
         (
           SELECT COALESCE(ROUND(AVG(satisfaction_level), 1), 0)
           FROM exercise_satisfaction
           WHERE user_id = $1
+            AND ($2::timestamptz IS NULL OR created_at >= $2)
         ) AS avg_satisfaction
       `,
-      [userId]
+      [userId, resetAt]
     )
 
     const summary = summaryRows[0] || {
@@ -39,10 +42,11 @@ export const getUserStatistics = async (userId: string) => {
       LEFT JOIN videos v
           ON v.id = ap.video1_id OR v.id = ap.video2_id
       WHERE ap.user_id = $1
+        AND ($2::timestamptz IS NULL OR ap.created_at >= $2)
       GROUP BY category
       ORDER BY total_sessions DESC
       `,
-      [userId]
+      [userId, resetAt]
     )
 
     const { rows: timelineRows } = await pool.query(
@@ -52,10 +56,11 @@ export const getUserStatistics = async (userId: string) => {
         COUNT(*) AS sessions
       FROM active_pauses ap
       WHERE ap.user_id = $1
+        AND ($2::timestamptz IS NULL OR ap.created_at >= $2)
       GROUP BY day
       ORDER BY day ASC
       `,
-      [userId]
+      [userId, resetAt]
     )
 
     const { rows: weeklyRows } = await pool.query(
@@ -65,10 +70,11 @@ export const getUserStatistics = async (userId: string) => {
         COUNT(*) AS sessions
       FROM active_pauses ap
       WHERE ap.user_id = $1
+        AND ($2::timestamptz IS NULL OR ap.created_at >= $2)
       GROUP BY day_of_week
       ORDER BY MIN(ap.created_at)
       `,
-      [userId]
+      [userId, resetAt]
     )
 
     const { rows: hourlyRows } = await pool.query(
@@ -83,10 +89,11 @@ export const getUserStatistics = async (userId: string) => {
         COUNT(*) AS sessions
       FROM active_pauses ap
       WHERE ap.user_id = $1
+        AND ($2::timestamptz IS NULL OR ap.created_at >= $2)
       GROUP BY time_slot
       ORDER BY time_slot
       `,
-      [userId]
+      [userId, resetAt]
     )
 
     const { rows: favoriteRows } = await pool.query(
@@ -98,11 +105,12 @@ export const getUserStatistics = async (userId: string) => {
       FROM active_pauses ap
       LEFT JOIN videos v ON v.id = ap.video1_id OR v.id = ap.video2_id
       WHERE ap.user_id = $1
+        AND ($2::timestamptz IS NULL OR ap.created_at >= $2)
       GROUP BY v.titulo, v.wistia_id
       ORDER BY total_sessions DESC
       LIMIT 3
       `,
-      [userId]
+      [userId, resetAt]
     )
 
     const { rows: weeklyComparisonRows } = await pool.query(
@@ -112,22 +120,23 @@ export const getUserStatistics = async (userId: string) => {
         COUNT(*)::int AS sessions
       FROM active_pauses ap
       WHERE ap.user_id = $1
-        AND ap.created_at >= NOW() - INTERVAL '12 weeks'
+        AND ap.created_at >= GREATEST(NOW() - INTERVAL '12 weeks', COALESCE($2::timestamptz, TIMESTAMPTZ 'epoch'))
       GROUP BY week_start
       ORDER BY week_start
       `,
-      [userId]
+      [userId, resetAt]
     )
 
     const { rows: timeRows } = await pool.query(
       `
       SELECT
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int AS week_pauses,
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS month_pauses
+        COUNT(*) FILTER (WHERE created_at >= GREATEST(NOW() - INTERVAL '7 days', COALESCE($2::timestamptz, TIMESTAMPTZ 'epoch')))::int AS week_pauses,
+        COUNT(*) FILTER (WHERE created_at >= GREATEST(NOW() - INTERVAL '30 days', COALESCE($2::timestamptz, TIMESTAMPTZ 'epoch')))::int AS month_pauses
       FROM active_pauses
       WHERE user_id = $1
+        AND ($2::timestamptz IS NULL OR created_at >= $2)
       `,
-      [userId]
+      [userId, resetAt]
     )
     const timeRow = timeRows[0] || { week_pauses: 0, month_pauses: 0 }
 

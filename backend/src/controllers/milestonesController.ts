@@ -33,6 +33,7 @@ import { getLatestRewardRaffleDrawsByOrganization } from "../db/queries/rewardQu
 import { calculateWorkdayStreak } from "../utils/streak"
 import { getZonedDateInfo, nextCalendarDay, shiftDateByDays } from "../utils/timezone"
 import { addUserXP } from "../db/queries/xpQueries"
+import { getLatestApplicableResetAtForUser } from "../db/queries/seasonResetQueries"
 import { getAchievementsProgress } from "../services/achievementService"
 import {
   calculateRaffleEntriesForPoints,
@@ -115,9 +116,6 @@ const fetchScopeNames = async (organizationId?: string | null, departmentId?: st
   }
   return { organizationName, organizationSlug, departmentName }
 }
-
-const getRewardModeForSlug = (organizationSlug?: string | null) =>
-  organizationSlug?.toLowerCase() === "stn" ? "classic_top3" : "raffle_thresholds"
 
 const parseIsoDateToUtc = (value?: string | Date | null) => {
   if (!value) return null
@@ -281,7 +279,8 @@ export const claimAchievementController = async (req: Request, res: Response) =>
 
   try {
     await client.query("BEGIN")
-    const row = await claimAchievementRow(client, userId, achievementId)
+    const achievementResetAt = await getLatestApplicableResetAtForUser(userId, "general_achievements")
+    const row = await claimAchievementRow(client, userId, achievementId, achievementResetAt)
     if (!row) {
       await client.query("ROLLBACK")
       return res.status(400).json({ error: "El logro no esta disponible para reclamar" })
@@ -562,7 +561,7 @@ export const getRankingController = async (req: Request, res: Response) => {
         seasonTimezone = org?.season_timezone ?? null
         seasonAnchorDate = org?.season_anchor_date ?? null
         seasonIntervalMonths = org?.season_interval_months ? Number(org.season_interval_months) : null
-        rewardMode = getRewardModeForSlug(org?.slug ?? null)
+        rewardMode = "raffle_thresholds"
         scopeInfo = {
           mode: requestedDept ? "department" : "organization",
           organizationId: requestedOrg,
@@ -570,33 +569,6 @@ export const getRankingController = async (req: Request, res: Response) => {
           organizationSlug,
           departmentId: requestedDept ?? null,
           departmentName,
-        }
-      } else if ((membershipInfo?.organizationSlug ?? "").toLowerCase() === "stn") {
-        // Para STN mantenemos siempre el modo clasico aunque el usuario sea superadmin.
-        // Si entra sin filtro explicito, arrancamos directamente en el alcance de su organizacion.
-        const requestedOrg = membershipInfo.organizationId
-        const requestedDept = membershipInfo.departmentId
-        if (!requestedOrg) {
-          return res
-            .status(400)
-            .json({ error: "Tu cuenta de STN no esta asociada a una organizacion valida" })
-        }
-
-        filters = { organizationId: requestedOrg }
-        const { organizationName, organizationSlug } = await fetchScopeNames(requestedOrg)
-        const org = await findOrganizationById(requestedOrg)
-        seasonDeadline = resolveSeasonDeadline(org)
-        seasonTimezone = org?.season_timezone ?? null
-        seasonAnchorDate = org?.season_anchor_date ?? null
-        seasonIntervalMonths = org?.season_interval_months ? Number(org.season_interval_months) : null
-        rewardMode = "classic_top3"
-        scopeInfo = {
-          mode: "organization",
-          organizationId: requestedOrg,
-          organizationName,
-          organizationSlug,
-          departmentId: requestedDept ?? null,
-          departmentName: null,
         }
       } else {
         scopeInfo = { mode: "global" }
@@ -613,7 +585,7 @@ export const getRankingController = async (req: Request, res: Response) => {
       seasonTimezone = org?.season_timezone ?? null
       seasonAnchorDate = org?.season_anchor_date ?? null
       seasonIntervalMonths = org?.season_interval_months ? Number(org.season_interval_months) : null
-      rewardMode = getRewardModeForSlug(membership.organization_slug ?? org?.slug ?? null)
+      rewardMode = "raffle_thresholds"
       filters = {
         organizationId: membership.organization_id,
         departmentId: membership.department_id,
@@ -635,14 +607,12 @@ export const getRankingController = async (req: Request, res: Response) => {
         ? scopeInfo.organizationId ?? null
         : membershipInfo?.organizationId ?? null
 
-    const raffleThresholdsPromise =
-      rewardMode === "classic_top3" || !rewardOrganizationId
-        ? Promise.resolve([])
-        : getOrganizationRaffleThresholds(rewardOrganizationId)
-    const raffleDrawsPromise =
-      rewardMode === "classic_top3" || !rewardOrganizationId
-        ? Promise.resolve([])
-        : getLatestRewardRaffleDrawsByOrganization(rewardOrganizationId)
+    const raffleThresholdsPromise = !rewardOrganizationId
+      ? Promise.resolve([])
+      : getOrganizationRaffleThresholds(rewardOrganizationId)
+    const raffleDrawsPromise = !rewardOrganizationId
+      ? Promise.resolve([])
+      : getLatestRewardRaffleDrawsByOrganization(rewardOrganizationId)
 
     const [top, position, rewards, userExp, searchResults, raffleThresholds, raffleDraws] = await Promise.all([
       getRankingPage(limit, offset, filters),
@@ -654,35 +624,31 @@ export const getRankingController = async (req: Request, res: Response) => {
       raffleDrawsPromise,
     ])
 
-    const effectiveThresholds = rewardMode === "classic_top3" ? [] : raffleThresholds
-    const userRaffleEntries =
-      rewardMode === "classic_top3" ? 0 : calculateRaffleEntriesForPoints(userExp, effectiveThresholds)
-    const savedRaffleWinners =
-      rewardMode === "classic_top3"
-        ? {}
-        : Object.fromEntries(
-            raffleDraws.map((row: any) => [
-              row.reward_key,
-              {
-                rewardKey: row.reward_key,
-                winner: {
-                  id: row.winner_user_id,
-                  first_name: row.first_name ?? null,
-                  last_name: row.last_name ?? null,
-                  avatar_url: row.avatar_url ?? null,
-                  periodical_exp: Number(row.periodical_exp ?? 0),
-                  entries: Number(row.winner_entries ?? 0),
-                },
-                totalEntries: Number(row.total_entries ?? 0),
-                eligibleUsers: Number(row.eligible_users ?? 0),
-                excludedTopUserId: row.excluded_top_user_id ?? null,
-                drawnAt:
-                  row.drawn_at instanceof Date
-                    ? row.drawn_at.toISOString()
-                    : new Date(row.drawn_at).toISOString(),
-              },
-            ])
-          )
+    const effectiveThresholds = raffleThresholds
+    const userRaffleEntries = calculateRaffleEntriesForPoints(userExp, effectiveThresholds)
+    const savedRaffleWinners = Object.fromEntries(
+      raffleDraws.map((row: any) => [
+        row.reward_key,
+        {
+          rewardKey: row.reward_key,
+          winner: {
+            id: row.winner_user_id,
+            first_name: row.first_name ?? null,
+            last_name: row.last_name ?? null,
+            avatar_url: row.avatar_url ?? null,
+            periodical_exp: Number(row.periodical_exp ?? 0),
+            entries: Number(row.winner_entries ?? 0),
+          },
+          totalEntries: Number(row.total_entries ?? 0),
+          eligibleUsers: Number(row.eligible_users ?? 0),
+          excludedTopUserId: row.excluded_top_user_id ?? null,
+          drawnAt:
+            row.drawn_at instanceof Date
+              ? row.drawn_at.toISOString()
+              : new Date(row.drawn_at).toISOString(),
+        },
+      ])
+    )
 
     return res.json({
       top,

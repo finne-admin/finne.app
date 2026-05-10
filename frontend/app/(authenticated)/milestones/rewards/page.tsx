@@ -53,11 +53,9 @@ type RankingFilter =
 export default function RecompensasPage() {
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [authResolved, setAuthResolved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userOrgId, setUserOrgId] = useState<string | null>(null)
-  const [userOrgSlug, setUserOrgSlug] = useState<string | null>(null)
   const [orgOptions, setOrgOptions] = useState<OrgOption[]>([])
   const [filter, setFilter] = useState<RankingFilter>({ scope: 'global' })
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
@@ -77,19 +75,14 @@ export default function RecompensasPage() {
         if (res.ok) {
           setUserRole(data?.user?.roleName || data?.user?.role || null)
           setUserOrgId(data?.user?.organizationId || null)
-          setUserOrgSlug(data?.user?.organizationSlug || null)
         } else {
           setUserRole(null)
           setUserOrgId(null)
-          setUserOrgSlug(null)
         }
       } catch (err) {
         console.error('Error obteniendo usuario:', err)
         setUserRole(null)
         setUserOrgId(null)
-        setUserOrgSlug(null)
-      } finally {
-        setAuthResolved(true)
       }
     })()
   }, [])
@@ -162,9 +155,9 @@ export default function RecompensasPage() {
 
   useEffect(() => {
     if (!userOrgId || filter.scope !== 'global') return
-    if (isSuperAdmin && (userOrgSlug ?? '').toLowerCase() !== 'stn') return
+    if (isSuperAdmin) return
     setFilter({ scope: 'organization', organizationId: userOrgId })
-  }, [filter.scope, isSuperAdmin, userOrgId, userOrgSlug])
+  }, [filter.scope, isSuperAdmin, userOrgId])
 
   const handleOrgChange = (value: string) => {
     setSelectedOrg(value)
@@ -208,32 +201,11 @@ export default function RecompensasPage() {
   }, [ranking?.scope])
 
   const podiumUsers = ranking?.top ?? []
-  const isClassicTop3 = useMemo(() => {
-    if (ranking?.rewardMode === 'classic_top3') return true
-    const scopeSlug =
-      ranking?.scope?.mode === 'organization' || ranking?.scope?.mode === 'department'
-        ? (ranking.scope.organizationSlug ?? null)
-        : null
-    return (scopeSlug ?? '').toLowerCase() === 'stn'
-  }, [ranking])
-
-  const isStnUser = (userOrgSlug ?? '').toLowerCase() === 'stn'
-  const shouldHoldStnView = isStnUser && (!authResolved || filter.scope === 'global' || loading || !isClassicTop3)
+  const isClassicTop3 = ranking?.rewardMode === 'classic_top3'
 
   return (
     <div className="px-6 py-12">
       <div className="mx-auto max-w-6xl space-y-10">
-        {shouldHoldStnView ? (
-          <div className="py-4">
-            <div className="animate-pulse space-y-5">
-              <div className="mx-auto h-8 w-96 rounded bg-gray-100" />
-              <div className="mx-auto h-4 w-72 rounded bg-gray-100" />
-              <div className="mx-auto h-14 max-w-4xl rounded-full bg-gray-100" />
-              <div className="h-[640px] rounded-[28px] bg-gray-100/80" />
-            </div>
-          </div>
-        ) : (
-          <>
         <div className="text-center space-y-3">
           <p className="text-xs uppercase tracking-[0.4em] text-emerald-500 font-semibold">Centro de recompensas</p>
           <h1 className="text-3xl font-bold text-gray-900">Reconocemos a quienes mantienen viva la actitud activa</h1>
@@ -282,14 +254,12 @@ export default function RecompensasPage() {
           <SvelteRewardsPodium
             users={podiumUsers}
             rewards={ranking?.rewards}
-            rewardMode={isClassicTop3 ? 'classic_top3' : ranking?.rewardMode}
+            rewardMode={ranking?.rewardMode}
             raffleThresholds={ranking?.raffleThresholds}
             userRaffleEntries={ranking?.userRaffleEntries}
             scopeLabel={scopeLabel}
             loading={loading}
           />
-        )}
-          </>
         )}
       </div>
     </div>

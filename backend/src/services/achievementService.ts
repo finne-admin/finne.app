@@ -3,6 +3,7 @@ import { getPool } from "../config/dbManager";
 import { calculateWorkdayStreak } from "../utils/streak";
 import { getUserRankingPosition } from "../db/queries/milestonesQueries";
 import { addUserXP } from "../db/queries/xpQueries";
+import { getLatestApplicableResetAtForUser } from "../db/queries/seasonResetQueries";
 
 const TIMEZONE = "Europe/Madrid";
 const FULL_DAY_REQUIRED_SESSIONS = 3;
@@ -131,7 +132,8 @@ export const checkAndGrantAchievements = async (
 
   const unlocked: UnlockedAchievement[] = [];
   const memo = new Map<string, Promise<any>>();
-  const completedIds = await getCompletedAchievementIds(pool, userId);
+  const achievementsResetAt = await getLatestApplicableResetAtForUser(userId, "general_achievements");
+  const completedIds = await getCompletedAchievementIds(pool, userId, achievementsResetAt);
 
   // Construimos la lista de logros a evaluar: para grupos (niveles) solo el siguiente nivel pendiente
   const grouped = new Map<string, AchievementRow[]>();
@@ -169,7 +171,7 @@ export const checkAndGrantAchievements = async (
     const met = await evaluateCondition(pool, userId, achievement, payload, memo);
     if (!met) continue;
 
-    const granted = await grantAchievement(pool, userId, achievement);
+    const granted = await grantAchievement(pool, userId, achievement, achievementsResetAt);
     if (granted) {
       unlocked.push({
         id: achievement.id,
@@ -212,23 +214,45 @@ export const getAchievementsProgress = async (userId: string): Promise<Map<strin
   return result;
 };
 
-const getCompletedAchievementIds = async (pool: DbPool, userId: string) => {
+const getCompletedAchievementIds = async (
+  pool: DbPool,
+  userId: string,
+  resetAt?: string | null
+) => {
   const { rows } = await pool.query<{ achievement_id: string }>(
-    `SELECT achievement_id FROM user_achievements WHERE user_id = $1 AND completado = true`,
-    [userId]
+    `
+      SELECT achievement_id
+      FROM user_achievements
+      WHERE user_id = $1
+        AND completado = true
+        AND ($2::timestamptz IS NULL OR unlocked_at >= $2)
+    `,
+    [userId, resetAt ?? null]
   );
   return new Set(rows.map((r) => r.achievement_id));
 };
 
-const grantAchievement = async (pool: DbPool, userId: string, achievement: AchievementRow) => {
+const grantAchievement = async (
+  pool: DbPool,
+  userId: string,
+  achievement: AchievementRow,
+  resetAt?: string | null
+) => {
   const { rowCount } = await pool.query(
     `
       INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, completado, reclamado, level)
       VALUES ($1, $2, NOW(), true, false, $3)
-      ON CONFLICT (user_id, achievement_id) DO NOTHING
+      ON CONFLICT (user_id, achievement_id) DO UPDATE
+      SET
+        unlocked_at = EXCLUDED.unlocked_at,
+        completado = true,
+        reclamado = false,
+        level = EXCLUDED.level
+      WHERE $4::timestamptz IS NOT NULL
+        AND user_achievements.unlocked_at < $4
       RETURNING achievement_id
     `,
-    [userId, achievement.id, achievement.level ?? null]
+    [userId, achievement.id, achievement.level ?? null, resetAt ?? null]
   );
   if ((rowCount ?? 0) > 0) {
     await autoClaimAchievement(pool, userId, achievement);

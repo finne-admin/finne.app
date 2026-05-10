@@ -1,4 +1,5 @@
 import { getPool } from "../../config/dbManager";
+import { createSeasonResetMarker } from "./seasonResetQueries";
 
 interface FetchUserFilters {
   organizationId?: string;
@@ -372,6 +373,7 @@ export type ResetScopeParams = {
   resetWeeklyAchievements?: boolean;
   resetActivePauses?: boolean;
   resetRanking?: boolean;
+  requestedBy?: string | null;
 };
 
 export type ResetScopeResult = {
@@ -382,6 +384,7 @@ export type ResetScopeResult = {
   satisfactionDeleted: number;
   sessionParticipantsDeleted: number;
   rankingUsersUpdated: number;
+  markersCreated: number;
 };
 
 export const resetOrganizationScopeData = async (
@@ -400,6 +403,7 @@ export const resetOrganizationScopeData = async (
     satisfactionDeleted: 0,
     sessionParticipantsDeleted: 0,
     rankingUsersUpdated: 0,
+    markersCreated: 0,
   };
 
   try {
@@ -418,19 +422,13 @@ export const resetOrganizationScopeData = async (
     result.affectedUsers = userRows.length;
 
     if (params.resetGeneralAchievements) {
-      const achievements = await client.query(
-        `
-        DELETE FROM user_achievements ua
-        USING achievements_catalog ac, user_membership um
-        WHERE ua.achievement_id = ac.id
-          AND ac.condition_type <> 'nivel_usuario'
-          AND ua.user_id = um.user_id
-          AND um.organization_id = $1
-          AND ($2::uuid IS NULL OR um.department_id = $2)
-        `,
-        baseParams
-      );
-      result.achievementsDeleted = achievements.rowCount ?? 0;
+      await createSeasonResetMarker(client, {
+        organizationId: params.organizationId,
+        departmentId,
+        resetType: "general_achievements",
+        createdBy: params.requestedBy ?? null,
+      });
+      result.markersCreated += 1;
     }
 
     if (params.resetWeeklyAchievements) {
@@ -448,57 +446,24 @@ export const resetOrganizationScopeData = async (
     }
 
     if (params.resetActivePauses) {
-      const sessions = await client.query(
-        `
-        DELETE FROM pause_session_participants psp
-        USING active_pauses ap, user_membership um
-        WHERE psp.active_pause_id = ap.id
-          AND ap.user_id = um.user_id
-          AND um.organization_id = $1
-          AND ($2::uuid IS NULL OR um.department_id = $2)
-        `,
-        baseParams
-      );
-      result.sessionParticipantsDeleted = sessions.rowCount ?? 0;
-
-      const satisfaction = await client.query(
-        `
-        DELETE FROM exercise_satisfaction es
-        USING user_membership um
-        WHERE es.user_id = um.user_id
-          AND um.organization_id = $1
-          AND ($2::uuid IS NULL OR um.department_id = $2)
-        `,
-        baseParams
-      );
-      result.satisfactionDeleted = satisfaction.rowCount ?? 0;
-
-      const pauses = await client.query(
-        `
-        DELETE FROM active_pauses ap
-        USING user_membership um
-        WHERE ap.user_id = um.user_id
-          AND um.organization_id = $1
-          AND ($2::uuid IS NULL OR um.department_id = $2)
-        `,
-        baseParams
-      );
-      result.activePausesDeleted = pauses.rowCount ?? 0;
+      await createSeasonResetMarker(client, {
+        organizationId: params.organizationId,
+        departmentId,
+        resetType: "active_pauses",
+        createdBy: params.requestedBy ?? null,
+      });
+      result.markersCreated += 1;
     }
 
     if (params.resetRanking) {
-      const ranking = await client.query(
-        `
-        UPDATE users u
-        SET periodical_exp = 0
-        FROM user_membership um
-        WHERE u.id = um.user_id
-          AND um.organization_id = $1
-          AND ($2::uuid IS NULL OR um.department_id = $2)
-        `,
-        baseParams
-      );
-      result.rankingUsersUpdated = ranking.rowCount ?? 0;
+      await createSeasonResetMarker(client, {
+        organizationId: params.organizationId,
+        departmentId,
+        resetType: "ranking",
+        createdBy: params.requestedBy ?? null,
+      });
+      result.markersCreated += 1;
+      result.rankingUsersUpdated = result.affectedUsers;
     }
 
     await client.query("COMMIT");

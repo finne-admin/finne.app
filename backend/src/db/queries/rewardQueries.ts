@@ -1,4 +1,5 @@
 import { getPool } from "../../config/dbManager"
+import { ensureSeasonResetTable } from "./seasonResetQueries"
 
 export type RewardScopeType = "global" | "organization" | "department"
 export type RewardKey = "guaranteed_winner" | "raffle_a" | "raffle_b"
@@ -205,6 +206,7 @@ export const replaceRaffleThresholdsByOrganization = async (
 }
 
 export const getRaffleCandidatesByOrganization = async (organizationId: string) => {
+  await ensureSeasonResetTable()
   const pool = await getPool()
   const { rows } = await pool.query<RewardRaffleCandidateRow>(
     `
@@ -213,11 +215,24 @@ export const getRaffleCandidatesByOrganization = async (organizationId: string) 
       u.first_name,
       u.last_name,
       u.avatar_url,
-      COALESCE(u.periodical_exp, 0) AS periodical_exp
+      COALESCE((
+        SELECT SUM(ap.points)
+        FROM activity_points ap
+        WHERE ap.user_id = u.id
+          AND ap.action_type = 'xp_gain'
+          AND ap.created_at >= COALESCE(rreset.reset_at, TIMESTAMPTZ 'epoch')
+      ), 0) AS periodical_exp
     FROM users u
     INNER JOIN user_membership um ON um.user_id = u.id
+    LEFT JOIN LATERAL (
+      SELECT MAX(srm.reset_at) AS reset_at
+      FROM season_reset_markers srm
+      WHERE srm.reset_type = 'ranking'
+        AND srm.organization_id = um.organization_id
+        AND (srm.department_id IS NULL OR srm.department_id = um.department_id)
+    ) rreset ON TRUE
     WHERE um.organization_id = $1
-    ORDER BY COALESCE(u.periodical_exp, 0) DESC, u.first_name ASC, u.last_name ASC
+    ORDER BY periodical_exp DESC, u.first_name ASC, u.last_name ASC
     `,
     [organizationId]
   )

@@ -32,6 +32,7 @@ type ResetResult = {
   satisfactionDeleted: number
   sessionParticipantsDeleted: number
   rankingUsersUpdated: number
+  markersCreated: number
 }
 
 export function GlobalResetPanel() {
@@ -145,8 +146,8 @@ export function GlobalResetPanel() {
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="text-sm text-gray-600">
-          Configura un reinicio por organizacion y alcance. El endpoint backend aun no esta
-          conectado, pero la seleccion queda validada.
+          Configura un nuevo corte de temporada por organizacion y alcance. El ranking y las
+          metricas de pausas pasan a contar desde ese corte sin borrar el historico ya registrado.
         </p>
 
         <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-2">
@@ -219,28 +220,28 @@ export function GlobalResetPanel() {
                   checked={resetGeneralAchievements}
                   onCheckedChange={(value) => setResetGeneralAchievements(Boolean(value))}
                 />
-                Logros generales cumplidos
+                Reiniciar logros generales
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={resetWeeklyAchievements}
                   onCheckedChange={(value) => setResetWeeklyAchievements(Boolean(value))}
                 />
-                Logros semanales cumplidos
+                Reiniciar logros semanales
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={resetActivePauses}
                   onCheckedChange={(value) => setResetActivePauses(Boolean(value))}
                 />
-                Pausas activas realizadas
+                Reiniciar temporada de pausas
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={resetRanking}
                   onCheckedChange={(value) => setResetRanking(Boolean(value))}
                 />
-                Reiniciar ranking (exp periodica)
+                Reiniciar ranking de temporada
               </label>
             </div>
           </div>
@@ -276,20 +277,22 @@ export function GlobalResetPanel() {
         {result && (
           <div className="text-sm text-gray-600 space-y-1">
             <p>Usuarios afectados: {result.affectedUsers}</p>
+            {result.markersCreated > 0 && (
+              <p>Nuevos cortes de temporada creados: {result.markersCreated}</p>
+            )}
             {resetGeneralAchievements && (
-              <p>Logros generales eliminados: {result.achievementsDeleted}</p>
+              <p>Logros generales: a partir de ahora se evaluan desde el nuevo corte.</p>
             )}
             {resetWeeklyAchievements && (
               <p>Logros semanales eliminados: {result.weeklyDeleted}</p>
             )}
             {resetActivePauses && (
               <>
-                <p>Pausas activas eliminadas: {result.activePausesDeleted}</p>
-                <p>Valoraciones eliminadas: {result.satisfactionDeleted}</p>
+                <p>Pausas activas: se conserva el historico y la temporada nueva empieza ahora.</p>
               </>
             )}
             {resetRanking && (
-              <p>Usuarios con ranking reiniciado: {result.rankingUsersUpdated}</p>
+              <p>Usuarios con ranking de temporada reiniciado: {result.rankingUsersUpdated}</p>
             )}
           </div>
         )}

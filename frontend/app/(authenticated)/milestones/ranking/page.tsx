@@ -84,7 +84,6 @@ export default function RankingPage() {
   const [goal, setGoal] = useState<number | null>(null)
   const [ranking, setRanking] = useState<RankingResponse | null>(null)
   const [loadingRanking, setLoadingRanking] = useState(true)
-  const [authResolved, setAuthResolved] = useState(false)
   const [pageOffset, setPageOffset] = useState(0)
   const pageSize = 10
   const [searching, setSearching] = useState(false)
@@ -92,7 +91,6 @@ export default function RankingPage() {
   const [searchResults, setSearchResults] = useState<{ name: string; score: number; rank?: number }[]>([])
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userOrgId, setUserOrgId] = useState<string | null>(null)
-  const [userOrgSlug, setUserOrgSlug] = useState<string | null>(null)
   const [filter, setFilter] = useState<RankingFilter>({ scope: 'global' })
   const [orgOptions, setOrgOptions] = useState<OrgOption[]>([])
   const [selectedOrg, setSelectedOrg] = useState<string>('global')
@@ -130,28 +128,23 @@ export default function RankingPage() {
         if (res.ok) {
           setUserRole(data?.user?.roleName || data?.user?.role || null)
           setUserOrgId(data?.user?.organizationId || null)
-          setUserOrgSlug(data?.user?.organizationSlug || null)
         } else {
           setUserRole(null)
           setUserOrgId(null)
-          setUserOrgSlug(null)
         }
       } catch (error) {
         console.error('Error obteniendo usuario:', error)
         setUserRole(null)
         setUserOrgId(null)
-        setUserOrgSlug(null)
-      } finally {
-        setAuthResolved(true)
       }
     })()
   }, [])
 
   useEffect(() => {
     if (!userOrgId || filter.scope !== 'global') return
-    if (isSuperAdmin && (userOrgSlug ?? '').toLowerCase() !== 'stn') return
+    if (isSuperAdmin) return
     setFilter({ scope: 'organization', organizationId: userOrgId })
-  }, [filter.scope, isSuperAdmin, userOrgId, userOrgSlug])
+  }, [filter.scope, isSuperAdmin, userOrgId])
 
   const loadRanking = useCallback(async () => {
     setLoadingRanking(true)
@@ -278,17 +271,7 @@ export default function RankingPage() {
     [ranking?.raffleThresholds]
   )
 
-  const isClassicTop3 = useMemo(() => {
-    if (ranking?.rewardMode === 'classic_top3') return true
-    const scopeSlug =
-      ranking?.scope.mode === 'organization' || ranking?.scope.mode === 'department'
-        ? (ranking.scope.organizationSlug ?? null)
-        : null
-    return (scopeSlug ?? ranking?.membership?.organizationSlug ?? '').toLowerCase() === 'stn'
-  }, [ranking])
-
-  const isStnUser = (userOrgSlug ?? '').toLowerCase() === 'stn'
-  const shouldHoldStnView = isStnUser && (!authResolved || filter.scope === 'global' || loadingRanking || !isClassicTop3)
+  const isClassicTop3 = ranking?.rewardMode === 'classic_top3'
 
   const raffleOrganizationId = useMemo(() => {
     if (!ranking) return null
@@ -395,24 +378,6 @@ export default function RankingPage() {
   return (
     <div className="px-3 sm:px-6 py-4 sm:py-8">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 sm:gap-10 md:grid-cols-[minmax(280px,360px)_1fr]">
-        {shouldHoldStnView ? (
-          <div className="md:col-span-2">
-            <div className="py-4">
-              <div className="animate-pulse space-y-4">
-                <div className="h-8 w-64 rounded bg-gray-100" />
-                <div className="h-4 w-48 rounded bg-gray-100" />
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(280px,360px)_1fr]">
-                  <div className="space-y-4">
-                    <div className="h-40 rounded-[28px] bg-gray-100" />
-                    <div className="h-32 rounded-[28px] bg-gray-100" />
-                  </div>
-                  <div className="h-[520px] rounded-[28px] bg-gray-100" />
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
         <aside className="order-2 md:order-1 block w-full">
           <div className="space-y-4 md:sticky" style={{ top: '24px' }}>
             <HuchaPanel goal={goal ?? 5000} deadline={deadline} pigHeight={420} showBalloon={false} />
@@ -551,7 +516,7 @@ export default function RankingPage() {
               totalUsuarios={ranking?.totalUsers ?? null}
               loading={loadingRanking}
               rewards={ranking?.rewards}
-              rewardMode={isClassicTop3 ? 'classic_top3' : ranking?.rewardMode}
+              rewardMode={ranking?.rewardMode}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               searching={searching}
@@ -676,7 +641,7 @@ export default function RankingPage() {
             <SvelteRewardsPodium
               users={ranking?.top ?? []}
               rewards={ranking?.rewards}
-              rewardMode={isClassicTop3 ? 'classic_top3' : ranking?.rewardMode}
+              rewardMode={ranking?.rewardMode}
               raffleThresholds={ranking?.raffleThresholds}
               userRaffleEntries={ranking?.userRaffleEntries}
               scopeLabel={rewardsScopeLabel}
@@ -684,8 +649,6 @@ export default function RankingPage() {
             />
           </section>
         </section>
-          </>
-        )}
       </div>
     </div>
   )
